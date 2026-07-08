@@ -887,3 +887,80 @@ textarea:focus {
     grid-template-columns: 1fr;
   }
 }
+/* ================= MOBILE ================= */
+
+.mobile-menu-btn {
+  display: none;
+}
+
+.mobile-menu-backdrop {
+  display: none;
+}
+
+@media (max-width: 768px) {
+
+  .mobile-menu-btn {
+    display: flex;
+    position: fixed;
+    top: 16px;
+    left: 16px;
+    width: 48px;
+    height: 48px;
+    border: none;
+    border-radius: 12px;
+    background: #1b9fff;
+    color: white;
+    font-size: 24px;
+    align-items: center;
+    justify-content: center;
+    z-index: 1001;
+    box-shadow: 0 8px 20px rgba(0,0,0,.25);
+  }
+
+  .mobile-menu-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.45);
+    z-index: 998;
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: -320px;
+    width: 290px;
+    height: 100vh;
+    transition: .3s;
+    z-index: 999;
+  }
+
+  .sidebar.mobile-open {
+    left: 0;
+  }
+
+  .main-content {
+    margin-left: 0 !important;
+    width: 100%;
+    padding: 70px 16px 16px;
+  }
+
+  .card,
+  .section-card {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .data-table {
+    display: block;
+    overflow-x: auto;
+  }
+
+  input,
+  select,
+  textarea,
+  button {
+    width: 100%;
+    box-sizing: border-box;
+  }
+}
