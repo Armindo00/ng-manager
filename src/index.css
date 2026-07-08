@@ -887,7 +887,9 @@ textarea:focus {
     grid-template-columns: 1fr;
   }
 }
-/* ================= MOBILE ================= */
+/* ===========================
+   MOBILE CLEANUP
+=========================== */
 
 .mobile-menu-btn {
   display: none;
@@ -897,92 +899,176 @@ textarea:focus {
   display: none;
 }
 
+.close-menu-btn {
+  display: none;
+}
+
 @media (max-width: 768px) {
+  body {
+    overflow-x: hidden;
+  }
+
+  .app-layout {
+    display: block;
+    width: 100%;
+    min-height: 100vh;
+  }
+
+  .main-content {
+    width: 100%;
+    padding: 78px 14px 18px !important;
+    overflow-x: hidden;
+  }
 
   .mobile-menu-btn {
     display: flex;
     position: fixed;
-    top: 16px;
-    left: 16px;
-    width: 48px;
-    height: 48px;
-    border: none;
-    border-radius: 12px;
-    background: #1b9fff;
+    top: 18px;
+    left: 14px;
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    background: #0284c7;
     color: white;
-    font-size: 24px;
+    font-size: 23px;
     align-items: center;
     justify-content: center;
-    z-index: 1001;
-    box-shadow: 0 8px 20px rgba(0,0,0,.25);
+    z-index: 1400;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.22);
   }
 
   .mobile-menu-backdrop {
     display: block;
     position: fixed;
     inset: 0;
-    background: rgba(0,0,0,.45);
-    z-index: 998;
+    background: rgba(15, 23, 42, 0.55);
+    z-index: 1200;
   }
 
   .sidebar {
-    position: fixed;
+    position: fixed !important;
     top: 0;
-    left: -320px;
-    width: 290px;
-    height: 100vh;
-    transition: .3s;
-    z-index: 999;
+    left: -100%;
+    width: 82vw;
+    max-width: 310px;
+    height: 100dvh;
+    z-index: 1300;
+    padding: 24px 18px;
+    transition: left 0.25s ease;
+    overflow-y: auto;
   }
 
   .sidebar.mobile-open {
     left: 0;
   }
 
-  .main-content {
-    margin-left: 0 !important;
-    width: 100%;
-    padding: 70px 16px 16px;
+  .close-menu-btn {
+    display: flex;
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.12);
+    color: white;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+  }
+
+  .sidebar-header {
+    margin-top: 44px;
+    margin-bottom: 26px;
+    align-items: center;
+  }
+
+  .logo-circle {
+    width: 58px;
+    height: 58px;
+    border-radius: 18px;
+  }
+
+  .brand {
+    font-size: 18px;
+  }
+
+  .role-label {
+    font-size: 12px;
+  }
+
+  .sidebar-footer {
+    margin-top: 30px;
+  }
+
+  .topbar {
+    padding: 14px 14px 14px 62px;
+    margin-bottom: 18px;
+    border-radius: 18px;
+    align-items: flex-start;
+  }
+
+  .topbar h2 {
+    font-size: 20px;
+    line-height: 1.15;
+  }
+
+  .topbar-date {
+    font-size: 12px;
+  }
+
+  .topbar-actions {
+    gap: 8px;
+    margin-left: auto;
+  }
+
+  .topbar-badge {
+    display: none;
+  }
+
+  .topbar-avatar {
+    width: 38px;
+    height: 38px;
+    font-size: 15px;
+  }
+
+  .notification-bell {
+    width: 38px;
+    height: 38px;
+  }
+
+  .notification-panel {
+    position: fixed;
+    top: 78px;
+    left: 14px;
+    right: 14px;
+    width: auto;
+  }
+
+  .page-title {
+    font-size: 28px;
+    margin-bottom: 18px;
   }
 
   .card,
   .section-card {
     width: 100%;
-    box-sizing: border-box;
-  }
-
-  .data-table {
-    display: block;
-    overflow-x: auto;
-  }
-
-  input,
-  select,
-  textarea,
-  button {
-    width: 100%;
-    box-sizing: border-box;
-  }
-}
-@media (max-width: 768px) {
-  .dashboard-page {
-    width: 100%;
-    overflow-x: hidden;
+    padding: 16px;
+    border-radius: 20px;
   }
 
   .stats-grid {
-    display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 12px;
   }
 
   .stat-card {
+    display: block;
     padding: 16px;
-    min-width: 0;
   }
 
   .stat-label {
-    font-size: 13px;
+    font-size: 12px;
     line-height: 1.25;
   }
 
@@ -997,10 +1083,9 @@ textarea:focus {
   }
 
   .lesson-preview {
-    display: grid;
     grid-template-columns: 1fr;
     gap: 4px;
-    padding: 12px 0;
+    padding: 12px;
   }
 
   .quick-actions {
@@ -1009,83 +1094,62 @@ textarea:focus {
     gap: 10px;
   }
 
-  .dashboard-calendar-wrap {
+  .form-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  input,
+  select,
+  textarea,
+  button {
+    width: 100%;
+    margin: 4px 0;
+  }
+
+  .data-table {
+    display: block;
     overflow-x: auto;
-    width: 100%;
-  }
-}
-.calendar-wrapper{
-    width:100%;
-    overflow-x:auto;
-    -webkit-overflow-scrolling:touch;
-}
-@media (max-width:768px){
-
-.calendar-wrapper .react-calendar{
-    min-width:700px;
-}
-
-}
-@media (max-width: 768px) {
-
-  .sidebar {
-    position: fixed;
-    left: -320px;
-    top: 0;
-    width: 280px;
-    height: 100vh;
-    z-index: 1000;
-    transition: left .3s ease;
+    white-space: nowrap;
   }
 
-  .sidebar.mobile-open {
-  left: 0;
-}
+  .student-stats-grid {
+    grid-template-columns: 1fr 1fr;
+  }
 
-  .mobile-menu-btn {
-    display: flex;
-    position: fixed;
-    top: 16px;
-    left: 16px;
-    width: 48px;
-    height: 48px;
-    border: none;
+  .student-tabs {
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+
+  .modal {
+    width: calc(100% - 24px);
+    max-height: 88vh;
+    overflow-y: auto;
+  }
+
+  .calendar-grid {
+    gap: 6px;
+  }
+
+  .calendar-day {
+    min-height: 54px;
+    padding: 6px;
     border-radius: 12px;
-    background: #18a8f5;
-    color: white;
-    font-size: 24px;
-    align-items: center;
-    justify-content: center;
-    z-index: 1100;
   }
 
-  .main-content {
-    margin-left: 0;
-    width: 100%;
-    padding: 20px;
-  }
-}
-@media (max-width: 768px) {
-  .mobile-menu-btn {
-    top: 70px;
-    left: 20px;
+  .calendar-day strong {
+    margin-bottom: 4px;
+    font-size: 13px;
   }
 
-  .sidebar {
-    width: 78vw;
-    max-width: 320px;
-    padding-top: 90px;
+  .calendar-lesson {
+    font-size: 10px;
+    padding: 4px 5px;
+    white-space: normal;
   }
 
-  .sidebar-header {
-    margin-top: 0;
-  }
-
-  .sidebar-footer {
-    margin-top: 40px;
-  }
-
-  .logout-btn {
-    width: 100%;
+  .calendar-header span {
+    font-size: 11px;
   }
 }

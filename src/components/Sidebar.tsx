@@ -40,9 +40,11 @@ function Sidebar({ user, activeSection, onChangeSection, onLogout }: Props) {
 
   return (
     <>
-      <button className="mobile-menu-btn" onClick={() => setOpen(true)}>
-        ☰
-      </button>
+     {!open && (
+  <button className="mobile-menu-btn" onClick={() => setOpen(true)}>
+    ☰
+  </button>
+)}
 
       {open && (
         <div
@@ -52,6 +54,12 @@ function Sidebar({ user, activeSection, onChangeSection, onLogout }: Props) {
       )}
 
       <aside className={open ? "sidebar mobile-open" : "sidebar"}>
+        <button
+  className="close-menu-btn"
+  onClick={() => setOpen(false)}
+>
+  ✕
+</button>
         <div>
           <div className="sidebar-header">
             <div className="logo-circle">
@@ -98,7 +106,13 @@ function Sidebar({ user, activeSection, onChangeSection, onLogout }: Props) {
         </div>
 
         <div className="sidebar-footer">
-          <button className="logout-btn" onClick={onLogout}>
+         <button
+  className="logout-btn"
+  onClick={() => {
+    setOpen(false);
+    onLogout();
+  }}
+>
             🚪 Terminar sessão
           </button>
         </div>
