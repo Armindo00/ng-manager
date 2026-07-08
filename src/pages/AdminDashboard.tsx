@@ -129,9 +129,9 @@ function AdminDashboard() {
         </div>
       </div>
 
-      <div className="dashboard-calendar-wrap">
-        <LessonsCalendar lessons={lessons} />
-      </div>
+      <div className="calendar-wrapper">
+  <LessonsCalendar lessons={lessons} />
+</div>
     </div>
   );
 }
