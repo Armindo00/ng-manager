@@ -817,3 +817,73 @@ textarea:focus {
   padding: 9px 12px;
   font-size: 13px;
 }
+@media (max-width: 768px) {
+  .app-layout {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: 100%;
+    min-height: auto;
+    flex-direction: row;
+    overflow-x: auto;
+    padding: 12px;
+  }
+
+  .main-content {
+    width: 100%;
+    padding: 16px;
+  }
+
+  .card,
+  .section-card {
+    width: 100%;
+    padding: 16px;
+    border-radius: 18px;
+  }
+
+  .form-row {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .form-row input,
+  .form-row select,
+  .form-row button {
+    width: 100%;
+  }
+
+  .table-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .search-input {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .data-table {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+
+  .modal {
+    width: calc(100% - 24px);
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  .student-tabs {
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+
+  .lesson-detail-grid,
+  .student-profile-grid {
+    grid-template-columns: 1fr;
+  }
+}
