@@ -49,46 +49,46 @@ function AdminDashboard() {
     totalBooked === 0 ? 0 : Math.round((totalPresent / totalBooked) * 100);
 
   return (
-    <div>
+    <div className="dashboard-page">
       <h1 className="page-title">Dashboard</h1>
 
       <div className="stats-grid">
-        <div className="card">
+        <div className="card stat-card">
           <span className="stat-label">👥 Total de alunos</span>
           <strong className="stat-number">{students.length}</strong>
         </div>
 
-        <div className="card">
+        <div className="card stat-card">
           <span className="stat-label">🏄 Treinadores</span>
           <strong className="stat-number">{coaches.length}</strong>
         </div>
 
-        <div className="card">
+        <div className="card stat-card">
           <span className="stat-label">📝 Treinos por publicar</span>
           <strong className="stat-number">{draftLessons}</strong>
         </div>
 
-        <div className="card">
+        <div className="card stat-card">
           <span className="stat-label">📢 Treinos publicados</span>
           <strong className="stat-number">{publishedLessons}</strong>
         </div>
 
-        <div className="card">
+        <div className="card stat-card">
           <span className="stat-label">✅ Treinos concluídos</span>
           <strong className="stat-number">{finishedLessons}</strong>
         </div>
 
-        <div className="card">
+        <div className="card stat-card">
           <span className="stat-label">💳 Pagamentos pendentes</span>
           <strong className="stat-number">{pendingPayments}</strong>
         </div>
 
-        <div className="card">
+        <div className="card stat-card">
           <span className="stat-label">⭐ Avaliações este mês</span>
           <strong className="stat-number">{evaluationsThisMonth}</strong>
         </div>
 
-        <div className="card">
+        <div className="card stat-card">
           <span className="stat-label">📊 Presença média</span>
           <strong className="stat-number">{attendanceRate}%</strong>
         </div>
@@ -98,17 +98,19 @@ function AdminDashboard() {
         <div className="card section-card">
           <h2>📅 Próximos Treinos</h2>
 
-          {lessons
-            .filter((lesson) => lesson.status !== "finished")
-            .slice(0, 5)
-            .map((lesson) => (
-              <div className="lesson-preview" key={lesson.id}>
-                <strong>{lesson.date}</strong>
-                <span>{lesson.time || "--:--"}</span>
-                <span>{lesson.groupName || "Treino Extra"}</span>
-                <span>{lesson.beach || "Praia por definir"}</span>
-              </div>
-            ))}
+          <div className="lesson-preview-list">
+            {lessons
+              .filter((lesson) => lesson.status !== "finished")
+              .slice(0, 5)
+              .map((lesson) => (
+                <div className="lesson-preview" key={lesson.id}>
+                  <strong>{lesson.date}</strong>
+                  <span>{lesson.time || "--:--"}</span>
+                  <span>{lesson.groupName || "Treino Extra"}</span>
+                  <span>{lesson.beach || "Praia por definir"}</span>
+                </div>
+              ))}
+          </div>
 
           {lessons.length === 0 && (
             <p className="muted">Ainda não existem treinos.</p>
@@ -127,7 +129,9 @@ function AdminDashboard() {
         </div>
       </div>
 
-      <LessonsCalendar lessons={lessons} />
+      <div className="dashboard-calendar-wrap">
+        <LessonsCalendar lessons={lessons} />
+      </div>
     </div>
   );
 }

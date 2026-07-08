@@ -964,3 +964,53 @@ textarea:focus {
     box-sizing: border-box;
   }
 }
+@media (max-width: 768px) {
+  .dashboard-page {
+    width: 100%;
+    overflow-x: hidden;
+  }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .stat-card {
+    padding: 16px;
+    min-width: 0;
+  }
+
+  .stat-label {
+    font-size: 13px;
+    line-height: 1.25;
+  }
+
+  .stat-number {
+    font-size: 28px;
+  }
+
+  .dashboard-row {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .lesson-preview {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 4px;
+    padding: 12px 0;
+  }
+
+  .quick-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .dashboard-calendar-wrap {
+    overflow-x: auto;
+    width: 100%;
+  }
+}
