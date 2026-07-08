@@ -39,7 +39,7 @@ function LessonsCalendar({ lessons }: Props) {
   }
 
   return (
-    <div className="card section-card">
+    <div className="card section-card calendar-card">
       <h2>📅 Calendário de treinos</h2>
       <h3 className="calendar-month">{monthName}</h3>
 

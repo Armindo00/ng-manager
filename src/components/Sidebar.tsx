@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { User } from "../types";
 import logo from "../assets/logo next.jpeg";
 
@@ -20,6 +20,17 @@ type Props = {
 
 function Sidebar({ user, activeSection, onChangeSection, onLogout }: Props) {
   const [open, setOpen] = useState(false);
+  useEffect(() => {
+  if (open) {
+    document.body.classList.add("menu-open");
+  } else {
+    document.body.classList.remove("menu-open");
+  }
+
+  return () => {
+    document.body.classList.remove("menu-open");
+  };
+}, [open]);
 
   function changeSection(section: AppSection) {
     onChangeSection(section);
@@ -48,9 +59,10 @@ function Sidebar({ user, activeSection, onChangeSection, onLogout }: Props) {
 
       {open && (
         <div
-          className="mobile-menu-backdrop"
-          onClick={() => setOpen(false)}
-        />
+  className="mobile-menu-backdrop"
+  onClick={() => setOpen(false)}
+  onTouchMove={(event) => event.preventDefault()}
+/>
       )}
 
       <aside className={open ? "sidebar mobile-open" : "sidebar"}>

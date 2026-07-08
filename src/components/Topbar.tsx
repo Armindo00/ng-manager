@@ -13,35 +13,26 @@ function Topbar({ user }: Props) {
     year: "numeric",
   });
 
-  // Mais tarde estas notificações virão do Supabase
   const notifications = [
-    {
-      id: "1",
-      text: "Existem treinos por publicar",
-    },
-    {
-      id: "2",
-      text: "Existem pagamentos pendentes",
-    },
+    { id: "1", text: "Existem treinos por publicar" },
+    { id: "2", text: "Existem pagamentos pendentes" },
   ];
 
   return (
     <div className="topbar">
-      <div>
-        <p className="topbar-date">{today}</p>
-        <h2>Bem-vindo, {user.name}</h2>
-      </div>
+      <div className="topbar-inner">
+        <div>
+          <p className="topbar-date">{today}</p>
+          <h2>Bem-vindo,<br />{user.name}</h2>
+        </div>
 
-      <div className="topbar-actions">
-        <span className="topbar-badge">
-          🌊 NextGeneration Surf School
-        </span>
+        <div className="topbar-actions">
+          <NotificationBell notifications={notifications} />
 
-        <NotificationBell notifications={notifications} />
-
-        <span className="topbar-avatar">
-          {user.name.charAt(0).toUpperCase()}
-        </span>
+          <span className="topbar-avatar">
+            {user.name.charAt(0).toUpperCase()}
+          </span>
+        </div>
       </div>
     </div>
   );
