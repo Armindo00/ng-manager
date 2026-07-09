@@ -824,3 +824,83 @@ textarea:focus {
     font-size: 15px;
   }
 }
+/* ===== POLISH FINAL MOBILE ===== */
+
+@media (max-width: 768px) {
+  body::before {
+    height: 120px;
+  }
+
+  .mobile-menu-btn {
+    top: calc(env(safe-area-inset-top) + 18px) !important;
+    left: 18px !important;
+  }
+
+  .main-content {
+    padding-top: 150px !important;
+  }
+
+  .dashboard-row .section-card h2,
+  .calendar-card h2 {
+    text-align: center;
+    font-size: 28px;
+    line-height: 1.15;
+  }
+
+  .lesson-preview {
+    display: grid;
+    grid-template-columns: 1.2fr 0.8fr 1.4fr;
+    align-items: center;
+    gap: 8px;
+    min-height: 58px;
+    padding: 12px 14px;
+    border-radius: 16px;
+    font-size: 13px;
+  }
+
+  .lesson-preview span:nth-child(3) {
+    display: none;
+  }
+
+  .lesson-preview strong {
+    font-size: 13px;
+  }
+
+  .lesson-preview span {
+    font-size: 13px;
+  }
+
+  .quick-actions {
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .quick-actions button {
+    height: 56px;
+    border-radius: 16px;
+    font-size: 14px;
+    padding: 10px;
+  }
+
+  .calendar-card {
+    text-align: center;
+  }
+
+  .calendar-month {
+    text-align: left;
+    font-size: 24px;
+  }
+
+  .calendar-day {
+    aspect-ratio: 1 / 1.15;
+    min-height: auto;
+  }
+
+  .mobile-menu-backdrop {
+    backdrop-filter: blur(6px);
+  }
+
+  .sidebar {
+    box-shadow: 22px 0 60px rgba(15, 23, 42, 0.35);
+  }
+}
