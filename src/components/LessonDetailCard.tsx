@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import type { Lesson, Student } from "../types";
+import type { Coach, Lesson, Student } from "../types";
 import { updateLesson } from "../services/lessonsService";
+import { getCoaches } from "../services/coachesService";
 
 type Props = {
   lesson: Lesson;
@@ -11,45 +12,74 @@ type Props = {
 function LessonDetailCard({ lesson, students }: Props) {
   const [currentLesson, setCurrentLesson] = useState<Lesson>(lesson);
   const [coachNotes, setCoachNotes] = useState(lesson.coachNotes || "");
+  const [coaches, setCoaches] = useState<Coach[]>([]);
 
   const bookedStudents = students.filter((student) =>
     currentLesson.bookedStudentIds.includes(student.id)
   );
 
-  async function publishLesson() {
-    const updatedLesson: Lesson = {
-      ...currentLesson,
-      status: "published",
-    };
+  useEffect(() => {
+    loadCoaches();
+  }, []);
 
-    setCurrentLesson(updatedLesson);
-
+  async function loadCoaches() {
     try {
-      await updateLesson(updatedLesson);
-      toast.success("Treino publicado com sucesso.");
+      setCoaches(await getCoaches());
     } catch (error) {
       console.error(error);
-      toast.error("Erro ao publicar treino.");
-      setCurrentLesson(currentLesson);
+      toast.error("Erro ao carregar treinadores.");
     }
   }
 
-  async function finishLesson() {
-    const updatedLesson: Lesson = {
-      ...currentLesson,
-      status: "finished",
-    };
+  async function saveLessonChanges(updatedLesson: Lesson, successMessage: string) {
+    const previousLesson = currentLesson;
 
     setCurrentLesson(updatedLesson);
 
     try {
       await updateLesson(updatedLesson);
-      toast.success("Treino concluído.");
+      toast.success(successMessage);
     } catch (error) {
       console.error(error);
-      toast.error("Erro ao concluir treino.");
-      setCurrentLesson(currentLesson);
+      toast.error("Erro ao guardar alterações.");
+      setCurrentLesson(previousLesson);
     }
+  }
+
+  function updateField(field: keyof Lesson, value: string) {
+    const updatedLesson = {
+      ...currentLesson,
+      [field]: value,
+    };
+
+    saveLessonChanges(updatedLesson, "Treino atualizado.");
+  }
+
+  function updateCoach(coachId: string) {
+    const coach = coaches.find((item) => item.id === coachId);
+    if (!coach) return;
+
+    const updatedLesson: Lesson = {
+      ...currentLesson,
+      coachId: coach.id,
+      coachName: coach.name,
+    };
+
+    saveLessonChanges(updatedLesson, "Treinador atualizado.");
+  }
+
+  async function publishLesson() {
+    saveLessonChanges(
+      { ...currentLesson, status: "published" },
+      "Treino publicado com sucesso."
+    );
+  }
+
+  async function finishLesson() {
+    saveLessonChanges(
+      { ...currentLesson, status: "finished" },
+      "Treino concluído."
+    );
   }
 
   async function togglePresence(studentId: string) {
@@ -62,35 +92,17 @@ function LessonDetailCard({ lesson, students }: Props) {
         : [...currentLesson.presentStudentIds, studentId],
     };
 
-    setCurrentLesson(updatedLesson);
-
-    try {
-      await updateLesson(updatedLesson);
-      toast.success(
-        isPresent ? "Aluno marcado como ausente." : "Presença marcada."
-      );
-    } catch (error) {
-      console.error(error);
-      toast.error("Erro ao guardar presença.");
-      setCurrentLesson(currentLesson);
-    }
+    saveLessonChanges(
+      updatedLesson,
+      isPresent ? "Aluno marcado como ausente." : "Presença marcada."
+    );
   }
 
   async function saveNotes() {
-    const updatedLesson: Lesson = {
-      ...currentLesson,
-      coachNotes,
-    };
-
-    setCurrentLesson(updatedLesson);
-
-    try {
-      await updateLesson(updatedLesson);
-      toast.success("Notas guardadas.");
-    } catch (error) {
-      console.error(error);
-      toast.error("Erro ao guardar notas.");
-    }
+    saveLessonChanges(
+      { ...currentLesson, coachNotes },
+      "Notas guardadas."
+    );
   }
 
   return (
@@ -125,6 +137,68 @@ function LessonDetailCard({ lesson, students }: Props) {
         {currentLesson.status === "finished" && (
           <span className="muted">Este treino já foi concluído.</span>
         )}
+      </div>
+
+      <div className="lesson-section">
+        <h3>✏️ Editar treino</h3>
+
+        <div className="lesson-edit-grid">
+          <label>
+            Data
+            <input
+              type="date"
+              value={currentLesson.date}
+              onChange={(e) => updateField("date", e.target.value)}
+            />
+          </label>
+
+          <label>
+            Hora
+            <input
+              type="time"
+              value={currentLesson.time || ""}
+              onChange={(e) => updateField("time", e.target.value)}
+            />
+          </label>
+
+          <label>
+            Praia
+            <input
+              value={currentLesson.beach || ""}
+              onChange={(e) => updateField("beach", e.target.value)}
+            />
+          </label>
+
+          <label>
+            Treinador
+            <select
+              value={currentLesson.coachId}
+              onChange={(e) => updateCoach(e.target.value)}
+            >
+              {coaches.map((coach) => (
+                <option key={coach.id} value={coach.id}>
+                  {coach.name}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label>
+            Carrinha
+            <input
+              value={currentLesson.van || ""}
+              onChange={(e) => updateField("van", e.target.value)}
+            />
+          </label>
+
+          <label>
+            Hora de recolha
+            <input
+              value={currentLesson.pickupTime || ""}
+              onChange={(e) => updateField("pickupTime", e.target.value)}
+            />
+          </label>
+        </div>
       </div>
 
       <div className="lesson-detail-grid">
@@ -163,18 +237,12 @@ function LessonDetailCard({ lesson, students }: Props) {
 
         <div className="lesson-students-list">
           {bookedStudents.map((student) => {
-            const isPresent = currentLesson.presentStudentIds.includes(
-              student.id
-            );
+            const isPresent = currentLesson.presentStudentIds.includes(student.id);
 
             return (
               <button
                 type="button"
-                className={
-                  isPresent
-                    ? "lesson-student-row present"
-                    : "lesson-student-row"
-                }
+                className={isPresent ? "lesson-student-row present" : "lesson-student-row"}
                 key={student.id}
                 onClick={() => togglePresence(student.id)}
               >

@@ -1296,3 +1296,29 @@ body::before {
     width: 100%;
   }
 }
+.lesson-edit-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+.lesson-edit-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.lesson-edit-grid input,
+.lesson-edit-grid select {
+  width: 100%;
+  margin: 0;
+}
+
+@media (max-width: 768px) {
+  .lesson-edit-grid {
+    grid-template-columns: 1fr;
+  }
+}
