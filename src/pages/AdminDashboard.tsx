@@ -5,6 +5,8 @@ import { getCoaches } from "../services/coachesService";
 import { getLessons } from "../services/lessonsService";
 import { getEvaluations } from "../services/evaluationsService";
 import LessonsCalendar from "../components/LessonsCalendar";
+import Modal from "../components/Modal";
+import LessonDetailCard from "../components/LessonDetailCard";
 
 type AdminSection =
   | "dashboard"
@@ -18,11 +20,13 @@ type AdminSection =
 type Props = {
   onChangeSection: (section: AdminSection) => void;
 };
+
 function AdminDashboard({ onChangeSection }: Props) {
   const [students, setStudents] = useState<Student[]>([]);
   const [coaches, setCoaches] = useState<Coach[]>([]);
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [evaluations, setEvaluations] = useState<MonthlyEvaluation[]>([]);
+  const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
 
   useEffect(() => {
     loadData();
@@ -44,7 +48,8 @@ function AdminDashboard({ onChangeSection }: Props) {
   const currentYear = new Date().getFullYear();
 
   const evaluationsThisMonth = evaluations.filter(
-    (evaluation) => evaluation.month === currentMonth && evaluation.year === currentYear
+    (evaluation) =>
+      evaluation.month === currentMonth && evaluation.year === currentYear
   ).length;
 
   const totalBooked = lessons.reduce(
@@ -59,6 +64,10 @@ function AdminDashboard({ onChangeSection }: Props) {
 
   const attendanceRate =
     totalBooked === 0 ? 0 : Math.round((totalPresent / totalBooked) * 100);
+
+  const upcomingLessons = lessons
+    .filter((lesson) => lesson.status !== "finished")
+    .slice(0, 5);
 
   return (
     <div className="dashboard-page">
@@ -111,20 +120,21 @@ function AdminDashboard({ onChangeSection }: Props) {
           <h2>📅 Próximos Treinos</h2>
 
           <div className="lesson-preview-list">
-            {lessons
-              .filter((lesson) => lesson.status !== "finished")
-              .slice(0, 5)
-              .map((lesson) => (
-                <div className="lesson-preview" key={lesson.id}>
-                  <strong>{lesson.date}</strong>
-                  <span>{lesson.time || "--:--"}</span>
-                  <span>{lesson.groupName || "Treino Extra"}</span>
-                  <span>{lesson.beach || "Praia por definir"}</span>
-                </div>
-              ))}
+            {upcomingLessons.map((lesson) => (
+              <button
+                className="lesson-preview lesson-preview-button"
+                key={lesson.id}
+                onClick={() => setSelectedLesson(lesson)}
+              >
+                <strong>{lesson.date}</strong>
+                <span>{lesson.time || "--:--"}</span>
+                <span>{lesson.groupName || "Treino Extra"}</span>
+                <span>{lesson.beach || "Praia por definir"}</span>
+              </button>
+            ))}
           </div>
 
-          {lessons.length === 0 && (
+          {upcomingLessons.length === 0 && (
             <p className="muted">Ainda não existem treinos.</p>
           )}
         </div>
@@ -133,28 +143,46 @@ function AdminDashboard({ onChangeSection }: Props) {
           <h2>⚡ Ações Rápidas</h2>
 
           <div className="quick-actions">
-            <button className="primary-btn" onClick={() => onChangeSection("students")}>
-  ➕ Novo Aluno
-</button>
+            <button
+              className="primary-btn"
+              onClick={() => onChangeSection("students")}
+            >
+              ➕ Novo Aluno
+            </button>
 
-<button className="primary-btn" onClick={() => onChangeSection("coaches")}>
-  👨‍🏫 Novo Treinador
-</button>
+            <button
+              className="primary-btn"
+              onClick={() => onChangeSection("coaches")}
+            >
+              👨‍🏫 Novo Treinador
+            </button>
 
-<button className="primary-btn" onClick={() => onChangeSection("groups")}>
-  👥 Novo Grupo
-</button>
+            <button
+              className="primary-btn"
+              onClick={() => onChangeSection("groups")}
+            >
+              👥 Novo Grupo
+            </button>
 
-<button className="primary-btn" onClick={() => onChangeSection("lessons")}>
-  🏄 Criar Treino
-</button>
+            <button
+              className="primary-btn"
+              onClick={() => onChangeSection("lessons")}
+            >
+              🏄 Criar Treino
+            </button>
           </div>
         </div>
       </div>
 
       <div className="calendar-wrapper">
-  <LessonsCalendar lessons={lessons} />
-</div>
+        <LessonsCalendar lessons={lessons} />
+      </div>
+
+      {selectedLesson && (
+        <Modal title="Ficha do treino" onClose={() => setSelectedLesson(null)}>
+          <LessonDetailCard lesson={selectedLesson} students={students} />
+        </Modal>
+      )}
     </div>
   );
 }

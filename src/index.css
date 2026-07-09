@@ -992,3 +992,15 @@ body::before {
 .sidebar.mobile-open + .mobile-menu-backdrop {
   pointer-events: auto;
 }
+.lesson-preview-button {
+  width: 100%;
+  text-align: left;
+  background: #f8fafc;
+  color: inherit;
+  border: 1px solid #e2e8f0;
+}
+
+.lesson-preview-button:hover {
+  background: #eef6ff;
+  border-color: #bae6fd;
+}
