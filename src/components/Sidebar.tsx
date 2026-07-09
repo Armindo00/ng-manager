@@ -20,15 +20,26 @@ type Props = {
 
 function Sidebar({ user, activeSection, onChangeSection, onLogout }: Props) {
   const [open, setOpen] = useState(false);
-  useEffect(() => {
+
+ useEffect(() => {
+  const scrollY = window.scrollY;
+
   if (open) {
-    document.body.classList.add("menu-open");
-  } else {
-    document.body.classList.remove("menu-open");
+    document.body.style.position = "fixed";
+    document.body.style.top = "-" + scrollY + "px";
+    document.body.style.width = "100%";
   }
 
   return () => {
-    document.body.classList.remove("menu-open");
+    const top = document.body.style.top;
+
+    document.body.style.position = "";
+    document.body.style.top = "";
+    document.body.style.width = "";
+
+    if (top) {
+      window.scrollTo(0, parseInt(top || "0", 10) * -1);
+    }
   };
 }, [open]);
 
@@ -51,27 +62,23 @@ function Sidebar({ user, activeSection, onChangeSection, onLogout }: Props) {
 
   return (
     <>
-     {!open && (
-  <button className="mobile-menu-btn" onClick={() => setOpen(true)}>
-    ☰
-  </button>
-)}
+      <button className="mobile-menu-btn" onClick={() => setOpen(true)}>
+        ☰
+      </button>
 
       {open && (
         <div
-  className="mobile-menu-backdrop"
-  onClick={() => setOpen(false)}
-  onTouchMove={(event) => event.preventDefault()}
-/>
+          className="mobile-menu-backdrop"
+          onClick={() => setOpen(false)}
+          onTouchMove={(event) => event.preventDefault()}
+        />
       )}
 
       <aside className={open ? "sidebar mobile-open" : "sidebar"}>
-        <button
-  className="close-menu-btn"
-  onClick={() => setOpen(false)}
->
-  ✕
-</button>
+        <button className="close-menu-btn" onClick={() => setOpen(false)}>
+          ✕
+        </button>
+
         <div>
           <div className="sidebar-header">
             <div className="logo-circle">
@@ -118,13 +125,13 @@ function Sidebar({ user, activeSection, onChangeSection, onLogout }: Props) {
         </div>
 
         <div className="sidebar-footer">
-         <button
-  className="logout-btn"
-  onClick={() => {
-    setOpen(false);
-    onLogout();
-  }}
->
+          <button
+            className="logout-btn"
+            onClick={() => {
+              setOpen(false);
+              onLogout();
+            }}
+          >
             🚪 Terminar sessão
           </button>
         </div>

@@ -11,40 +11,39 @@ type Props = {
 
 function NotificationBell({ notifications }: Props) {
   const [open, setOpen] = useState(false);
-
-  const panelRef = useRef<HTMLDivElement>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    function handleClick(event: MouseEvent) {
+    function closeOnOutside(event: MouseEvent | TouchEvent) {
       if (
-        panelRef.current &&
-        !panelRef.current.contains(event.target as Node)
+        wrapperRef.current &&
+        !wrapperRef.current.contains(event.target as Node)
       ) {
         setOpen(false);
       }
     }
 
     if (open) {
-      document.addEventListener("mousedown", handleClick);
+      document.addEventListener("mousedown", closeOnOutside);
+      document.addEventListener("touchstart", closeOnOutside);
     }
 
     return () => {
-      document.removeEventListener("mousedown", handleClick);
+      document.removeEventListener("mousedown", closeOnOutside);
+      document.removeEventListener("touchstart", closeOnOutside);
     };
   }, [open]);
 
   return (
-    <div className="notification-wrapper" ref={panelRef}>
+    <div className="notification-wrapper" ref={wrapperRef}>
       <button
         className="notification-bell"
-        onClick={() => setOpen((prev) => !prev)}
+        onClick={() => setOpen((current) => !current)}
       >
         <span className="bell-icon">🔔</span>
 
         {notifications.length > 0 && (
-          <span className="notification-count">
-            {notifications.length}
-          </span>
+          <span className="notification-count">{notifications.length}</span>
         )}
       </button>
 

@@ -20,7 +20,7 @@ function LessonsCalendar({ lessons }: Props) {
   const startOffset = (firstDay.getDay() + 6) % 7;
   const daysInMonth = lastDay.getDate();
 
-  const cells = [];
+  const cells: Array<number | null> = [];
 
   for (let i = 0; i < startOffset; i++) {
     cells.push(null);
@@ -40,7 +40,10 @@ function LessonsCalendar({ lessons }: Props) {
 
   return (
     <div className="card section-card calendar-card">
-      <h2>📅 Calendário de treinos</h2>
+      <div className="calendar-title-row">
+        <h2>📅 Calendário de treinos</h2>
+      </div>
+
       <h3 className="calendar-month">{monthName}</h3>
 
       <div className="calendar-grid calendar-header">
@@ -54,21 +57,34 @@ function LessonsCalendar({ lessons }: Props) {
       </div>
 
       <div className="calendar-grid">
-        {cells.map((day, index) => (
-          <div className="calendar-day" key={index}>
-            {day && (
-              <>
-                <strong>{day}</strong>
+        {cells.map((day, index) => {
+          const dayLessons = day ? lessonsForDay(day) : [];
 
-                {lessonsForDay(day).map((lesson) => (
-                  <div className="calendar-lesson" key={lesson.id}>
-                    {lesson.time || "--:--"} · {lesson.groupName || "Treino"}
-                  </div>
-                ))}
-              </>
-            )}
-          </div>
-        ))}
+          return (
+            <div
+              className={
+                day === today.getDate()
+                  ? "calendar-day calendar-today"
+                  : "calendar-day"
+              }
+              key={index}
+            >
+              {day && (
+                <>
+                  <strong>{day}</strong>
+
+                  {dayLessons.length > 0 && (
+                    <div className="calendar-dots">
+                      {dayLessons.slice(0, 3).map((lesson) => (
+                        <span key={lesson.id} />
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );

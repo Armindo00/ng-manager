@@ -19,22 +19,24 @@ function Topbar({ user }: Props) {
   ];
 
   return (
-    <div className="topbar">
-      <div className="topbar-inner">
-        <div>
-          <p className="topbar-date">{today}</p>
-          <h2>Bem-vindo,<br />{user.name}</h2>
-        </div>
-
-        <div className="topbar-actions">
-          <NotificationBell notifications={notifications} />
-
-          <span className="topbar-avatar">
-            {user.name.charAt(0).toUpperCase()}
-          </span>
-        </div>
+    <header className="topbar">
+      <div className="topbar-copy">
+        <p className="topbar-date">{today}</p>
+        <h2>
+          Bem-vindo,
+          <br />
+          {user.name}
+        </h2>
       </div>
-    </div>
+
+      <div className="topbar-actions">
+        <NotificationBell notifications={notifications} />
+
+        <span className="topbar-avatar">
+          {user.name.charAt(0).toUpperCase()}
+        </span>
+      </div>
+    </header>
   );
 }
 
