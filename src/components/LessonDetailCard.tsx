@@ -16,6 +16,42 @@ function LessonDetailCard({ lesson, students }: Props) {
     currentLesson.bookedStudentIds.includes(student.id)
   );
 
+  async function publishLesson() {
+    const updatedLesson: Lesson = {
+      ...currentLesson,
+      status: "published",
+    };
+
+    setCurrentLesson(updatedLesson);
+
+    try {
+      await updateLesson(updatedLesson);
+      toast.success("Treino publicado com sucesso.");
+    } catch (error) {
+      console.error(error);
+      toast.error("Erro ao publicar treino.");
+      setCurrentLesson(currentLesson);
+    }
+  }
+
+  async function finishLesson() {
+    const updatedLesson: Lesson = {
+      ...currentLesson,
+      status: "finished",
+    };
+
+    setCurrentLesson(updatedLesson);
+
+    try {
+      await updateLesson(updatedLesson);
+      toast.success("Treino concluído.");
+    } catch (error) {
+      console.error(error);
+      toast.error("Erro ao concluir treino.");
+      setCurrentLesson(currentLesson);
+    }
+  }
+
   async function togglePresence(studentId: string) {
     const isPresent = currentLesson.presentStudentIds.includes(studentId);
 
@@ -30,7 +66,9 @@ function LessonDetailCard({ lesson, students }: Props) {
 
     try {
       await updateLesson(updatedLesson);
-      toast.success(isPresent ? "Aluno marcado como ausente." : "Presença marcada.");
+      toast.success(
+        isPresent ? "Aluno marcado como ausente." : "Presença marcada."
+      );
     } catch (error) {
       console.error(error);
       toast.error("Erro ao guardar presença.");
@@ -64,7 +102,29 @@ function LessonDetailCard({ lesson, students }: Props) {
           <p>{currentLesson.beach || "Praia por definir"}</p>
         </div>
 
-        <span className="lesson-status">{currentLesson.status}</span>
+        <span className={"lesson-status status-" + currentLesson.status}>
+          {currentLesson.status === "draft" && "Rascunho"}
+          {currentLesson.status === "published" && "Publicado"}
+          {currentLesson.status === "finished" && "Concluído"}
+        </span>
+      </div>
+
+      <div className="lesson-actions-bar">
+        {currentLesson.status === "draft" && (
+          <button className="primary-btn" onClick={publishLesson}>
+            📢 Publicar treino
+          </button>
+        )}
+
+        {currentLesson.status === "published" && (
+          <button className="primary-btn" onClick={finishLesson}>
+            ✅ Concluir treino
+          </button>
+        )}
+
+        {currentLesson.status === "finished" && (
+          <span className="muted">Este treino já foi concluído.</span>
+        )}
       </div>
 
       <div className="lesson-detail-grid">
@@ -103,12 +163,18 @@ function LessonDetailCard({ lesson, students }: Props) {
 
         <div className="lesson-students-list">
           {bookedStudents.map((student) => {
-            const isPresent = currentLesson.presentStudentIds.includes(student.id);
+            const isPresent = currentLesson.presentStudentIds.includes(
+              student.id
+            );
 
             return (
               <button
                 type="button"
-                className={isPresent ? "lesson-student-row present" : "lesson-student-row"}
+                className={
+                  isPresent
+                    ? "lesson-student-row present"
+                    : "lesson-student-row"
+                }
                 key={student.id}
                 onClick={() => togglePresence(student.id)}
               >

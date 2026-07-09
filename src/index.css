@@ -1265,3 +1265,34 @@ body::before {
 .calendar-day-lesson-row small {
   color: #64748b;
 }
+.lesson-actions-bar {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.status-draft {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.status-published {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.status-finished {
+  background: #e2e8f0;
+  color: #334155;
+}
+
+@media (max-width: 768px) {
+  .lesson-actions-bar {
+    justify-content: stretch;
+  }
+
+  .lesson-actions-bar button {
+    width: 100%;
+  }
+}
