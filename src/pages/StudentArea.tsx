@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
 import type { Lesson, MaterialRequest, Student, User } from "../types";
 import { getStudents } from "../services/studentsService";
 import { getLessons, updateLesson } from "../services/lessonsService";
@@ -22,12 +23,6 @@ function StudentArea({ user }: Props) {
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [transportType, setTransportType] = useState<"pickup" | "beach">("pickup");
-  const [selectedPickup, setSelectedPickup] = useState("");
-  const [availableFrom, setAvailableFrom] = useState("");
-  const [notes, setNotes] = useState("");
-  const [material, setMaterial] = useState<MaterialRequest>(emptyMaterial);
-
   useEffect(() => {
     loadData();
   }, []);
@@ -41,6 +36,9 @@ function StudentArea({ user }: Props) {
 
       setStudents(studentsData);
       setLessons(lessonsData.filter((lesson) => lesson.status === "published"));
+    } catch (error) {
+      console.error(error);
+      toast.error("Erro ao carregar treinos.");
     } finally {
       setLoading(false);
     }
@@ -58,26 +56,18 @@ function StudentArea({ user }: Props) {
 
   const studentId = student.id;
 
+  const myLessons = lessons.filter((lesson) =>
+    lesson.bookedStudentIds.includes(studentId)
+  );
+
   const attended = lessons.filter((lesson) =>
     lesson.presentStudentIds.includes(studentId)
   );
 
-  function toggleMaterial(key: keyof MaterialRequest) {
-    if (key === "other") return;
-
-    setMaterial({
-      ...material,
-      [key]: !material[key],
-    });
-  }
-
-  async function confirmLesson(lessonId: string) {
-    if (transportType === "pickup" && !selectedPickup) return;
-    if (!availableFrom) return;
-
-    const lesson = lessons.find((item) => item.id === lessonId);
-    if (!lesson) return;
-
+  async function respondToLesson(
+    lesson: Lesson,
+    status: "confirmed" | "declined"
+  ) {
     const responses = lesson.responses || [];
 
     const filteredResponses = responses.filter(
@@ -86,63 +76,29 @@ function StudentArea({ user }: Props) {
 
     const updatedLesson: Lesson = {
       ...lesson,
-      bookedStudentIds: lesson.bookedStudentIds.includes(studentId)
-        ? lesson.bookedStudentIds
-        : [...lesson.bookedStudentIds, studentId],
       responses: [
         ...filteredResponses,
         {
           studentId,
-          status: "confirmed",
-          transportType,
-          pickupLocation:
-            transportType === "pickup" ? selectedPickup : "Direto para a praia",
-          availableFrom,
-          material,
-          notes,
-        },
-      ],
-    };
-
-    await updateLesson(updatedLesson);
-    await loadData();
-
-    setTransportType("pickup");
-    setSelectedPickup("");
-    setAvailableFrom("");
-    setNotes("");
-    setMaterial(emptyMaterial);
-  }
-
-  async function declineLesson(lessonId: string) {
-    const lesson = lessons.find((item) => item.id === lessonId);
-    if (!lesson) return;
-
-    const responses = lesson.responses || [];
-
-    const filteredResponses = responses.filter(
-      (response) => response.studentId !== studentId
-    );
-
-    const updatedLesson: Lesson = {
-      ...lesson,
-      bookedStudentIds: lesson.bookedStudentIds.filter((id) => id !== studentId),
-      responses: [
-        ...filteredResponses,
-        {
-          studentId,
-          status: "declined",
+          status,
           transportType: "pickup",
           pickupLocation: "",
           availableFrom: "",
           material: emptyMaterial,
-          notes,
+          notes: "",
         },
       ],
     };
 
-    await updateLesson(updatedLesson);
-    await loadData();
+    try {
+      await updateLesson(updatedLesson);
+      await loadData();
+
+      toast.success(status === "confirmed" ? "Confirmaste presença." : "Marcaste que não vais.");
+    } catch (error) {
+      console.error(error);
+      toast.error("Erro ao guardar resposta.");
+    }
   }
 
   return (
@@ -167,12 +123,14 @@ function StudentArea({ user }: Props) {
       </div>
 
       <div className="card section-card">
-        <h2>Treinos disponíveis</h2>
+        <h2>Os meus treinos</h2>
 
-        {lessons.length === 0 && <p className="muted">Sem treinos criados.</p>}
+        {myLessons.length === 0 && (
+          <p className="muted">Não tens treinos atribuídos.</p>
+        )}
 
         <div className="lesson-list">
-          {lessons.map((lesson) => {
+          {myLessons.map((lesson) => {
             const response = lesson.responses?.find(
               (item) => item.studentId === studentId
             );
@@ -183,160 +141,37 @@ function StudentArea({ user }: Props) {
             return (
               <div className="lesson-card" key={lesson.id}>
                 <div>
-                  <h3>{lesson.date} · {lesson.time}</h3>
+                  <h3>
+                    {lesson.date} · {lesson.time || "--:--"}
+                  </h3>
 
                   {lesson.groupName && <p>Grupo: {lesson.groupName}</p>}
 
-                  <p>{lesson.beach}</p>
-                  <p>Treinador: {lesson.coachName}</p>
-                  <p>Carrinha: {lesson.van}</p>
+                  <p>🏖️ {lesson.beach || "Praia por definir"}</p>
+                  <p>👨‍🏫 Treinador: {lesson.coachName}</p>
+                  <p>🚐 Carrinha: {lesson.van || "Por definir"}</p>
+                  <p>🕒 Pickup: {lesson.pickupTime || "Por definir"}</p>
 
-                  {isConfirmed && <p className="muted">Confirmado</p>}
-                  {isDeclined && <p className="muted">Não vou</p>}
+                  {isConfirmed && <p className="muted">✅ Confirmado</p>}
+                  {isDeclined && <p className="muted">❌ Não vou</p>}
+                  {!isConfirmed && !isDeclined && (
+                    <p className="muted">Ainda não respondeste.</p>
+                  )}
                 </div>
 
-                <div>
-                  <h4>Como vais para o treino?</h4>
-
-                  <label className="check-row">
-                    <input
-                      type="radio"
-                      name={"transport-" + lesson.id}
-                      checked={transportType === "pickup"}
-                      onChange={() => setTransportType("pickup")}
-                    />
-                    Vou na carrinha
-                  </label>
-
-                  <label className="check-row">
-                    <input
-                      type="radio"
-                      name={"transport-" + lesson.id}
-                      checked={transportType === "beach"}
-                      onChange={() => setTransportType("beach")}
-                    />
-                    Vou direto para a praia
-                  </label>
-
-                  {transportType === "pickup" && (
-                    <>
-                      <h4>Escolher pickup</h4>
-
-                      {(lesson.coachPickups || []).length === 0 && (
-                        <p className="muted">
-                          O treinador ainda não definiu pickups.
-                        </p>
-                      )}
-
-                      {(lesson.coachPickups || []).map((pickup) => (
-                        <label className="check-row" key={pickup.id}>
-                          <input
-                            type="radio"
-                            name={"pickup-" + lesson.id}
-                            checked={selectedPickup === pickup.location}
-                            onChange={() => setSelectedPickup(pickup.location)}
-                          />
-                          {pickup.location} — {pickup.time}
-                        </label>
-                      ))}
-                    </>
-                  )}
-
-                  <h4>
-                    {transportType === "pickup"
-                      ? "A partir de que hora consegues estar no pickup?"
-                      : "A que horas chegas à praia?"}
-                  </h4>
-
-                  <input
-                    type="time"
-                    value={availableFrom}
-                    onChange={(e) => setAvailableFrom(e.target.value)}
-                  />
-
-                  <h4>Material necessário</h4>
-
-                  <label className="check-row">
-                    <input
-                      type="checkbox"
-                      checked={material.softboard}
-                      onChange={() => toggleMaterial("softboard")}
-                    />
-                    Softboard
-                  </label>
-
-                  <label className="check-row">
-                    <input
-                      type="checkbox"
-                      checked={material.fiberBoard}
-                      onChange={() => toggleMaterial("fiberBoard")}
-                    />
-                    Prancha fibra
-                  </label>
-
-                  <label className="check-row">
-                    <input
-                      type="checkbox"
-                      checked={material.wetsuit}
-                      onChange={() => toggleMaterial("wetsuit")}
-                    />
-                    Fato
-                  </label>
-
-                  <label className="check-row">
-                    <input
-                      type="checkbox"
-                      checked={material.lycra}
-                      onChange={() => toggleMaterial("lycra")}
-                    />
-                    Licra
-                  </label>
-
-                  <label className="check-row">
-                    <input
-                      type="checkbox"
-                      checked={material.leash}
-                      onChange={() => toggleMaterial("leash")}
-                    />
-                    Leash
-                  </label>
-
-                  <label className="check-row">
-                    <input
-                      type="checkbox"
-                      checked={material.vest}
-                      onChange={() => toggleMaterial("vest")}
-                    />
-                    Colete
-                  </label>
-
-                  <input
-                    placeholder="Outro material"
-                    value={material.other}
-                    onChange={(e) =>
-                      setMaterial({ ...material, other: e.target.value })
-                    }
-                  />
-
-                  <input
-                    placeholder="Observações"
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                  />
-
+                <div className="student-lesson-actions">
                   <button
                     className="primary-btn"
-                    onClick={() => confirmLesson(lesson.id)}
+                    onClick={() => respondToLesson(lesson, "confirmed")}
                   >
-                    Vou ao treino
+                    ✅ Vou
                   </button>
 
                   <button
                     className="danger-btn"
-                    onClick={() => declineLesson(lesson.id)}
-                    style={{ marginLeft: 8 }}
+                    onClick={() => respondToLesson(lesson, "declined")}
                   >
-                    Não vou
+                    ❌ Não vou
                   </button>
                 </div>
               </div>

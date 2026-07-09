@@ -1361,3 +1361,15 @@ body::before {
     align-items: stretch;
   }
 }
+.student-lesson-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+@media (max-width: 768px) {
+  .student-lesson-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
