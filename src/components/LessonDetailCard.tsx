@@ -26,13 +26,15 @@ function LessonDetailCard({ lesson, students }: Props) {
         : [...currentLesson.presentStudentIds, studentId],
     };
 
+    setCurrentLesson(updatedLesson);
+
     try {
-      setCurrentLesson(updatedLesson);
       await updateLesson(updatedLesson);
       toast.success(isPresent ? "Aluno marcado como ausente." : "Presença marcada.");
     } catch (error) {
       console.error(error);
-      toast.error("Erro ao atualizar presença.");
+      toast.error("Erro ao guardar presença.");
+      setCurrentLesson(currentLesson);
     }
   }
 
@@ -42,8 +44,9 @@ function LessonDetailCard({ lesson, students }: Props) {
       coachNotes,
     };
 
+    setCurrentLesson(updatedLesson);
+
     try {
-      setCurrentLesson(updatedLesson);
       await updateLesson(updatedLesson);
       toast.success("Notas guardadas.");
     } catch (error) {
@@ -100,18 +103,12 @@ function LessonDetailCard({ lesson, students }: Props) {
 
         <div className="lesson-students-list">
           {bookedStudents.map((student) => {
-            const isPresent = currentLesson.presentStudentIds.includes(
-              student.id
-            );
+            const isPresent = currentLesson.presentStudentIds.includes(student.id);
 
             return (
               <button
                 type="button"
-                className={
-                  isPresent
-                    ? "lesson-student-row present"
-                    : "lesson-student-row"
-                }
+                className={isPresent ? "lesson-student-row present" : "lesson-student-row"}
                 key={student.id}
                 onClick={() => togglePresence(student.id)}
               >
