@@ -52,11 +52,22 @@ function LessonDetailCard({ lesson, students }: Props) {
     }
   }
 
-  function updateField(field: keyof Lesson, value: string) {
-    saveLessonChanges(
-      { ...currentLesson, [field]: value },
-      "Treino atualizado."
+  function getStudentResponse(studentId: string) {
+    return currentLesson.responses?.find(
+      (response) => response.studentId === studentId
     );
+  }
+
+  function responseText(studentId: string) {
+    const response = getStudentResponse(studentId);
+
+    if (response?.status === "confirmed") return "🟢 Confirmou";
+    if (response?.status === "declined") return "🔴 Não vai";
+    return "⏳ Sem resposta";
+  }
+
+  function updateField(field: keyof Lesson, value: string) {
+    saveLessonChanges({ ...currentLesson, [field]: value }, "Treino atualizado.");
   }
 
   function updateCoach(coachId: string) {
@@ -84,41 +95,45 @@ function LessonDetailCard({ lesson, students }: Props) {
   }
 
   function addStudent(studentId: string) {
-    const updatedLesson: Lesson = {
-      ...currentLesson,
-      bookedStudentIds: [...currentLesson.bookedStudentIds, studentId],
-    };
+    saveLessonChanges(
+      {
+        ...currentLesson,
+        bookedStudentIds: [...currentLesson.bookedStudentIds, studentId],
+      },
+      "Aluno adicionado ao treino."
+    );
 
-    saveLessonChanges(updatedLesson, "Aluno adicionado ao treino.");
     setStudentSearch("");
   }
 
   function removeStudent(studentId: string) {
-    const updatedLesson: Lesson = {
-      ...currentLesson,
-      bookedStudentIds: currentLesson.bookedStudentIds.filter(
-        (id) => id !== studentId
-      ),
-      presentStudentIds: currentLesson.presentStudentIds.filter(
-        (id) => id !== studentId
-      ),
-    };
-
-    saveLessonChanges(updatedLesson, "Aluno removido do treino.");
+    saveLessonChanges(
+      {
+        ...currentLesson,
+        bookedStudentIds: currentLesson.bookedStudentIds.filter(
+          (id) => id !== studentId
+        ),
+        presentStudentIds: currentLesson.presentStudentIds.filter(
+          (id) => id !== studentId
+        ),
+        responses: (currentLesson.responses || []).filter(
+          (response) => response.studentId !== studentId
+        ),
+      },
+      "Aluno removido do treino."
+    );
   }
 
   function togglePresence(studentId: string) {
     const isPresent = currentLesson.presentStudentIds.includes(studentId);
 
-    const updatedLesson: Lesson = {
-      ...currentLesson,
-      presentStudentIds: isPresent
-        ? currentLesson.presentStudentIds.filter((id) => id !== studentId)
-        : [...currentLesson.presentStudentIds, studentId],
-    };
-
     saveLessonChanges(
-      updatedLesson,
+      {
+        ...currentLesson,
+        presentStudentIds: isPresent
+          ? currentLesson.presentStudentIds.filter((id) => id !== studentId)
+          : [...currentLesson.presentStudentIds, studentId],
+      },
       isPresent ? "Aluno marcado como ausente." : "Presença marcada."
     );
   }
@@ -236,7 +251,12 @@ function LessonDetailCard({ lesson, students }: Props) {
         <div className="lesson-students-list">
           {bookedStudents.map((student) => (
             <div className="lesson-student-manage-row" key={student.id}>
-              <span>{student.name}</span>
+              <div>
+                <strong>{student.name}</strong>
+                <p className="student-response-status">
+                  {responseText(student.id)}
+                </p>
+              </div>
 
               <button
                 type="button"
@@ -286,9 +306,7 @@ function LessonDetailCard({ lesson, students }: Props) {
 
         <div className="lesson-students-list">
           {bookedStudents.map((student) => {
-            const isPresent = currentLesson.presentStudentIds.includes(
-              student.id
-            );
+            const isPresent = currentLesson.presentStudentIds.includes(student.id);
 
             return (
               <button
@@ -301,7 +319,13 @@ function LessonDetailCard({ lesson, students }: Props) {
                 key={student.id}
                 onClick={() => togglePresence(student.id)}
               >
-                <span>{student.name}</span>
+                <span>
+                  {student.name}
+                  <small className="student-response-status">
+                    {responseText(student.id)}
+                  </small>
+                </span>
+
                 <strong>{isPresent ? "✅ Presente" : "⬜ Ausente"}</strong>
               </button>
             );

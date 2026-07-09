@@ -1373,3 +1373,10 @@ body::before {
     align-items: stretch;
   }
 }
+.student-response-status {
+  display: block;
+  margin: 4px 0 0;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+}
