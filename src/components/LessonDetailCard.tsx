@@ -13,9 +13,16 @@ function LessonDetailCard({ lesson, students }: Props) {
   const [currentLesson, setCurrentLesson] = useState<Lesson>(lesson);
   const [coachNotes, setCoachNotes] = useState(lesson.coachNotes || "");
   const [coaches, setCoaches] = useState<Coach[]>([]);
+  const [studentSearch, setStudentSearch] = useState("");
 
   const bookedStudents = students.filter((student) =>
     currentLesson.bookedStudentIds.includes(student.id)
+  );
+
+  const availableStudents = students.filter(
+    (student) =>
+      !currentLesson.bookedStudentIds.includes(student.id) &&
+      student.name.toLowerCase().includes(studentSearch.toLowerCase())
   );
 
   useEffect(() => {
@@ -33,7 +40,6 @@ function LessonDetailCard({ lesson, students }: Props) {
 
   async function saveLessonChanges(updatedLesson: Lesson, successMessage: string) {
     const previousLesson = currentLesson;
-
     setCurrentLesson(updatedLesson);
 
     try {
@@ -47,42 +53,61 @@ function LessonDetailCard({ lesson, students }: Props) {
   }
 
   function updateField(field: keyof Lesson, value: string) {
-    const updatedLesson = {
-      ...currentLesson,
-      [field]: value,
-    };
-
-    saveLessonChanges(updatedLesson, "Treino atualizado.");
+    saveLessonChanges(
+      { ...currentLesson, [field]: value },
+      "Treino atualizado."
+    );
   }
 
   function updateCoach(coachId: string) {
     const coach = coaches.find((item) => item.id === coachId);
     if (!coach) return;
 
-    const updatedLesson: Lesson = {
-      ...currentLesson,
-      coachId: coach.id,
-      coachName: coach.name,
-    };
-
-    saveLessonChanges(updatedLesson, "Treinador atualizado.");
+    saveLessonChanges(
+      { ...currentLesson, coachId: coach.id, coachName: coach.name },
+      "Treinador atualizado."
+    );
   }
 
-  async function publishLesson() {
+  function publishLesson() {
     saveLessonChanges(
       { ...currentLesson, status: "published" },
       "Treino publicado com sucesso."
     );
   }
 
-  async function finishLesson() {
+  function finishLesson() {
     saveLessonChanges(
       { ...currentLesson, status: "finished" },
       "Treino concluído."
     );
   }
 
-  async function togglePresence(studentId: string) {
+  function addStudent(studentId: string) {
+    const updatedLesson: Lesson = {
+      ...currentLesson,
+      bookedStudentIds: [...currentLesson.bookedStudentIds, studentId],
+    };
+
+    saveLessonChanges(updatedLesson, "Aluno adicionado ao treino.");
+    setStudentSearch("");
+  }
+
+  function removeStudent(studentId: string) {
+    const updatedLesson: Lesson = {
+      ...currentLesson,
+      bookedStudentIds: currentLesson.bookedStudentIds.filter(
+        (id) => id !== studentId
+      ),
+      presentStudentIds: currentLesson.presentStudentIds.filter(
+        (id) => id !== studentId
+      ),
+    };
+
+    saveLessonChanges(updatedLesson, "Aluno removido do treino.");
+  }
+
+  function togglePresence(studentId: string) {
     const isPresent = currentLesson.presentStudentIds.includes(studentId);
 
     const updatedLesson: Lesson = {
@@ -98,11 +123,8 @@ function LessonDetailCard({ lesson, students }: Props) {
     );
   }
 
-  async function saveNotes() {
-    saveLessonChanges(
-      { ...currentLesson, coachNotes },
-      "Notas guardadas."
-    );
+  function saveNotes() {
+    saveLessonChanges({ ...currentLesson, coachNotes }, "Notas guardadas.");
   }
 
   return (
@@ -201,34 +223,10 @@ function LessonDetailCard({ lesson, students }: Props) {
         </div>
       </div>
 
-      <div className="lesson-detail-grid">
-        <div>
-          <span>📅 Data</span>
-          <strong>{currentLesson.date}</strong>
-        </div>
-
-        <div>
-          <span>🕒 Hora</span>
-          <strong>{currentLesson.time || "--:--"}</strong>
-        </div>
-
-        <div>
-          <span>👨‍🏫 Treinador</span>
-          <strong>{currentLesson.coachName}</strong>
-        </div>
-
-        <div>
-          <span>🚐 Carrinha</span>
-          <strong>{currentLesson.van || "Por definir"}</strong>
-        </div>
-      </div>
-
       <div className="lesson-section">
         <div className="lesson-section-header">
-          <h3>👥 Presenças</h3>
-          <span>
-            {currentLesson.presentStudentIds.length}/{bookedStudents.length}
-          </span>
+          <h3>👥 Inscritos</h3>
+          <span>{bookedStudents.length}</span>
         </div>
 
         {bookedStudents.length === 0 && (
@@ -236,13 +234,70 @@ function LessonDetailCard({ lesson, students }: Props) {
         )}
 
         <div className="lesson-students-list">
+          {bookedStudents.map((student) => (
+            <div className="lesson-student-manage-row" key={student.id}>
+              <span>{student.name}</span>
+
+              <button
+                type="button"
+                className="danger-btn compact-btn"
+                onClick={() => removeStudent(student.id)}
+              >
+                Remover
+              </button>
+            </div>
+          ))}
+        </div>
+
+        <div className="lesson-add-student">
+          <input
+            placeholder="Pesquisar aluno para adicionar..."
+            value={studentSearch}
+            onChange={(e) => setStudentSearch(e.target.value)}
+          />
+
+          {studentSearch && (
+            <div className="lesson-add-results">
+              {availableStudents.slice(0, 5).map((student) => (
+                <button
+                  type="button"
+                  key={student.id}
+                  onClick={() => addStudent(student.id)}
+                >
+                  ➕ {student.name}
+                </button>
+              ))}
+
+              {availableStudents.length === 0 && (
+                <p className="muted">Nenhum aluno encontrado.</p>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="lesson-section">
+        <div className="lesson-section-header">
+          <h3>✅ Presenças</h3>
+          <span>
+            {currentLesson.presentStudentIds.length}/{bookedStudents.length}
+          </span>
+        </div>
+
+        <div className="lesson-students-list">
           {bookedStudents.map((student) => {
-            const isPresent = currentLesson.presentStudentIds.includes(student.id);
+            const isPresent = currentLesson.presentStudentIds.includes(
+              student.id
+            );
 
             return (
               <button
                 type="button"
-                className={isPresent ? "lesson-student-row present" : "lesson-student-row"}
+                className={
+                  isPresent
+                    ? "lesson-student-row present"
+                    : "lesson-student-row"
+                }
                 key={student.id}
                 onClick={() => togglePresence(student.id)}
               >
