@@ -6,7 +6,19 @@ import { getLessons } from "../services/lessonsService";
 import { getEvaluations } from "../services/evaluationsService";
 import LessonsCalendar from "../components/LessonsCalendar";
 
-function AdminDashboard() {
+type AdminSection =
+  | "dashboard"
+  | "students"
+  | "coaches"
+  | "groups"
+  | "recurring"
+  | "lessons"
+  | "payments";
+
+type Props = {
+  onChangeSection: (section: AdminSection) => void;
+};
+function AdminDashboard({ onChangeSection }: Props) {
   const [students, setStudents] = useState<Student[]>([]);
   const [coaches, setCoaches] = useState<Coach[]>([]);
   const [lessons, setLessons] = useState<Lesson[]>([]);
@@ -121,10 +133,21 @@ function AdminDashboard() {
           <h2>⚡ Ações Rápidas</h2>
 
           <div className="quick-actions">
-            <button className="primary-btn">➕ Novo Aluno</button>
-            <button className="primary-btn">👨‍🏫 Novo Treinador</button>
-            <button className="primary-btn">👥 Novo Grupo</button>
-            <button className="primary-btn">🏄 Criar Treino</button>
+            <button className="primary-btn" onClick={() => onChangeSection("students")}>
+  ➕ Novo Aluno
+</button>
+
+<button className="primary-btn" onClick={() => onChangeSection("coaches")}>
+  👨‍🏫 Novo Treinador
+</button>
+
+<button className="primary-btn" onClick={() => onChangeSection("groups")}>
+  👥 Novo Grupo
+</button>
+
+<button className="primary-btn" onClick={() => onChangeSection("lessons")}>
+  🏄 Criar Treino
+</button>
           </div>
         </div>
       </div>
