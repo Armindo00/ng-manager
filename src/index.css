@@ -1219,3 +1219,49 @@ body::before {
     align-items: flex-start;
   }
 }
+.calendar-day {
+  cursor: pointer;
+}
+
+.calendar-day:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.calendar-more {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  color: #0284c7;
+  font-weight: 800;
+}
+
+.calendar-day-lessons-list {
+  display: grid;
+  gap: 12px;
+}
+
+.calendar-day-lesson-row {
+  width: 100%;
+  text-align: left;
+  display: grid;
+  gap: 4px;
+  padding: 16px;
+  border-radius: 16px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #0f172a;
+}
+
+.calendar-day-lesson-row:hover {
+  background: #e0f2fe;
+  border-color: #38bdf8;
+}
+
+.calendar-day-lesson-row strong {
+  color: #0284c7;
+}
+
+.calendar-day-lesson-row small {
+  color: #64748b;
+}

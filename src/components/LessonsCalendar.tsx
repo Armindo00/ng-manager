@@ -2,9 +2,10 @@ import type { Lesson } from "../types";
 
 type Props = {
   lessons: Lesson[];
+  onSelectDay: (lessons: Lesson[], date: string) => void;
 };
 
-function LessonsCalendar({ lessons }: Props) {
+function LessonsCalendar({ lessons, onSelectDay }: Props) {
   const today = new Date();
   const year = today.getFullYear();
   const month = today.getMonth();
@@ -30,11 +31,15 @@ function LessonsCalendar({ lessons }: Props) {
     cells.push(day);
   }
 
-  function lessonsForDay(day: number) {
-    const date = `${year}-${String(month + 1).padStart(2, "0")}-${String(
-      day
-    ).padStart(2, "0")}`;
+  function getDateForDay(day: number) {
+    return `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(
+      2,
+      "0"
+    )}`;
+  }
 
+  function lessonsForDay(day: number) {
+    const date = getDateForDay(day);
     return lessons.filter((lesson) => lesson.date === date);
   }
 
@@ -59,15 +64,23 @@ function LessonsCalendar({ lessons }: Props) {
       <div className="calendar-grid">
         {cells.map((day, index) => {
           const dayLessons = day ? lessonsForDay(day) : [];
+          const date = day ? getDateForDay(day) : "";
 
           return (
-            <div
+            <button
+              type="button"
               className={
                 day === today.getDate()
                   ? "calendar-day calendar-today"
                   : "calendar-day"
               }
               key={index}
+              disabled={!day || dayLessons.length === 0}
+              onClick={() => {
+                if (day && dayLessons.length > 0) {
+                  onSelectDay(dayLessons, date);
+                }
+              }}
             >
               {day && (
                 <>
@@ -80,9 +93,13 @@ function LessonsCalendar({ lessons }: Props) {
                       ))}
                     </div>
                   )}
+
+                  {dayLessons.length > 3 && (
+                    <small className="calendar-more">+{dayLessons.length - 3}</small>
+                  )}
                 </>
               )}
-            </div>
+            </button>
           );
         })}
       </div>

@@ -27,6 +27,8 @@ function AdminDashboard({ onChangeSection }: Props) {
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [evaluations, setEvaluations] = useState<MonthlyEvaluation[]>([]);
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
+  const [dayLessons, setDayLessons] = useState<Lesson[]>([]);
+  const [selectedDate, setSelectedDate] = useState("");
 
   useEffect(() => {
     loadData();
@@ -37,6 +39,16 @@ function AdminDashboard({ onChangeSection }: Props) {
     setCoaches(await getCoaches());
     setLessons(await getLessons());
     setEvaluations(await getEvaluations());
+  }
+
+  function handleSelectCalendarDay(dayLessonsList: Lesson[], date: string) {
+    if (dayLessonsList.length === 1) {
+      setSelectedLesson(dayLessonsList[0]);
+      return;
+    }
+
+    setDayLessons(dayLessonsList);
+    setSelectedDate(date);
   }
 
   const pendingPayments = students.filter((student) => !student.paid).length;
@@ -150,31 +162,19 @@ function AdminDashboard({ onChangeSection }: Props) {
           <h2>⚡ Ações Rápidas</h2>
 
           <div className="quick-actions">
-            <button
-              className="primary-btn"
-              onClick={() => onChangeSection("students")}
-            >
+            <button className="primary-btn" onClick={() => onChangeSection("students")}>
               ➕ Novo Aluno
             </button>
 
-            <button
-              className="primary-btn"
-              onClick={() => onChangeSection("coaches")}
-            >
+            <button className="primary-btn" onClick={() => onChangeSection("coaches")}>
               👨‍🏫 Novo Treinador
             </button>
 
-            <button
-              className="primary-btn"
-              onClick={() => onChangeSection("groups")}
-            >
+            <button className="primary-btn" onClick={() => onChangeSection("groups")}>
               👥 Novo Grupo
             </button>
 
-            <button
-              className="primary-btn"
-              onClick={() => onChangeSection("lessons")}
-            >
+            <button className="primary-btn" onClick={() => onChangeSection("lessons")}>
               🏄 Criar Treino
             </button>
           </div>
@@ -182,8 +182,40 @@ function AdminDashboard({ onChangeSection }: Props) {
       </div>
 
       <div className="calendar-wrapper">
-        <LessonsCalendar lessons={lessons} />
+        <LessonsCalendar
+          lessons={lessons}
+          onSelectDay={handleSelectCalendarDay}
+        />
       </div>
+
+      {dayLessons.length > 1 && (
+        <Modal
+          title={`Treinos de ${selectedDate}`}
+          onClose={() => {
+            setDayLessons([]);
+            setSelectedDate("");
+          }}
+        >
+          <div className="calendar-day-lessons-list">
+            {dayLessons.map((lesson) => (
+              <button
+                type="button"
+                className="calendar-day-lesson-row"
+                key={lesson.id}
+                onClick={() => {
+                  setDayLessons([]);
+                  setSelectedDate("");
+                  setSelectedLesson(lesson);
+                }}
+              >
+                <strong>{lesson.time || "--:--"}</strong>
+                <span>{lesson.groupName || "Treino Extra"}</span>
+                <small>{lesson.beach || "Praia por definir"}</small>
+              </button>
+            ))}
+          </div>
+        </Modal>
+      )}
 
       {selectedLesson && (
         <Modal title="Ficha do treino" onClose={() => setSelectedLesson(null)}>
