@@ -1031,3 +1031,57 @@ body::before {
 .lesson-preview-button * {
   pointer-events: none !important;
 }
+/* ===========================
+   MODAL
+=========================== */
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 20px;
+}
+
+.modal-card {
+  width: min(900px, 100%);
+  max-height: 90vh;
+  overflow-y: auto;
+  background: white;
+  border-radius: 24px;
+  padding: 24px;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.3);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.modal-close {
+  width: 42px;
+  height: 42px;
+  border: none;
+  border-radius: 12px;
+  background: #f1f5f9;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.modal-close:hover {
+  background: #e2e8f0;
+}
+
+@media (max-width: 768px) {
+  .modal-card {
+    width: 100%;
+    max-height: 92vh;
+    border-radius: 18px;
+    padding: 18px;
+  }
+}
