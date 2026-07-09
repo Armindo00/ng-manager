@@ -791,3 +791,36 @@ textarea:focus {
     white-space: nowrap;
   }
 }
+@media (max-width: 768px) {
+  .stat-card {
+    min-height: 96px;
+    padding: 14px;
+  }
+
+  .stat-label {
+    font-size: 13px;
+  }
+
+  .stat-number {
+    font-size: 30px;
+  }
+
+  .lesson-preview {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 14px;
+    font-size: 14px;
+  }
+
+  .lesson-preview strong {
+    font-size: 15px;
+  }
+
+  .quick-actions button {
+    height: 52px;
+    padding: 12px;
+    font-size: 15px;
+  }
+}
