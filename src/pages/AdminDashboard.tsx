@@ -121,16 +121,23 @@ function AdminDashboard({ onChangeSection }: Props) {
 
           <div className="lesson-preview-list">
             {upcomingLessons.map((lesson) => (
-              <button
+              <div
                 className="lesson-preview lesson-preview-button"
                 key={lesson.id}
+                role="button"
+                tabIndex={0}
                 onClick={() => setSelectedLesson(lesson)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    setSelectedLesson(lesson);
+                  }
+                }}
               >
                 <strong>{lesson.date}</strong>
                 <span>{lesson.time || "--:--"}</span>
                 <span>{lesson.groupName || "Treino Extra"}</span>
                 <span>{lesson.beach || "Praia por definir"}</span>
-              </button>
+              </div>
             ))}
           </div>
 

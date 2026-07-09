@@ -1004,3 +1004,30 @@ body::before {
   background: #eef6ff;
   border-color: #bae6fd;
 }
+.lesson-preview-button {
+  cursor: pointer !important;
+  pointer-events: auto !important;
+  border: 1px solid #e2e8f0 !important;
+  background: #f8fafc !important;
+  color: #334155 !important;
+  width: 100% !important;
+  appearance: none !important;
+}
+
+.lesson-preview-button * {
+  pointer-events: none !important;
+}
+
+.lesson-preview-button:hover,
+.lesson-preview-button:active {
+  background: #e0f2fe !important;
+  border-color: #38bdf8 !important;
+}
+.lesson-preview-button {
+  cursor: pointer !important;
+  pointer-events: auto !important;
+}
+
+.lesson-preview-button * {
+  pointer-events: none !important;
+}
