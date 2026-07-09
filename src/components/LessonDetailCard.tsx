@@ -1,4 +1,5 @@
 import { useState } from "react";
+import toast from "react-hot-toast";
 import type { Lesson, Student } from "../types";
 import { updateLesson } from "../services/lessonsService";
 
@@ -25,8 +26,14 @@ function LessonDetailCard({ lesson, students }: Props) {
         : [...currentLesson.presentStudentIds, studentId],
     };
 
-    setCurrentLesson(updatedLesson);
-    await updateLesson(updatedLesson);
+    try {
+      setCurrentLesson(updatedLesson);
+      await updateLesson(updatedLesson);
+      toast.success(isPresent ? "Aluno marcado como ausente." : "Presença marcada.");
+    } catch (error) {
+      console.error(error);
+      toast.error("Erro ao atualizar presença.");
+    }
   }
 
   async function saveNotes() {
@@ -35,50 +42,88 @@ function LessonDetailCard({ lesson, students }: Props) {
       coachNotes,
     };
 
-    setCurrentLesson(updatedLesson);
-    await updateLesson(updatedLesson);
-
-    alert("Notas guardadas.");
+    try {
+      setCurrentLesson(updatedLesson);
+      await updateLesson(updatedLesson);
+      toast.success("Notas guardadas.");
+    } catch (error) {
+      console.error(error);
+      toast.error("Erro ao guardar notas.");
+    }
   }
 
   return (
     <div className="lesson-detail-card">
-      <h2>{currentLesson.groupName || "Treino extra"}</h2>
+      <div className="lesson-detail-hero">
+        <div>
+          <span className="lesson-kicker">Treino</span>
+          <h2>{currentLesson.groupName || "Treino extra"}</h2>
+          <p>{currentLesson.beach || "Praia por definir"}</p>
+        </div>
 
-      <div className="lesson-detail-grid">
-        <p>📅 Data: {currentLesson.date}</p>
-        <p>🕒 Hora: {currentLesson.time || "--:--"}</p>
-        <p>🏖️ Praia: {currentLesson.beach || "Por definir"}</p>
-        <p>👨‍🏫 Treinador: {currentLesson.coachName}</p>
-        <p>🚐 Carrinha: {currentLesson.van}</p>
-        <p>📌 Estado: {currentLesson.status}</p>
+        <span className="lesson-status">{currentLesson.status}</span>
       </div>
 
-      <h3>👥 Lista de presenças</h3>
+      <div className="lesson-detail-grid">
+        <div>
+          <span>📅 Data</span>
+          <strong>{currentLesson.date}</strong>
+        </div>
 
-      {bookedStudents.length === 0 && (
-        <p className="muted">Ainda não existem alunos neste treino.</p>
-      )}
+        <div>
+          <span>🕒 Hora</span>
+          <strong>{currentLesson.time || "--:--"}</strong>
+        </div>
 
-      {bookedStudents.map((student) => {
-        const isPresent = currentLesson.presentStudentIds.includes(student.id);
+        <div>
+          <span>👨‍🏫 Treinador</span>
+          <strong>{currentLesson.coachName}</strong>
+        </div>
 
-        return (
-          <label className="lesson-student-row" key={student.id}>
-            <span>{student.name}</span>
+        <div>
+          <span>🚐 Carrinha</span>
+          <strong>{currentLesson.van || "Por definir"}</strong>
+        </div>
+      </div>
 
-            <input
-              type="checkbox"
-              checked={isPresent}
-              onChange={() => togglePresence(student.id)}
-            />
+      <div className="lesson-section">
+        <div className="lesson-section-header">
+          <h3>👥 Presenças</h3>
+          <span>
+            {currentLesson.presentStudentIds.length}/{bookedStudents.length}
+          </span>
+        </div>
 
-            <strong>{isPresent ? "✅ Presente" : "⬜ Ausente"}</strong>
-          </label>
-        );
-      })}
+        {bookedStudents.length === 0 && (
+          <p className="muted">Ainda não existem alunos neste treino.</p>
+        )}
 
-      <div className="lesson-notes-box">
+        <div className="lesson-students-list">
+          {bookedStudents.map((student) => {
+            const isPresent = currentLesson.presentStudentIds.includes(
+              student.id
+            );
+
+            return (
+              <button
+                type="button"
+                className={
+                  isPresent
+                    ? "lesson-student-row present"
+                    : "lesson-student-row"
+                }
+                key={student.id}
+                onClick={() => togglePresence(student.id)}
+              >
+                <span>{student.name}</span>
+                <strong>{isPresent ? "✅ Presente" : "⬜ Ausente"}</strong>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="lesson-section">
         <h3>📝 Notas do treinador</h3>
 
         <textarea

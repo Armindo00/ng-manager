@@ -1085,3 +1085,137 @@ body::before {
     padding: 18px;
   }
 }
+.lesson-detail-card {
+  display: grid;
+  gap: 20px;
+}
+
+.lesson-detail-hero {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, #e0f2fe, #f8fafc);
+  border: 1px solid #bae6fd;
+}
+
+.lesson-kicker {
+  color: #0284c7;
+  font-weight: 900;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.lesson-detail-hero h2 {
+  margin: 6px 0;
+}
+
+.lesson-detail-hero p {
+  margin: 0;
+  color: #64748b;
+}
+
+.lesson-status {
+  height: fit-content;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: white;
+  color: #0284c7;
+  font-weight: 800;
+  font-size: 12px;
+}
+
+.lesson-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+
+.lesson-detail-grid div {
+  padding: 16px;
+  border-radius: 16px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.lesson-detail-grid span {
+  display: block;
+  color: #64748b;
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+
+.lesson-detail-grid strong {
+  font-size: 15px;
+}
+
+.lesson-section {
+  padding: 18px;
+  border-radius: 18px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.lesson-section h3 {
+  margin-top: 0;
+}
+
+.lesson-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.lesson-section-header span {
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: white;
+  color: #0284c7;
+  font-weight: 800;
+}
+
+.lesson-students-list {
+  display: grid;
+  gap: 10px;
+}
+
+.lesson-student-row {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  padding: 14px;
+  border-radius: 14px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  color: #0f172a;
+  text-align: left;
+}
+
+.lesson-student-row.present {
+  border-color: #86efac;
+  background: #f0fdf4;
+}
+
+.lesson-section textarea {
+  width: 100%;
+  margin: 0 0 12px;
+}
+
+@media (max-width: 768px) {
+  .lesson-detail-hero {
+    flex-direction: column;
+  }
+
+  .lesson-detail-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .lesson-student-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
