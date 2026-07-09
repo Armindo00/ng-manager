@@ -981,3 +981,14 @@ textarea:focus {
     border-radius: 16px !important;
   }
 }
+body::before {
+  pointer-events: none !important;
+}
+
+.mobile-menu-backdrop {
+  pointer-events: none;
+}
+
+.sidebar.mobile-open + .mobile-menu-backdrop {
+  pointer-events: auto;
+}
