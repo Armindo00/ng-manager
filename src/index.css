@@ -1338,3 +1338,21 @@ body.menu-open {
     line-height: 18px;
   }
 }
+@media (max-width: 768px) {
+  .mobile-menu-btn {
+    position: fixed !important;
+    top: 18px !important;
+    left: 16px !important;
+  }
+
+  .dashboard-row,
+  .calendar-wrapper {
+    position: relative;
+    z-index: 1;
+  }
+
+  .quick-actions {
+    position: relative;
+    z-index: 1;
+  }
+}
