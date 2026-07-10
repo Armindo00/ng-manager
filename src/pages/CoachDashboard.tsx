@@ -1,8 +1,11 @@
 import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
 import type { Lesson, MonthlyEvaluation, Student, User } from "../types";
 import { getStudents } from "../services/studentsService";
 import { getLessons } from "../services/lessonsService";
 import { getEvaluations } from "../services/evaluationsService";
+import Modal from "../components/Modal";
+import LessonDetailCard from "../components/LessonDetailCard";
 
 type Props = {
   user: User;
@@ -12,26 +15,65 @@ function CoachDashboard({ user }: Props) {
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [evaluations, setEvaluations] = useState<MonthlyEvaluation[]>([]);
+  const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadData();
   }, []);
 
   async function loadData() {
-    const lessonsData = await getLessons();
-    const studentsData = await getStudents();
-    const evaluationsData = await getEvaluations();
+    try {
+      setLoading(true);
 
-    setLessons(lessonsData.filter((lesson) => lesson.coachName === user.name));
-    setStudents(studentsData);
-    setEvaluations(evaluationsData);
+      const [lessonsData, studentsData, evaluationsData] = await Promise.all([
+        getLessons(),
+        getStudents(),
+        getEvaluations(),
+      ]);
+
+      const coachLessons = lessonsData.filter(
+        (lesson) =>
+          lesson.coachId === user.id || lesson.coachName === user.name
+      );
+
+      setLessons(coachLessons);
+      setStudents(studentsData);
+      setEvaluations(evaluationsData);
+    } catch (error) {
+      console.error(error);
+      toast.error("Erro ao carregar o dashboard do treinador.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   const today = new Date().toISOString().split("T")[0];
 
-  const todayLessons = lessons.filter((lesson) => lesson.date === today);
-  const draftLessons = lessons.filter((lesson) => lesson.status === "draft");
-  const publishedLessons = lessons.filter((lesson) => lesson.status === "published");
+  const sortedLessons = [...lessons].sort((a, b) =>
+    `${a.date} ${a.time || ""}`.localeCompare(
+      `${b.date} ${b.time || ""}`
+    )
+  );
+
+  const todayLessons = sortedLessons.filter(
+    (lesson) => lesson.date === today && lesson.status !== "finished"
+  );
+
+  const upcomingLessons = sortedLessons
+    .filter(
+      (lesson) =>
+        lesson.date > today && lesson.status !== "finished"
+    )
+    .slice(0, 6);
+
+  const draftLessons = lessons.filter(
+    (lesson) => lesson.status === "draft"
+  );
+
+  const publishedLessons = lessons.filter(
+    (lesson) => lesson.status === "published"
+  );
 
   const currentMonth = new Date().getMonth() + 1;
   const currentYear = new Date().getFullYear();
@@ -45,137 +87,218 @@ function CoachDashboard({ user }: Props) {
     )
     .map((evaluation) => evaluation.studentId);
 
+  const coachStudentIds = new Set(
+    lessons.flatMap((lesson) => lesson.bookedStudentIds)
+  );
+
   const coachStudents = students.filter((student) =>
-    lessons.some((lesson) => lesson.bookedStudentIds.includes(student.id))
+    coachStudentIds.has(student.id)
   );
 
   const pendingEvaluations = coachStudents.filter(
     (student) => !evaluatedStudentIds.includes(student.id)
   );
 
-  function getConfirmedCount(lesson: Lesson) {
-    return (lesson.responses || []).filter(
+  function getResponseCounts(lesson: Lesson) {
+    const responses = lesson.responses || [];
+
+    const confirmed = responses.filter(
       (response) => response.status === "confirmed"
     ).length;
-  }
 
-  function getPendingCount(lesson: Lesson) {
-    return lesson.bookedStudentIds.length - (lesson.responses || []).length;
-  }
-
-  function getPickupCount(lesson: Lesson) {
-    return (lesson.responses || []).filter(
-      (response) =>
-        response.status === "confirmed" && response.transportType === "pickup"
+    const declined = responses.filter(
+      (response) => response.status === "declined"
     ).length;
-  }
 
-  function getBeachCount(lesson: Lesson) {
-    return (lesson.responses || []).filter(
-      (response) =>
-        response.status === "confirmed" && response.transportType === "beach"
-    ).length;
-  }
+    const pending = Math.max(
+      lesson.bookedStudentIds.length - confirmed - declined,
+      0
+    );
 
-  function getMaterialSummary(lesson: Lesson) {
-    const summary = {
-      softboard: 0,
-      fiberBoard: 0,
-      wetsuit: 0,
-      lycra: 0,
-      leash: 0,
-      vest: 0,
+    return {
+      confirmed,
+      declined,
+      pending,
     };
+  }
 
-    lesson.responses?.forEach((response) => {
-      if (response.status !== "confirmed") return;
+  function renderLessonCard(lesson: Lesson) {
+    const counts = getResponseCounts(lesson);
 
-      if (response.material.softboard) summary.softboard++;
-      if (response.material.fiberBoard) summary.fiberBoard++;
-      if (response.material.wetsuit) summary.wetsuit++;
-      if (response.material.lycra) summary.lycra++;
-      if (response.material.leash) summary.leash++;
-      if (response.material.vest) summary.vest++;
-    });
+    return (
+      <article className="coach-dashboard-lesson" key={lesson.id}>
+        <div className="coach-lesson-main">
+          <div>
+            <span className={`coach-lesson-status status-${lesson.status}`}>
+              {lesson.status === "draft" && "Rascunho"}
+              {lesson.status === "published" && "Publicado"}
+              {lesson.status === "finished" && "Concluído"}
+            </span>
 
-    return summary;
+            <h3>{lesson.groupName || "Treino extra"}</h3>
+
+            <p>
+              📅 {lesson.date} · 🕒 {lesson.time || "--:--"}
+            </p>
+
+            <p>🏖️ {lesson.beach || "Praia por definir"}</p>
+            <p>🚐 {lesson.van || "Carrinha por definir"}</p>
+          </div>
+
+          <button
+            type="button"
+            className="primary-btn coach-open-lesson-btn"
+            onClick={() => setSelectedLesson(lesson)}
+          >
+            Abrir treino
+          </button>
+        </div>
+
+        <div className="coach-lesson-summary">
+          <div>
+            <span>Alunos</span>
+            <strong>{lesson.bookedStudentIds.length}</strong>
+          </div>
+
+          <div>
+            <span>Confirmados</span>
+            <strong>{counts.confirmed}</strong>
+          </div>
+
+          <div>
+            <span>Não vão</span>
+            <strong>{counts.declined}</strong>
+          </div>
+
+          <div>
+            <span>Sem resposta</span>
+            <strong>{counts.pending}</strong>
+          </div>
+        </div>
+      </article>
+    );
+  }
+
+  if (loading) {
+    return <p className="muted">A carregar dashboard...</p>;
   }
 
   return (
-    <div>
-      <h1 className="page-title">Dashboard do Treinador</h1>
+    <div className="coach-dashboard-page">
+      <div className="coach-dashboard-heading">
+        <div>
+          <span className="coach-dashboard-kicker">Área do treinador</span>
+          <h1 className="page-title">Olá, {user.name} 👋</h1>
+        </div>
+
+        <p>
+          Hoje tens <strong>{todayLessons.length}</strong>{" "}
+          {todayLessons.length === 1 ? "treino" : "treinos"}.
+        </p>
+      </div>
 
       <div className="stats-grid">
-        <div className="card">
-          <span className="stat-label">Treinos hoje</span>
+        <div className="card stat-card">
+          <span className="stat-label">🏄 Treinos hoje</span>
           <strong className="stat-number">{todayLessons.length}</strong>
         </div>
 
-        <div className="card">
-          <span className="stat-label">Por publicar</span>
+        <div className="card stat-card">
+          <span className="stat-label">📝 Por publicar</span>
           <strong className="stat-number">{draftLessons.length}</strong>
         </div>
 
-        <div className="card">
-          <span className="stat-label">Publicados</span>
+        <div className="card stat-card">
+          <span className="stat-label">📢 Publicados</span>
           <strong className="stat-number">{publishedLessons.length}</strong>
         </div>
 
-        <div className="card">
-          <span className="stat-label">Avaliações pendentes</span>
-          <strong className="stat-number">{pendingEvaluations.length}</strong>
+        <div className="card stat-card">
+          <span className="stat-label">⭐ Avaliações pendentes</span>
+          <strong className="stat-number">
+            {pendingEvaluations.length}
+          </strong>
         </div>
       </div>
 
-      <div className="card section-card">
-        <h2>Treinos de hoje</h2>
+      <section className="card section-card">
+        <div className="coach-section-title">
+          <div>
+            <span>Agenda</span>
+            <h2>Treinos de hoje</h2>
+          </div>
 
-        {todayLessons.length === 0 && (
+          <strong>{todayLessons.length}</strong>
+        </div>
+
+        {todayLessons.length === 0 ? (
           <p className="muted">Não tens treinos hoje.</p>
+        ) : (
+          <div className="coach-dashboard-lessons">
+            {todayLessons.map(renderLessonCard)}
+          </div>
         )}
+      </section>
 
-        {todayLessons.map((lesson) => {
-          const materialSummary = getMaterialSummary(lesson);
+      <section className="card section-card">
+        <div className="coach-section-title">
+          <div>
+            <span>Agenda</span>
+            <h2>Próximos treinos</h2>
+          </div>
 
-          return (
-            <div className="lesson-card" key={lesson.id}>
-              <div>
-                <h3>{lesson.groupName || "Treino extra"}</h3>
-                <p>Hora: {lesson.time || "Por definir"}</p>
-                <p>Praia: {lesson.beach || "Por definir"}</p>
-                <p>Estado: {lesson.status}</p>
-              </div>
+          <strong>{upcomingLessons.length}</strong>
+        </div>
 
-              <div>
-                <p>Confirmados: {getConfirmedCount(lesson)}</p>
-                <p>Sem resposta: {getPendingCount(lesson)}</p>
-                <p>Carrinha: {getPickupCount(lesson)}</p>
-                <p>Direto para a praia: {getBeachCount(lesson)}</p>
+        {upcomingLessons.length === 0 ? (
+          <p className="muted">Não tens próximos treinos agendados.</p>
+        ) : (
+          <div className="coach-dashboard-lessons">
+            {upcomingLessons.map(renderLessonCard)}
+          </div>
+        )}
+      </section>
 
-                <h4>Material</h4>
-                <p>Softboards: {materialSummary.softboard}</p>
-                <p>Pranchas fibra: {materialSummary.fiberBoard}</p>
-                <p>Fatos: {materialSummary.wetsuit}</p>
-                <p>Licras: {materialSummary.lycra}</p>
-                <p>Leashes: {materialSummary.leash}</p>
-                <p>Coletes: {materialSummary.vest}</p>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+      <section className="card section-card">
+        <div className="coach-section-title">
+          <div>
+            <span>Avaliações mensais</span>
+            <h2>Alunos por avaliar</h2>
+          </div>
 
-      <div className="card section-card">
-        <h2>Avaliações deste mês</h2>
+          <strong>{pendingEvaluations.length}</strong>
+        </div>
 
         {pendingEvaluations.length === 0 ? (
-          <p className="muted">Todas as avaliações estão feitas.</p>
+          <p className="muted">
+            Todas as avaliações deste mês estão concluídas.
+          </p>
         ) : (
-          pendingEvaluations.map((student) => (
-            <p key={student.id}>{student.name}</p>
-          ))
+          <div className="coach-pending-evaluations">
+            {pendingEvaluations.map((student) => (
+              <div key={student.id}>
+                <strong>{student.name}</strong>
+                <span>{student.level || "Nível não definido"}</span>
+              </div>
+            ))}
+          </div>
         )}
-      </div>
+      </section>
+
+      {selectedLesson && (
+        <Modal
+          title="Ficha do treino"
+          onClose={() => {
+            setSelectedLesson(null);
+            loadData();
+          }}
+        >
+          <LessonDetailCard
+            lesson={selectedLesson}
+            students={students}
+          />
+        </Modal>
+      )}
     </div>
   );
 }
