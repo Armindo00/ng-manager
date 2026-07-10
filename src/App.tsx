@@ -70,6 +70,26 @@ function App() {
     setCurrentUser(null);
   }
 
+  function handleChangeSection(section: string) {
+    if (!currentUser) return;
+
+    if (currentUser.role === "admin") {
+      setActiveSection(section as AdminSection);
+    } else if (currentUser.role === "coach") {
+      setCoachSection(section as CoachSection);
+    } else if (currentUser.role === "student") {
+      setStudentSection(section as StudentSection);
+    }
+  }
+
+  function getActiveSection() {
+    if (!currentUser) return "dashboard";
+
+    if (currentUser.role === "admin") return activeSection;
+    if (currentUser.role === "coach") return coachSection;
+    return studentSection;
+  }
+
   if (!currentUser) {
     return (
       <>
@@ -86,8 +106,8 @@ function App() {
       <div className="app-layout">
         <Sidebar
           user={currentUser}
-          activeSection={activeSection}
-          onChangeSection={setActiveSection}
+          activeSection={getActiveSection()}
+          onChangeSection={handleChangeSection}
           onLogout={logout}
         />
 
@@ -96,47 +116,6 @@ function App() {
 
           {currentUser.role === "student" && (
             <>
-              <div className="card section-card">
-                <button
-                  className="primary-btn"
-                  onClick={() => setStudentSection("dashboard")}
-                >
-                  Dashboard
-                </button>
-
-                <button
-                  className="primary-btn"
-                  style={{ marginLeft: 10 }}
-                  onClick={() => setStudentSection("lessons")}
-                >
-                  Os meus treinos
-                </button>
-
-                <button
-                  className="primary-btn"
-                  style={{ marginLeft: 10 }}
-                  onClick={() => setStudentSection("evaluations")}
-                >
-                  As minhas avaliações
-                </button>
-
-                <button
-                  className="primary-btn"
-                  style={{ marginLeft: 10 }}
-                  onClick={() => setStudentSection("skillcard")}
-                >
-                  Skill Card
-                </button>
-
-                <button
-                  className="primary-btn"
-                  style={{ marginLeft: 10 }}
-                  onClick={() => setStudentSection("calendar")}
-                >
-                  Calendário
-                </button>
-              </div>
-
               {studentSection === "dashboard" && (
                 <StudentDashboard user={currentUser} />
               )}
@@ -161,31 +140,6 @@ function App() {
 
           {currentUser.role === "coach" && (
             <>
-              <div className="card section-card">
-                <button
-                  className="primary-btn"
-                  onClick={() => setCoachSection("dashboard")}
-                >
-                  Dashboard
-                </button>
-
-                <button
-                  className="primary-btn"
-                  style={{ marginLeft: 10 }}
-                  onClick={() => setCoachSection("lessons")}
-                >
-                  Os meus treinos
-                </button>
-
-                <button
-                  className="primary-btn"
-                  style={{ marginLeft: 10 }}
-                  onClick={() => setCoachSection("evaluations")}
-                >
-                  Avaliar alunos
-                </button>
-              </div>
-
               {coachSection === "dashboard" && (
                 <CoachDashboard user={currentUser} />
               )}
@@ -200,10 +154,9 @@ function App() {
             </>
           )}
 
-          {currentUser.role === "admin" &&
-  activeSection === "dashboard" && (
-    <AdminDashboard onChangeSection={setActiveSection} />
-  )}
+          {currentUser.role === "admin" && activeSection === "dashboard" && (
+            <AdminDashboard onChangeSection={setActiveSection} />
+          )}
           {currentUser.role === "admin" &&
             activeSection === "students" && <AdminArea />}
 
