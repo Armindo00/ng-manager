@@ -34,8 +34,14 @@ function StudentArea({ user }: Props) {
       const studentsData = await getStudents();
       const lessonsData = await getLessons();
 
+      const today = new Date().toISOString().split("T")[0];
+
       setStudents(studentsData);
-      setLessons(lessonsData.filter((lesson) => lesson.status === "published"));
+      setLessons(
+        lessonsData.filter(
+          (lesson) => lesson.status === "published" && lesson.date >= today
+        )
+      );
     } catch (error) {
       console.error(error);
       toast.error("Erro ao carregar treinos.");
@@ -46,31 +52,36 @@ function StudentArea({ user }: Props) {
 
   const student = students.find((s) => s.id === user.studentId);
 
-  if (loading) {
-    return <p className="muted">A carregar...</p>;
-  }
-
-  if (!student) {
-    return <p>Aluno não encontrado.</p>;
-  }
+  if (loading) return <p className="muted">A carregar...</p>;
+  if (!student) return <p>Aluno não encontrado.</p>;
 
   const studentId = student.id;
 
-  const myLessons = lessons.filter((lesson) =>
-    lesson.bookedStudentIds.includes(studentId)
-  );
+  const myLessons = lessons
+    .filter((lesson) => lesson.bookedStudentIds.includes(studentId))
+    .sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`));
 
   const attended = lessons.filter((lesson) =>
     lesson.presentStudentIds.includes(studentId)
+  );
+
+  function getResponse(lesson: Lesson) {
+    return lesson.responses?.find((response) => response.studentId === studentId);
+  }
+
+  const pendingLessons = myLessons.filter((lesson) => !getResponse(lesson));
+  const confirmedLessons = myLessons.filter(
+    (lesson) => getResponse(lesson)?.status === "confirmed"
+  );
+  const declinedLessons = myLessons.filter(
+    (lesson) => getResponse(lesson)?.status === "declined"
   );
 
   async function respondToLesson(
     lesson: Lesson,
     status: "confirmed" | "declined"
   ) {
-    const responses = lesson.responses || [];
-
-    const filteredResponses = responses.filter(
+    const filteredResponses = (lesson.responses || []).filter(
       (response) => response.studentId !== studentId
     );
 
@@ -94,11 +105,60 @@ function StudentArea({ user }: Props) {
       await updateLesson(updatedLesson);
       await loadData();
 
-      toast.success(status === "confirmed" ? "Confirmaste presença." : "Marcaste que não vais.");
+      toast.success(
+        status === "confirmed"
+          ? "Confirmaste presença."
+          : "Marcaste que não vais."
+      );
     } catch (error) {
       console.error(error);
       toast.error("Erro ao guardar resposta.");
     }
+  }
+
+  function renderLessonCard(lesson: Lesson) {
+    const response = getResponse(lesson);
+    const isConfirmed = response?.status === "confirmed";
+    const isDeclined = response?.status === "declined";
+
+    return (
+      <div className="lesson-card student-lesson-card" key={lesson.id}>
+        <div>
+          <h3>
+            {lesson.date} · {lesson.time || "--:--"}
+          </h3>
+
+          {lesson.groupName && <p>Grupo: {lesson.groupName}</p>}
+
+          <p>🏖️ {lesson.beach || "Praia por definir"}</p>
+          <p>👨‍🏫 Treinador: {lesson.coachName}</p>
+          <p>🚐 Carrinha: {lesson.van || "Por definir"}</p>
+          <p>🕒 Pickup: {lesson.pickupTime || "Por definir"}</p>
+
+          {isConfirmed && <p className="student-status confirmed">✅ Vou</p>}
+          {isDeclined && <p className="student-status declined">❌ Não vou</p>}
+          {!isConfirmed && !isDeclined && (
+            <p className="student-status pending">⏳ Por responder</p>
+          )}
+        </div>
+
+        <div className="student-lesson-actions">
+          <button
+            className="primary-btn"
+            onClick={() => respondToLesson(lesson, "confirmed")}
+          >
+            ✅ Vou
+          </button>
+
+          <button
+            className="danger-btn"
+            onClick={() => respondToLesson(lesson, "declined")}
+          >
+            ❌ Não vou
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -123,61 +183,33 @@ function StudentArea({ user }: Props) {
       </div>
 
       <div className="card section-card">
-        <h2>Os meus treinos</h2>
+        <h2>⏳ Por responder</h2>
 
-        {myLessons.length === 0 && (
-          <p className="muted">Não tens treinos atribuídos.</p>
+        {pendingLessons.length === 0 && (
+          <p className="muted">Não tens treinos por responder.</p>
         )}
 
-        <div className="lesson-list">
-          {myLessons.map((lesson) => {
-            const response = lesson.responses?.find(
-              (item) => item.studentId === studentId
-            );
+        <div className="lesson-list">{pendingLessons.map(renderLessonCard)}</div>
+      </div>
 
-            const isConfirmed = response?.status === "confirmed";
-            const isDeclined = response?.status === "declined";
+      <div className="card section-card">
+        <h2>✅ Vou</h2>
 
-            return (
-              <div className="lesson-card" key={lesson.id}>
-                <div>
-                  <h3>
-                    {lesson.date} · {lesson.time || "--:--"}
-                  </h3>
+        {confirmedLessons.length === 0 && (
+          <p className="muted">Ainda não confirmaste nenhum treino.</p>
+        )}
 
-                  {lesson.groupName && <p>Grupo: {lesson.groupName}</p>}
+        <div className="lesson-list">{confirmedLessons.map(renderLessonCard)}</div>
+      </div>
 
-                  <p>🏖️ {lesson.beach || "Praia por definir"}</p>
-                  <p>👨‍🏫 Treinador: {lesson.coachName}</p>
-                  <p>🚐 Carrinha: {lesson.van || "Por definir"}</p>
-                  <p>🕒 Pickup: {lesson.pickupTime || "Por definir"}</p>
+      <div className="card section-card">
+        <h2>❌ Não vou</h2>
 
-                  {isConfirmed && <p className="muted">✅ Confirmado</p>}
-                  {isDeclined && <p className="muted">❌ Não vou</p>}
-                  {!isConfirmed && !isDeclined && (
-                    <p className="muted">Ainda não respondeste.</p>
-                  )}
-                </div>
+        {declinedLessons.length === 0 && (
+          <p className="muted">Nenhum treino recusado.</p>
+        )}
 
-                <div className="student-lesson-actions">
-                  <button
-                    className="primary-btn"
-                    onClick={() => respondToLesson(lesson, "confirmed")}
-                  >
-                    ✅ Vou
-                  </button>
-
-                  <button
-                    className="danger-btn"
-                    onClick={() => respondToLesson(lesson, "declined")}
-                  >
-                    ❌ Não vou
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+        <div className="lesson-list">{declinedLessons.map(renderLessonCard)}</div>
       </div>
     </div>
   );
