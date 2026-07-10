@@ -198,22 +198,22 @@ function AdminArea() {
             <tbody>
               {filteredStudents.map((student) => (
                 <tr key={student.id}>
-                  <td>
+                  <td className="data-table-primary" data-label="Nome">
                     <strong>{student.name}</strong>
                     <br />
                     <small>{student.email}</small>
                   </td>
-                  <td>{student.phone}</td>
-                  <td>{student.level}</td>
-                  <td>{student.monthlyLimit} treinos</td>
-                  <td>{student.pickup}</td>
-                  <td>{student.mainCoach}</td>
-                  <td>
+                  <td data-label="Telefone">{student.phone}</td>
+                  <td data-label="Nível">{student.level}</td>
+                  <td data-label="Plano">{student.monthlyLimit} treinos</td>
+                  <td data-label="Pickup">{student.pickup}</td>
+                  <td data-label="Treinador">{student.mainCoach}</td>
+                  <td data-label="Ações">
                     <ActionButtons
-  onView={() => setSelectedStudent(student)}
-  onEdit={() => editStudent(student)}
-  onDelete={() => setStudentToDelete(student)}
-/>
+                      onView={() => setSelectedStudent(student)}
+                      onEdit={() => editStudent(student)}
+                      onDelete={() => setStudentToDelete(student)}
+                    />
                   </td>
                 </tr>
               ))}

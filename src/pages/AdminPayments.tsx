@@ -173,13 +173,21 @@ function AdminPayments() {
           <tbody>
             {payments.map((payment) => (
               <tr key={payment.id}>
-                <td>{getStudentName(payment.studentId)}</td>
-                <td>{payment.month}/{payment.year}</td>
-                <td>{payment.amount}€</td>
-                <td>{statusText(payment.status)}</td>
-                <td>{payment.paymentMethod || "-"}</td>
-                <td>{payment.paymentDate || "-"}</td>
-                <td>
+                <td className="data-table-primary" data-label="Aluno">
+                  {getStudentName(payment.studentId)}
+                </td>
+                <td data-label="Mês/Ano">
+                  {payment.month}/{payment.year}
+                </td>
+                <td data-label="Valor">{payment.amount}€</td>
+                <td data-label="Estado">
+                  <span className={`payment-status payment-status-${payment.status}`}>
+                    {statusText(payment.status)}
+                  </span>
+                </td>
+                <td data-label="Método">{payment.paymentMethod || "-"}</td>
+                <td data-label="Data">{payment.paymentDate || "-"}</td>
+                <td data-label="Ações">
                   <div className="payment-actions">
                     {payment.status !== "paid" && (
                       <button

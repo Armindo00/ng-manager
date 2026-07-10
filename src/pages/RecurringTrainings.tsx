@@ -162,12 +162,14 @@ function RecurringTrainings() {
           <tbody>
             {trainings.map((training) => (
               <tr key={training.id}>
-                <td>{training.groupName}</td>
-                <td>{training.weekDay}</td>
-                <td>{training.coachName}</td>
-                <td>{training.van}</td>
-                <td>{training.repeatUntil}</td>
-                <td>
+                <td className="data-table-primary" data-label="Grupo">
+                  {training.groupName}
+                </td>
+                <td data-label="Dia">{training.weekDay}</td>
+                <td data-label="Treinador">{training.coachName}</td>
+                <td data-label="Carrinha">{training.van}</td>
+                <td data-label="Até">{training.repeatUntil}</td>
+                <td data-label="Ações">
                   <ActionButtons
                     onDelete={() => setTrainingToDelete(training)}
                   />

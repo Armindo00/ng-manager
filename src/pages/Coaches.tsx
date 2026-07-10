@@ -112,12 +112,12 @@ function Coaches() {
           <tbody>
             {coaches.map((coach) => (
               <tr key={coach.id}>
-                <td>{coach.name}</td>
-                <td>{coach.phone}</td>
-                <td>
-                  <ActionButtons
-                    onDelete={() => setCoachToDelete(coach)}
-                  />
+                <td className="data-table-primary" data-label="Nome">
+                  {coach.name}
+                </td>
+                <td data-label="Telefone">{coach.phone}</td>
+                <td data-label="Ações">
+                  <ActionButtons onDelete={() => setCoachToDelete(coach)} />
                 </td>
               </tr>
             ))}

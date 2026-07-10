@@ -142,10 +142,12 @@ function Groups() {
         <tbody>
           {groups.map((group) => (
             <tr key={group.id}>
-              <td>{group.name}</td>
-              <td>{group.coachName}</td>
-              <td>{group.studentIds.length}</td>
-              <td>
+              <td className="data-table-primary" data-label="Grupo">
+                {group.name}
+              </td>
+              <td data-label="Treinador">{group.coachName}</td>
+              <td data-label="Alunos">{group.studentIds.length}</td>
+              <td data-label="Ações">
                 <ActionButtons onDelete={() => setGroupToDelete(group)} />
               </td>
             </tr>

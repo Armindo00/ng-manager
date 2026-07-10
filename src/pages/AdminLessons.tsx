@@ -140,13 +140,15 @@ function AdminLessons() {
         <tbody>
           {lessons.map((lesson) => (
             <tr key={lesson.id}>
-              <td>{lesson.date}</td>
-              <td>{lesson.time}</td>
-              <td>{lesson.groupName}</td>
-              <td>{lesson.coachName}</td>
-              <td>{lesson.beach}</td>
-              <td>{lesson.van}</td>
-              <td>
+              <td className="data-table-primary" data-label="Data">
+                {lesson.date}
+              </td>
+              <td data-label="Hora">{lesson.time}</td>
+              <td data-label="Grupo">{lesson.groupName}</td>
+              <td data-label="Treinador">{lesson.coachName}</td>
+              <td data-label="Praia">{lesson.beach}</td>
+              <td data-label="Carrinha">{lesson.van}</td>
+              <td data-label="Ações">
                 <ActionButtons
                   onView={() => setSelectedLesson(lesson)}
                   onDelete={() => setLessonToDelete(lesson)}
