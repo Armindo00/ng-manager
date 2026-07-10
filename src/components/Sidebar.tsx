@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { User } from "../types";
 import logo from "../assets/logo next.jpeg";
+import AppVersion from "./AppVersion";
 
 type Props = {
   user: User;
@@ -119,6 +120,8 @@ function Sidebar({ user, activeSection, onChangeSection, onLogout }: Props) {
         </div>
 
         <div className="sidebar-footer">
+          <AppVersion className="app-version sidebar-version" />
+
           <button
             className="logout-btn"
             onClick={() => {

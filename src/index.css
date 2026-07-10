@@ -202,6 +202,26 @@ textarea:focus {
   background: rgba(239, 68, 68, 0.18);
 }
 
+.app-version {
+  margin: 0;
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.sidebar-version {
+  margin-bottom: 12px;
+  color: #94a3b8;
+  text-align: center;
+}
+
+.login-version {
+  margin-top: 24px;
+  text-align: center;
+  color: #64748b;
+}
+
 .mobile-menu-btn,
 .mobile-menu-backdrop,
 .close-menu-btn {

@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { User } from "../types";
 import { supabase } from "../services/supabase";
 import { getUserByEmail } from "../services/usersService";
+import AppVersion from "../components/AppVersion";
 
 type Props = {
   onLogin: (user: User) => void;
@@ -82,6 +83,8 @@ function Login({ onLogin }: Props) {
             {loading ? "A entrar..." : "Entrar"}
           </button>
         </div>
+
+        <AppVersion className="app-version login-version" />
       </div>
     </div>
   );
