@@ -8,6 +8,7 @@ import StudentDashboard from "./pages/StudentDashboard";
 import StudentEvaluations from "./pages/StudentEvaluations";
 import StudentCalendar from "./pages/StudentCalendar";
 import SkillCard from "./pages/SkillCard";
+import Payments from "./pages/Payments";
 import CoachArea from "./pages/CoachArea";
 import CoachDashboard from "./pages/CoachDashboard";
 import AdminArea from "./pages/AdminArea";
@@ -41,7 +42,8 @@ type StudentSection =
   | "lessons"
   | "evaluations"
   | "skillcard"
-  | "calendar";
+  | "calendar"
+  | "payments";
 
 function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -139,6 +141,10 @@ function App() {
 
               {studentSection === "calendar" && (
                 <StudentCalendar user={currentUser} />
+              )}
+
+              {studentSection === "payments" && (
+                <Payments user={currentUser} />
               )}
             </>
           )}

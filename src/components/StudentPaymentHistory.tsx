@@ -15,13 +15,20 @@ function StudentPaymentHistory({ student }: Props) {
 
   async function loadPayments() {
     const data = await getPayments();
-    setPayments(data.filter((payment) => payment.studentId === student.id));
+    setPayments(
+      data
+        .filter((payment) => payment.studentId === student.id)
+        .sort((a, b) => {
+          if (a.year !== b.year) return b.year - a.year;
+          return b.month - a.month;
+        })
+    );
   }
 
   function statusText(status: string) {
-    if (status === "paid") return "✅ Pago";
+    if (status === "paid") return "Pago";
     if (status === "cancelled") return "Cancelado";
-    return "❌ Pendente";
+    return "Pendente";
   }
 
   return (
@@ -43,7 +50,11 @@ function StudentPaymentHistory({ student }: Props) {
 
           <div>
             <strong>{payment.amount}€</strong>
-            <p>{statusText(payment.status)}</p>
+            <p>
+              <span className={`payment-status payment-status-${payment.status}`}>
+                {statusText(payment.status)}
+              </span>
+            </p>
           </div>
         </div>
       ))}

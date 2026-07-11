@@ -9,8 +9,8 @@ type Props = {
 };
 
 function Login({ onLogin }: Props) {
-  const [email, setEmail] = useState("admin@test.com");
-  const [password, setPassword] = useState("12345678");
+  const [email, setEmail] = useState(import.meta.env.DEV ? "admin@test.com" : "");
+  const [password, setPassword] = useState(import.meta.env.DEV ? "12345678" : "");
   const [loading, setLoading] = useState(false);
 
   async function login() {

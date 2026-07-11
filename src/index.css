@@ -519,6 +519,30 @@ textarea:focus {
   color: #991b1b;
 }
 
+.student-payment-history h3 {
+  margin: 0 0 16px;
+}
+
+.payment-history-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 0;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.payment-history-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.payment-history-row p {
+  margin: 4px 0 0;
+  color: #64748b;
+  font-size: 14px;
+}
+
 .icon-btn {
   width: 38px !important;
   height: 38px !important;

@@ -115,6 +115,7 @@ function Sidebar({ user, activeSection, onChangeSection, onLogout }: Props) {
               {item("📝", "As minhas avaliações", "evaluations")}
               {item("🏅", "Skill Card", "skillcard")}
               {item("📆", "Calendário", "calendar")}
+              {item("💳", "Pagamentos", "payments")}
             </nav>
           )}
         </div>
