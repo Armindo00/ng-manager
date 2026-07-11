@@ -52,9 +52,14 @@ function App() {
     useState<AdminSection>("dashboard");
 
   useEffect(() => {
-    generateLessonsFromRecurring();
     restoreSession();
   }, []);
+
+  useEffect(() => {
+    if (currentUser?.role !== "admin") return;
+
+    generateLessonsFromRecurring();
+  }, [currentUser]);
 
   async function restoreSession() {
     const { data } = await supabase.auth.getUser();
