@@ -22,7 +22,6 @@ import Sidebar from "./components/Sidebar";
 import Evaluations from "./pages/Evaluations";
 import Topbar from "./components/Topbar";
 
-import { generateLessonsFromRecurring } from "./pages/services/lessonGenerator";
 import { supabase } from "./services/supabase";
 import { getUserByEmail } from "./services/usersService";
 
@@ -56,12 +55,6 @@ function App() {
   useEffect(() => {
     restoreSession();
   }, []);
-
-  useEffect(() => {
-    if (currentUser?.role !== "admin") return;
-
-    generateLessonsFromRecurring();
-  }, [currentUser]);
 
   async function restoreSession() {
     const { data } = await supabase.auth.getUser();

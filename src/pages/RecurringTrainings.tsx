@@ -11,6 +11,7 @@ import type { Group } from "../types/group";
 import type { WeekDay } from "../types/recurringTraining";
 import ActionButtons from "../components/ActionButtons";
 import ConfirmDialog from "../components/ConfirmDialog";
+import { generateLessonsFromRecurring } from "../services/lessonGeneratorService";
 
 const weekDays: WeekDay[] = [
   "Segunda",
@@ -28,6 +29,7 @@ function RecurringTrainings() {
   const [trainingToDelete, setTrainingToDelete] =
     useState<RecurringTraining | null>(null);
   const [loading, setLoading] = useState(true);
+  const [generating, setGenerating] = useState(false);
 
   const [groupId, setGroupId] = useState("");
   const [weekDay, setWeekDay] = useState<WeekDay>("Terça");
@@ -101,9 +103,41 @@ function RecurringTrainings() {
     }
   }
 
+  async function runLessonGeneration() {
+    try {
+      setGenerating(true);
+      const created = await generateLessonsFromRecurring();
+
+      toast.success(
+        created > 0
+          ? `${created} treino(s) gerado(s) para hoje.`
+          : "Não havia treinos semanais para gerar hoje."
+      );
+    } catch (error) {
+      console.error(error);
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Erro ao gerar treinos. A função SQL está aplicada no Supabase?";
+      toast.error(message);
+    } finally {
+      setGenerating(false);
+    }
+  }
+
   return (
     <div className="card section-card">
       <h1 className="page-title">Treinos Semanais</h1>
+
+      <div className="quick-actions" style={{ marginBottom: 20 }}>
+        <button
+          className="primary-btn"
+          onClick={runLessonGeneration}
+          disabled={generating}
+        >
+          {generating ? "A gerar..." : "Gerar treinos de hoje"}
+        </button>
+      </div>
 
       <div className="form-row">
         <select value={groupId} onChange={(e) => setGroupId(e.target.value)}>
