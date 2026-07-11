@@ -75,14 +75,51 @@ async function assertAdmin(authHeader: string | null) {
 async function findStudentAccess(adminClient: ReturnType<typeof createClient>, studentId: string) {
   const { data, error } = await adminClient
     .from("app_users")
-    .select("id, email, blocked")
+    .select("id, email")
     .eq("student_id", studentId)
     .eq("role", "student")
     .maybeSingle();
 
   if (error) throw error;
+  if (!data) return null;
 
-  return data;
+  return {
+    id: data.id,
+    email: data.email,
+    blocked: false,
+  };
+}
+
+function sanitizeEmail(email: string) {
+  return email
+    .replace(/[\u200B-\u200D\uFEFF]/g, "")
+    .trim()
+    .toLowerCase();
+}
+
+function isValidEmail(email: string) {
+  const normalized = sanitizeEmail(email);
+  return /^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/i.test(normalized);
+}
+
+async function findAuthUserByEmail(
+  adminClient: ReturnType<typeof createClient>,
+  email: string
+) {
+  const { data, error } = await adminClient.auth.admin.listUsers({
+    page: 1,
+    perPage: 1000,
+  });
+
+  if (error) throw error;
+
+  const normalized = sanitizeEmail(email);
+
+  return (
+    data.users.find(
+      (user) => user.email && sanitizeEmail(user.email) === normalized
+    ) ?? null
+  );
 }
 
 Deno.serve(async (req) => {
@@ -103,6 +140,19 @@ Deno.serve(async (req) => {
         return jsonResponse({ error: "Nome e email são obrigatórios." }, 400);
       }
 
+      const normalizedEmail = sanitizeEmail(String(body.email ?? ""));
+
+      if (!isValidEmail(normalizedEmail)) {
+        return jsonResponse({
+          error: `Email inválido: "${body.email}". Usa um formato como aluno@escola.com`,
+          debug: {
+            received: body.email,
+            normalized: normalizedEmail,
+            length: normalizedEmail.length,
+          },
+        }, 400);
+      }
+
       const existing = await findStudentAccess(adminClient, body.studentId);
 
       if (existing) {
@@ -114,43 +164,79 @@ Deno.serve(async (req) => {
       }
 
       const password = generatePassword();
+      let authUserId: string | null = null;
+      let createdPassword: string | undefined = password;
 
-      const { data: authData, error: authError } =
-        await adminClient.auth.admin.createUser({
-          email: body.email,
-          password,
-          email_confirm: true,
-          user_metadata: {
-            name: body.name,
-            role: "student",
-          },
-        });
+      const existingAuthUser = await findAuthUserByEmail(
+        adminClient,
+        normalizedEmail
+      );
 
-      if (authError || !authData.user) {
-        return jsonResponse({
-          error: authError?.message || "Erro ao criar utilizador de acesso.",
-        }, 400);
+      if (existingAuthUser) {
+        authUserId = existingAuthUser.id;
+        createdPassword = undefined;
+
+        const { error: updateError } =
+          await adminClient.auth.admin.updateUserById(existingAuthUser.id, {
+            password,
+            email_confirm: true,
+            ban_duration: "none",
+            user_metadata: {
+              name: body.name,
+              role: "student",
+            },
+          });
+
+        if (updateError) {
+          return jsonResponse({ error: updateError.message }, 400);
+        }
+      } else {
+        const { data: authData, error: authError } =
+          await adminClient.auth.admin.createUser({
+            email: normalizedEmail,
+            password,
+            email_confirm: true,
+            user_metadata: {
+              name: body.name,
+              role: "student",
+            },
+          });
+
+        if (authError || !authData.user) {
+          return jsonResponse({
+            error: authError?.message || "Erro ao criar utilizador de acesso.",
+            debug: {
+              email: normalizedEmail,
+              length: normalizedEmail.length,
+            },
+          }, 400);
+        }
+
+        authUserId = authData.user.id;
       }
 
       const { error: appUserError } = await adminClient.from("app_users").insert({
-        id: authData.user.id,
+        id: authUserId,
         name: body.name,
-        email: body.email,
+        email: normalizedEmail,
         role: "student",
         student_id: body.studentId,
-        blocked: false,
       });
 
       if (appUserError) {
-        await adminClient.auth.admin.deleteUser(authData.user.id);
+        if (!existingAuthUser && authUserId) {
+          await adminClient.auth.admin.deleteUser(authUserId);
+        }
+
         return jsonResponse({ error: appUserError.message }, 400);
       }
 
       return jsonResponse({
         hasAccess: true,
         blocked: false,
-        email: body.email,
-        password,
+        email: normalizedEmail,
+        password: createdPassword,
+        linkedExistingAuthUser: Boolean(existingAuthUser),
       });
     }
 
@@ -175,7 +261,9 @@ Deno.serve(async (req) => {
       await adminClient
         .from("app_users")
         .update({ blocked: false })
-        .eq("id", access.id);
+        .eq("id", access.id)
+        .then(() => undefined)
+        .catch(() => undefined);
 
       return jsonResponse({
         hasAccess: true,
@@ -199,7 +287,9 @@ Deno.serve(async (req) => {
       await adminClient
         .from("app_users")
         .update({ blocked: shouldBlock })
-        .eq("id", access.id);
+        .eq("id", access.id)
+        .then(() => undefined)
+        .catch(() => undefined);
 
       return jsonResponse({
         hasAccess: true,
@@ -225,8 +315,16 @@ Deno.serve(async (req) => {
         return jsonResponse({ error: "Email é obrigatório." }, 400);
       }
 
+      const normalizedEmail = sanitizeEmail(String(body.email ?? ""));
+
+      if (!isValidEmail(normalizedEmail)) {
+        return jsonResponse({
+          error: `Email inválido: "${body.email}". Usa um formato como aluno@escola.com`,
+        }, 400);
+      }
+
       const { error } = await adminClient.auth.admin.updateUserById(access.id, {
-        email: body.email,
+        email: normalizedEmail,
       });
 
       if (error) {
@@ -235,13 +333,13 @@ Deno.serve(async (req) => {
 
       await adminClient
         .from("app_users")
-        .update({ email: body.email })
+        .update({ email: normalizedEmail })
         .eq("id", access.id);
 
       return jsonResponse({
         hasAccess: true,
         blocked: access.blocked ?? false,
-        email: body.email,
+        email: normalizedEmail,
       });
     }
 

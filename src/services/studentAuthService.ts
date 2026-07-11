@@ -1,3 +1,4 @@
+import { FunctionsHttpError } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
 
 export type StudentAccess = {
@@ -15,7 +16,36 @@ export type StudentAuthResult = {
   error?: string;
 };
 
-type Action = "create" | "reset-password" | "toggle-block" | "delete-access" | "update-email";
+type Action =
+  | "create"
+  | "reset-password"
+  | "toggle-block"
+  | "delete-access"
+  | "update-email";
+
+function formatInvokeError(error: unknown, data: unknown) {
+  if (data && typeof data === "object" && "error" in data) {
+    return String((data as { error: string }).error);
+  }
+
+  if (error instanceof FunctionsHttpError) {
+    return `Erro na Edge Function (${error.context.status}): verifica se fizeste deploy da function admin-student-auth.`;
+  }
+
+  if (error instanceof Error) {
+    if (
+      error.message.includes("Failed to send a request") ||
+      error.message.includes("Function not found") ||
+      error.message.includes("404")
+    ) {
+      return "Edge Function não encontrada. Faz deploy com: npx supabase functions deploy admin-student-auth --project-ref zhcupwgfxrwawqcyejrx";
+    }
+
+    return error.message;
+  }
+
+  return "Erro ao gerir acesso do aluno.";
+}
 
 async function invokeStudentAuth(
   action: Action,
@@ -32,27 +62,65 @@ async function invokeStudentAuth(
   });
 
   if (error) {
-    throw new Error(error.message);
+    if (error instanceof FunctionsHttpError) {
+      try {
+        const payload = await error.context.json();
+
+        if (payload?.error) {
+          throw new Error(String(payload.error));
+        }
+      } catch (parseError) {
+        if (
+          parseError instanceof Error &&
+          parseError.message &&
+          !parseError.message.includes("Unexpected")
+        ) {
+          throw parseError;
+        }
+      }
+    }
+
+    throw new Error(formatInvokeError(error, data));
   }
 
   if (data?.error) {
-    throw new Error(data.error);
+    throw new Error(String(data.error));
   }
 
   return data as StudentAuthResult;
 }
 
 export async function getStudentAccessMap() {
-  const { data, error } = await supabase
+  let rows:
+    | Array<{
+        id: string;
+        student_id: string | null;
+        email: string;
+        blocked?: boolean;
+      }>
+    | null = null;
+
+  const withBlocked = await supabase
     .from("app_users")
     .select("id, student_id, email, blocked")
     .eq("role", "student");
 
-  if (error) throw error;
+  if (withBlocked.error?.message?.includes("blocked")) {
+    const withoutBlocked = await supabase
+      .from("app_users")
+      .select("id, student_id, email")
+      .eq("role", "student");
+
+    if (withoutBlocked.error) throw withoutBlocked.error;
+    rows = withoutBlocked.data;
+  } else {
+    if (withBlocked.error) throw withBlocked.error;
+    rows = withBlocked.data;
+  }
 
   const map = new Map<string, StudentAccess>();
 
-  for (const row of data || []) {
+  for (const row of rows || []) {
     if (!row.student_id) continue;
 
     map.set(row.student_id, {
