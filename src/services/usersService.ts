@@ -31,10 +31,12 @@ export async function getUsers() {
 }
 
 export async function getUserByEmail(email: string) {
+  const normalizedEmail = email.trim().toLowerCase();
+
   const { data, error } = await supabase
     .from("app_users")
     .select("*")
-    .eq("email", email)
+    .ilike("email", normalizedEmail)
     .single();
 
   if (error) throw error;

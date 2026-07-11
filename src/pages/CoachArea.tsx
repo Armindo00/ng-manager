@@ -1,16 +1,8 @@
 import { useEffect, useState } from "react";
-import type { CoachPickup, Lesson, Student, User } from "../types";
-import type { Group } from "../types/group";
+import type { Lesson, Student, User } from "../types";
 import { getStudents } from "../services/studentsService";
-import { getGroups } from "../services/groupsService";
-import { getRecurringTrainings } from "../services/recurringTrainingsService";
-import {
-  getLessons,
-  addLesson,
-  updateLesson,
-  deleteLesson as removeLesson,
-} from "../services/lessonsService";
-import PickupManager from "../components/PickupManager";
+import { getLessons, updateLesson } from "../services/lessonsService";
+import CoachLessonSetup from "../components/CoachLessonSetup";
 
 type Props = {
   user: User;
@@ -18,20 +10,7 @@ type Props = {
 
 function CoachArea({ user }: Props) {
   const [students, setStudents] = useState<Student[]>([]);
-  const [groups, setGroups] = useState<Group[]>([]);
-  const [recurringTrainings, setRecurringTrainings] = useState<any[]>([]);
   const [lessons, setLessons] = useState<Lesson[]>([]);
-
-  const [date, setDate] = useState("");
-  const [time, setTime] = useState("");
-  const [beach, setBeach] = useState("");
-  const [pickups, setPickups] = useState<CoachPickup[]>([]);
-
-  const [extraDate, setExtraDate] = useState("");
-  const [extraTime, setExtraTime] = useState("");
-  const [extraBeach, setExtraBeach] = useState("");
-  const [extraVan, setExtraVan] = useState("");
-  const [extraPickups, setExtraPickups] = useState<CoachPickup[]>([]);
 
   useEffect(() => {
     loadData();
@@ -39,94 +18,14 @@ function CoachArea({ user }: Props) {
 
   async function loadData() {
     const studentsData = await getStudents();
-    const groupsData = await getGroups();
-    const recurringData = await getRecurringTrainings();
     const lessonsData = await getLessons();
 
     setStudents(studentsData);
-    setGroups(groupsData);
-    setRecurringTrainings(
-      recurringData.filter((training) => training.coachName === user.name)
+    setLessons(
+      lessonsData
+        .filter((lesson) => lesson.coachId === user.id)
+        .sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`))
     );
-    setLessons(lessonsData.filter((lesson) => lesson.coachName === user.name));
-  }
-
-  async function prepareRecurringLesson(trainingId: string) {
-    const training = recurringTrainings.find((item) => item.id === trainingId);
-    if (!training || !date || !time || !beach || pickups.length === 0) return;
-
-    const groupStudents =
-      groups.find((group) => group.id === training.groupId)?.studentIds ?? [];
-
-    const newLesson: Lesson = {
-      id: crypto.randomUUID(),
-      date,
-      time,
-      beach,
-      status: "draft",
-      groupId: training.groupId,
-      groupName: training.groupName,
-      coachId: training.coachId || user.id,
-      coachName: user.name,
-      van: training.van,
-      pickupTime: pickups[0]?.time || "",
-      coachPickups: pickups,
-      bookedStudentIds: groupStudents,
-      presentStudentIds: [],
-      responses: [],
-    };
-
-    await addLesson(newLesson);
-    await loadData();
-
-    setDate("");
-    setTime("");
-    setBeach("");
-    setPickups([]);
-  }
-
-  async function createExtraLesson() {
-    if (
-      !extraDate ||
-      !extraTime ||
-      !extraBeach ||
-      !extraVan ||
-      extraPickups.length === 0
-    )
-      return;
-
-    const newLesson: Lesson = {
-      id: crypto.randomUUID(),
-      date: extraDate,
-      time: extraTime,
-      beach: extraBeach,
-      status: "draft",
-      coachId: user.id,
-      coachName: user.name,
-      van: extraVan,
-      pickupTime: extraPickups[0]?.time || "",
-      coachPickups: extraPickups,
-      bookedStudentIds: [],
-      presentStudentIds: [],
-      responses: [],
-    };
-
-    await addLesson(newLesson);
-    await loadData();
-
-    setExtraDate("");
-    setExtraTime("");
-    setExtraBeach("");
-    setExtraVan("");
-    setExtraPickups([]);
-  }
-
-  async function publishLesson(lessonId: string) {
-    const lesson = lessons.find((item) => item.id === lessonId);
-    if (!lesson) return;
-
-    await updateLesson({ ...lesson, status: "published" });
-    await loadData();
   }
 
   async function finishLesson(lessonId: string) {
@@ -134,28 +33,6 @@ function CoachArea({ user }: Props) {
     if (!lesson) return;
 
     await updateLesson({ ...lesson, status: "finished" });
-    await loadData();
-  }
-
-  async function deleteLesson(lessonId: string) {
-    await removeLesson(lessonId);
-    await loadData();
-  }
-
-  async function togglePresence(lessonId: string, studentId: string) {
-    const lesson = lessons.find((item) => item.id === lessonId);
-    if (!lesson) return;
-
-    const alreadyPresent = lesson.presentStudentIds.includes(studentId);
-
-    const updatedLesson: Lesson = {
-      ...lesson,
-      presentStudentIds: alreadyPresent
-        ? lesson.presentStudentIds.filter((id) => id !== studentId)
-        : [...lesson.presentStudentIds, studentId],
-    };
-
-    await updateLesson(updatedLesson);
     await loadData();
   }
 
@@ -168,7 +45,7 @@ function CoachArea({ user }: Props) {
     if (response.status === "declined") return "Não vai";
 
     if (response.transportType === "beach") {
-      return "Vai direto para a praia · chegada às " + response.availableFrom;
+      return "Vai direto à praia · chegada às " + response.availableFrom;
     }
 
     return response.pickupLocation + " · disponível às " + response.availableFrom;
@@ -232,67 +109,27 @@ function CoachArea({ user }: Props) {
     );
   }
 
+  const upcomingLessons = lessons.filter((lesson) => lesson.status !== "finished");
+
   return (
     <div>
-      <h1 className="page-title">Área do Treinador</h1>
+      <h1 className="page-title">Os meus treinos</h1>
+
+      <p className="workflow-help">
+        O admin define o dia, alunos e carrinha. Tu defines a <strong>praia</strong>,
+        a <strong>hora de chegada à praia</strong> e os <strong>pickups</strong> com
+        base nas respostas dos alunos.
+      </p>
 
       <div className="card section-card">
-        <h2>Treinos semanais atribuídos</h2>
+        <h2>Treinos marcados</h2>
 
-        {recurringTrainings.length === 0 && (
-          <p className="muted">Ainda não existem treinos semanais atribuídos.</p>
+        {upcomingLessons.length === 0 && (
+          <p className="muted">Ainda não tens treinos publicados pelo admin.</p>
         )}
 
-        {recurringTrainings.map((training) => (
-          <div className="lesson-card" key={training.id}>
-            <div>
-              <h3>{training.groupName}</h3>
-              <p>Dia: {training.weekDay}</p>
-              <p>Carrinha: {training.van}</p>
-              <p>Até: {training.repeatUntil}</p>
-            </div>
-
-            <div>
-              <h4>Preparar treino</h4>
-
-              <div className="form-row">
-                <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-                <input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
-                <input placeholder="Praia" value={beach} onChange={(e) => setBeach(e.target.value)} />
-              </div>
-
-              <PickupManager pickups={pickups} onChange={setPickups} />
-
-              <button className="primary-btn" onClick={() => prepareRecurringLesson(training.id)}>
-                Criar treino
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div className="card section-card">
-        <h2>Criar treino extra</h2>
-
-        <div className="form-row">
-          <input type="date" value={extraDate} onChange={(e) => setExtraDate(e.target.value)} />
-          <input type="time" value={extraTime} onChange={(e) => setExtraTime(e.target.value)} />
-          <input placeholder="Praia" value={extraBeach} onChange={(e) => setExtraBeach(e.target.value)} />
-          <input placeholder="Carrinha" value={extraVan} onChange={(e) => setExtraVan(e.target.value)} />
-        </div>
-
-        <PickupManager pickups={extraPickups} onChange={setExtraPickups} />
-
-        <button className="primary-btn" onClick={createExtraLesson}>
-          Criar treino extra
-        </button>
-      </div>
-
-      <div className="card section-card">
-        <h2>Treinos criados</h2>
-
         <div className="lesson-list">
-          {lessons.map((lesson) => {
+          {upcomingLessons.map((lesson) => {
             const bookedStudents = students.filter((student) =>
               lesson.bookedStudentIds.includes(student.id)
             );
@@ -302,36 +139,32 @@ function CoachArea({ user }: Props) {
             const beachStudents = getBeachStudents(lesson);
 
             return (
-              <div className="lesson-card" key={lesson.id}>
+              <div className="lesson-card coach-lesson-card" key={lesson.id}>
                 <div>
-                  <h3>{lesson.date} · {lesson.time}</h3>
+                  <h3>
+                    {lesson.date}
+                    {lesson.time ? ` · ${lesson.time}` : ""}
+                  </h3>
+
                   {lesson.groupName && <p>Grupo: {lesson.groupName}</p>}
-                  <p>{lesson.beach}</p>
-                  <p>Carrinha: {lesson.van}</p>
-                  <p>Estado: {lesson.status}</p>
+                  <p>🏖️ {lesson.beach || "Praia por definir"}</p>
+                  <p>🚐 Carrinha: {lesson.van}</p>
+                  <p>Estado: {lesson.status === "published" ? "Publicado" : lesson.status}</p>
 
-                  {lesson.status === "draft" && (
-                    <button className="primary-btn" onClick={() => publishLesson(lesson.id)}>
-                      Publicar treino
-                    </button>
+                  <CoachLessonSetup lesson={lesson} onSaved={loadData} />
+
+                  <h4>Pickups planeados</h4>
+                  {(lesson.coachPickups || []).length === 0 && (
+                    <p className="muted">Ainda não definiste pickups.</p>
                   )}
 
-                  {lesson.status === "published" && (
-                    <button className="primary-btn" onClick={() => finishLesson(lesson.id)}>
-                      Finalizar treino
-                    </button>
-                  )}
-
-                  {lesson.status === "finished" && (
-                    <p className="muted">Treino concluído</p>
-                  )}
-
-                  <h4>Pickups</h4>
                   {(lesson.coachPickups || []).map((pickup) => (
-                    <p key={pickup.id}>{pickup.time} — {pickup.location}</p>
+                    <p key={pickup.id}>
+                      {pickup.time} — {pickup.location}
+                    </p>
                   ))}
 
-                  <h4>Transporte</h4>
+                  <h4>Resumo de transporte</h4>
                   <p>Carrinha: {pickupStudents.length}</p>
                   <p>Direto para a praia: {beachStudents.length}</p>
 
@@ -343,13 +176,34 @@ function CoachArea({ user }: Props) {
                   <p>Leashes: {materialSummary.leash}</p>
                   <p>Coletes: {materialSummary.vest}</p>
 
-                  <button className="danger-btn" onClick={() => deleteLesson(lesson.id)}>
-                    Apagar treino
-                  </button>
+                  {lesson.status === "published" && (
+                    <button
+                      className="primary-btn"
+                      onClick={() => finishLesson(lesson.id)}
+                    >
+                      Finalizar treino
+                    </button>
+                  )}
                 </div>
 
                 <div>
                   <h4>Respostas dos alunos</h4>
+
+                  {bookedStudents.length === 0 && (
+                    <p className="muted">Sem alunos inscritos neste treino.</p>
+                  )}
+
+                  {bookedStudents.map((student) => (
+                    <div key={student.id} className="compact-row">
+                      <div>
+                        <strong>{student.name}</strong>
+                        <br />
+                        <small>{getResponseText(lesson, student.id)}</small>
+                        <br />
+                        <small>Material: {getMaterialText(lesson, student.id)}</small>
+                      </div>
+                    </div>
+                  ))}
 
                   <h5>Vão na carrinha</h5>
                   {pickupStudents.length === 0 && (
@@ -361,7 +215,8 @@ function CoachArea({ user }: Props) {
 
                     return (
                       <p key={response.studentId}>
-                        {student?.name} — {response.pickupLocation} — {response.availableFrom}
+                        {student?.name} — {response.pickupLocation} —{" "}
+                        {response.availableFrom}
                       </p>
                     );
                   })}
@@ -380,29 +235,6 @@ function CoachArea({ user }: Props) {
                       </p>
                     );
                   })}
-
-                  <h4>Presenças</h4>
-
-                  {bookedStudents.map((student) => (
-                    <div key={student.id} className="compact-row">
-                      <div>
-                        <strong>{student.name}</strong>
-                        <br />
-                        <small>{getResponseText(lesson, student.id)}</small>
-                        <br />
-                        <small>Material: {getMaterialText(lesson, student.id)}</small>
-                      </div>
-
-                      <label>
-                        <input
-                          type="checkbox"
-                          checked={lesson.presentStudentIds.includes(student.id)}
-                          onChange={() => togglePresence(lesson.id, student.id)}
-                        />
-                        Presente
-                      </label>
-                    </div>
-                  ))}
                 </div>
               </div>
             );

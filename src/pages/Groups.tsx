@@ -92,6 +92,11 @@ function Groups() {
     <div className="card section-card">
       <h1 className="page-title">Grupos</h1>
 
+      <p className="workflow-help">
+        Cria aqui o grupo com treinador e alunos. Depois vai a{" "}
+        <strong>Horários</strong> para definir o dia fixo de treino, carrinha e publicar.
+      </p>
+
       <div className="form-row">
         <input
           placeholder="Nome do grupo"

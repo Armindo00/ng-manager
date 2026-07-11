@@ -33,8 +33,7 @@ function CoachDashboard({ user }: Props) {
       ]);
 
       const coachLessons = lessonsData.filter(
-        (lesson) =>
-          lesson.coachId === user.id || lesson.coachName === user.name
+        (lesson) => lesson.coachId === user.id
       );
 
       setLessons(coachLessons);
@@ -138,7 +137,8 @@ function CoachDashboard({ user }: Props) {
             <h3>{lesson.groupName || "Treino extra"}</h3>
 
             <p>
-              📅 {lesson.date} · 🕒 {lesson.time || "--:--"}
+              📅 {lesson.date}
+              {lesson.time ? ` · Chegada à praia: ${lesson.time}` : ""}
             </p>
 
             <p>🏖️ {lesson.beach || "Praia por definir"}</p>
@@ -296,6 +296,7 @@ function CoachDashboard({ user }: Props) {
           <LessonDetailCard
             lesson={selectedLesson}
             students={students}
+            readOnlyVan
           />
         </Modal>
       )}

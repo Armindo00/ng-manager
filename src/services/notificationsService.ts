@@ -57,8 +57,7 @@ export async function getNotifications(user: User): Promise<Notification[]> {
     ]);
 
     const coachLessons = lessons.filter(
-      (lesson) =>
-        lesson.coachId === user.id || lesson.coachName === user.name
+      (lesson) => lesson.coachId === user.id
     );
 
     const draftLessons = coachLessons.filter(

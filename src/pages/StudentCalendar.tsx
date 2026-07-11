@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { Lesson, Student, User } from "../types";
 import { getLessons } from "../services/lessonsService";
-import { getStudents } from "../services/studentsService";
+import { loadStudentView } from "../utils/studentView";
 
 type Props = {
   user: User;
@@ -12,37 +12,45 @@ function StudentCalendar({ user }: Props) {
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const [error, setError] = useState<string | null>(null);
+
   useEffect(() => {
     loadData();
-  }, []);
+  }, [user.id, user.studentId]);
 
   async function loadData() {
     setLoading(true);
 
-    const studentsData = await getStudents();
+    const studentResult = await loadStudentView(user);
     const lessonsData = await getLessons();
 
-    const foundStudent = studentsData.find((s) => s.id === user.studentId);
-
-    if (foundStudent) {
-      setStudent(foundStudent);
-
-      setLessons(
-        lessonsData
-          .filter(
-            (lesson) =>
-              lesson.bookedStudentIds.includes(foundStudent.id) &&
-              lesson.status !== "draft"
-          )
-          .sort((a, b) => a.date.localeCompare(b.date))
-      );
+    if (!studentResult.student) {
+      setStudent(null);
+      setLessons([]);
+      setError(studentResult.error);
+      setLoading(false);
+      return;
     }
+
+    const foundStudent = studentResult.student;
+    setStudent(foundStudent);
+    setError(null);
+
+    setLessons(
+      lessonsData
+        .filter(
+          (lesson) =>
+            lesson.bookedStudentIds.includes(foundStudent.id) &&
+            lesson.status !== "draft"
+        )
+        .sort((a, b) => a.date.localeCompare(b.date))
+    );
 
     setLoading(false);
   }
 
   if (loading) return <p className="muted">A carregar...</p>;
-  if (!student) return <p>Aluno não encontrado.</p>;
+  if (!student) return <p>{error || "Aluno não encontrado."}</p>;
 
   return (
     <div>

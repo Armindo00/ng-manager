@@ -86,3 +86,31 @@ export async function deletePayment(id: string) {
 
   if (error) throw error;
 }
+
+export async function syncStudentPaidStatus(studentId: string) {
+  const now = new Date();
+  const month = now.getMonth() + 1;
+  const year = now.getFullYear();
+
+  const { data, error } = await supabase
+    .from("payments")
+    .select("id")
+    .eq("student_id", studentId)
+    .eq("month", month)
+    .eq("year", year)
+    .eq("status", "paid")
+    .limit(1);
+
+  if (error) throw error;
+
+  const isPaid = (data?.length ?? 0) > 0;
+
+  const { error: updateError } = await supabase
+    .from("students")
+    .update({ paid: isPaid })
+    .eq("id", studentId);
+
+  if (updateError) throw updateError;
+
+  return isPaid;
+}

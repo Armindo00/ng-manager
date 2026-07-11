@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import type { Lesson, MonthlyEvaluation, Student, User } from "../types";
-import { getStudents } from "../services/studentsService";
 import { getLessons } from "../services/lessonsService";
 import { getEvaluations } from "../services/evaluationsService";
+import { loadStudentView } from "../utils/studentView";
 
 type Props = {
   user: User;
@@ -14,43 +14,52 @@ function StudentDashboard({ user }: Props) {
   const [evaluations, setEvaluations] = useState<MonthlyEvaluation[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const [error, setError] = useState<string | null>(null);
+
   useEffect(() => {
     loadData();
-  }, []);
+  }, [user.id, user.studentId]);
 
   async function loadData() {
     setLoading(true);
 
-    const studentsData = await getStudents();
+    const studentResult = await loadStudentView(user);
     const lessonsData = await getLessons();
     const evaluationsData = await getEvaluations();
 
-    const foundStudent = studentsData.find((s) => s.id === user.studentId);
-
-    if (foundStudent) {
-      setStudent(foundStudent);
-
-      setLessons(
-        lessonsData.filter((lesson) =>
-          lesson.bookedStudentIds.includes(foundStudent.id)
-        )
-      );
-
-      setEvaluations(
-        evaluationsData
-          .filter((evaluation) => evaluation.studentId === foundStudent.id)
-          .sort((a, b) => {
-            if (a.year !== b.year) return b.year - a.year;
-            return b.month - a.month;
-          })
-      );
+    if (!studentResult.student) {
+      setStudent(null);
+      setLessons([]);
+      setEvaluations([]);
+      setError(studentResult.error);
+      setLoading(false);
+      return;
     }
+
+    const foundStudent = studentResult.student;
+    setStudent(foundStudent);
+    setError(null);
+
+    setLessons(
+      lessonsData.filter((lesson) =>
+        lesson.bookedStudentIds.includes(foundStudent.id)
+      )
+    );
+
+    setEvaluations(
+      evaluationsData
+        .filter((evaluation) => evaluation.studentId === foundStudent.id)
+        .sort((a, b) => {
+          if (a.year !== b.year) return b.year - a.year;
+          return b.month - a.month;
+        })
+    );
 
     setLoading(false);
   }
 
   if (loading) return <p className="muted">A carregar...</p>;
-  if (!student) return <p>Aluno não encontrado.</p>;
+  if (!student) return <p>{error || "Aluno não encontrado."}</p>;
 
   const studentId = student.id;
   const nextLesson = lessons.find((lesson) => lesson.status === "published");

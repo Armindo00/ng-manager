@@ -55,6 +55,28 @@ export async function getStudents() {
   return (data || []).map(fromDb);
 }
 
+export async function getCurrentStudent(user: { role: string; studentId?: string }) {
+  if (user.role !== "student") return null;
+
+  if (user.studentId) {
+    const { data, error } = await supabase
+      .from("students")
+      .select("*")
+      .eq("id", user.studentId)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (data) return fromDb(data);
+  }
+
+  const { data, error } = await supabase.from("students").select("*").maybeSingle();
+
+  if (error) throw error;
+  if (!data) return null;
+
+  return fromDb(data);
+}
+
 export async function addStudent(student: Student) {
   const { error } = await supabase.from("students").insert(toDb(student));
 

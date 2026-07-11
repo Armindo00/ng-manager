@@ -94,8 +94,8 @@ function Sidebar({ user, activeSection, onChangeSection, onLogout }: Props) {
               {item("👥", "Alunos", "students")}
               {item("🏄", "Treinadores", "coaches")}
               {item("👨‍👩‍👧", "Grupos", "groups")}
-              {item("🔁", "Treinos Semanais", "recurring")}
-              {item("📅", "Treinos", "lessons")}
+              {item("🔁", "Horários", "recurring")}
+              {item("🗓️", "Calendário", "lessons")}
               {item("💳", "Pagamentos", "payments")}
             </nav>
           )}

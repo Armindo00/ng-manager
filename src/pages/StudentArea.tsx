@@ -1,59 +1,61 @@
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import type { Lesson, MaterialRequest, Student, User } from "../types";
-import { getStudents } from "../services/studentsService";
+import type { Lesson, LessonResponse, Student, User } from "../types";
 import { getLessons, updateLesson } from "../services/lessonsService";
+import { loadStudentView } from "../utils/studentView";
+import { formatStudentResponseSummary } from "../utils/lessonResponse";
+import StudentLessonResponseModal from "../components/StudentLessonResponseModal";
 
 type Props = {
   user: User;
 };
 
-const emptyMaterial: MaterialRequest = {
-  softboard: false,
-  fiberBoard: false,
-  wetsuit: false,
-  lycra: false,
-  leash: false,
-  vest: false,
-  other: "",
-};
-
 function StudentArea({ user }: Props) {
-  const [students, setStudents] = useState<Student[]>([]);
+  const [student, setStudent] = useState<Student | null>(null);
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [responseLesson, setResponseLesson] = useState<Lesson | null>(null);
+  const [savingResponse, setSavingResponse] = useState(false);
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [user.id, user.studentId]);
 
   async function loadData() {
     try {
       setLoading(true);
 
-      const studentsData = await getStudents();
-      const lessonsData = await getLessons();
+      const studentResult = await loadStudentView(user);
 
+      if (!studentResult.student) {
+        setStudent(null);
+        setLessons([]);
+        setError(studentResult.error);
+        return;
+      }
+
+      const lessonsData = await getLessons();
       const today = new Date().toISOString().split("T")[0];
 
-      setStudents(studentsData);
+      setStudent(studentResult.student);
+      setError(null);
       setLessons(
         lessonsData.filter(
           (lesson) => lesson.status === "published" && lesson.date >= today
         )
       );
-    } catch (error) {
-      console.error(error);
+    } catch (loadError) {
+      console.error(loadError);
       toast.error("Erro ao carregar treinos.");
+      setError("Erro ao carregar treinos.");
     } finally {
       setLoading(false);
     }
   }
 
-  const student = students.find((s) => s.id === user.studentId);
-
   if (loading) return <p className="muted">A carregar...</p>;
-  if (!student) return <p>Aluno não encontrado.</p>;
+  if (!student) return <p>{error || "Aluno não encontrado."}</p>;
 
   const studentId = student.id;
 
@@ -77,85 +79,118 @@ function StudentArea({ user }: Props) {
     (lesson) => getResponse(lesson)?.status === "declined"
   );
 
-  async function respondToLesson(
-    lesson: Lesson,
-    status: "confirmed" | "declined"
-  ) {
+  async function saveLessonResponse(lesson: Lesson, response: LessonResponse) {
     const filteredResponses = (lesson.responses || []).filter(
-      (response) => response.studentId !== studentId
+      (item) => item.studentId !== studentId
     );
 
     const updatedLesson: Lesson = {
       ...lesson,
-      responses: [
-        ...filteredResponses,
-        {
-          studentId,
-          status,
-          transportType: "pickup",
-          pickupLocation: "",
-          availableFrom: "",
-          material: emptyMaterial,
-          notes: "",
-        },
-      ],
+      responses: [...filteredResponses, response],
     };
 
     try {
+      setSavingResponse(true);
       await updateLesson(updatedLesson);
       await loadData();
+      setResponseLesson(null);
 
       toast.success(
-        status === "confirmed"
-          ? "Confirmaste presença."
+        response.status === "confirmed"
+          ? "Resposta enviada ao treinador."
           : "Marcaste que não vais."
       );
-    } catch (error) {
-      console.error(error);
+    } catch (saveError) {
+      console.error(saveError);
       toast.error("Erro ao guardar resposta.");
+    } finally {
+      setSavingResponse(false);
     }
   }
 
-  function renderLessonCard(lesson: Lesson) {
+  async function declineLesson(lesson: Lesson) {
+    await saveLessonResponse(lesson, {
+      studentId,
+      status: "declined",
+      transportType: "pickup",
+      pickupLocation: "",
+      availableFrom: "",
+      material: {
+        softboard: false,
+        fiberBoard: false,
+        wetsuit: false,
+        lycra: false,
+        leash: false,
+        vest: false,
+        other: "",
+      },
+      notes: "",
+    });
+  }
+
+  function renderLessonCard(lesson: Lesson, options?: { allowEdit?: boolean }) {
     const response = getResponse(lesson);
     const isConfirmed = response?.status === "confirmed";
     const isDeclined = response?.status === "declined";
+    const summary = response ? formatStudentResponseSummary(response) : [];
 
     return (
       <div className="lesson-card student-lesson-card" key={lesson.id}>
         <div>
           <h3>
-            {lesson.date} · {lesson.time || "--:--"}
+            {lesson.date}
+            {lesson.time ? ` · ${lesson.time}` : ""}
           </h3>
 
           {lesson.groupName && <p>Grupo: {lesson.groupName}</p>}
 
-          <p>🏖️ {lesson.beach || "Praia por definir"}</p>
+          <p>🏖️ {lesson.beach || "Praia por definir pelo treinador"}</p>
+          <p>🕒 Chegada à praia: {lesson.time || "Por definir pelo treinador"}</p>
           <p>👨‍🏫 Treinador: {lesson.coachName}</p>
           <p>🚐 Carrinha: {lesson.van || "Por definir"}</p>
-          <p>🕒 Pickup: {lesson.pickupTime || "Por definir"}</p>
 
           {isConfirmed && <p className="student-status confirmed">✅ Vou</p>}
           {isDeclined && <p className="student-status declined">❌ Não vou</p>}
           {!isConfirmed && !isDeclined && (
             <p className="student-status pending">⏳ Por responder</p>
           )}
+
+          {isConfirmed && summary.length > 0 && (
+            <div className="student-response-summary">
+              {summary.map((line) => (
+                <p key={line}>{line}</p>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="student-lesson-actions">
-          <button
-            className="primary-btn"
-            onClick={() => respondToLesson(lesson, "confirmed")}
-          >
-            ✅ Vou
-          </button>
+          {!isConfirmed && !isDeclined && (
+            <>
+              <button
+                className="primary-btn"
+                onClick={() => setResponseLesson(lesson)}
+              >
+                ✅ Vou
+              </button>
 
-          <button
-            className="danger-btn"
-            onClick={() => respondToLesson(lesson, "declined")}
-          >
-            ❌ Não vou
-          </button>
+              <button
+                className="danger-btn"
+                onClick={() => declineLesson(lesson)}
+              >
+                ❌ Não vou
+              </button>
+            </>
+          )}
+
+          {options?.allowEdit && isConfirmed && (
+            <button
+              className="compact-btn"
+              onClick={() => setResponseLesson(lesson)}
+            >
+              Editar resposta
+            </button>
+          )}
         </div>
       </div>
     );
@@ -163,7 +198,7 @@ function StudentArea({ user }: Props) {
 
   return (
     <div>
-      <h1 className="page-title">Área do Aluno</h1>
+      <h1 className="page-title">Os meus treinos</h1>
 
       <div className="stats-grid">
         <div className="card">
@@ -189,7 +224,9 @@ function StudentArea({ user }: Props) {
           <p className="muted">Não tens treinos por responder.</p>
         )}
 
-        <div className="lesson-list">{pendingLessons.map(renderLessonCard)}</div>
+        <div className="lesson-list">
+          {pendingLessons.map((lesson) => renderLessonCard(lesson))}
+        </div>
       </div>
 
       <div className="card section-card">
@@ -199,7 +236,11 @@ function StudentArea({ user }: Props) {
           <p className="muted">Ainda não confirmaste nenhum treino.</p>
         )}
 
-        <div className="lesson-list">{confirmedLessons.map(renderLessonCard)}</div>
+        <div className="lesson-list">
+          {confirmedLessons.map((lesson) =>
+            renderLessonCard(lesson, { allowEdit: true })
+          )}
+        </div>
       </div>
 
       <div className="card section-card">
@@ -209,8 +250,21 @@ function StudentArea({ user }: Props) {
           <p className="muted">Nenhum treino recusado.</p>
         )}
 
-        <div className="lesson-list">{declinedLessons.map(renderLessonCard)}</div>
+        <div className="lesson-list">
+          {declinedLessons.map((lesson) => renderLessonCard(lesson))}
+        </div>
       </div>
+
+      {responseLesson && (
+        <StudentLessonResponseModal
+          lesson={responseLesson}
+          student={student}
+          existingResponse={getResponse(responseLesson)}
+          saving={savingResponse}
+          onClose={() => setResponseLesson(null)}
+          onSubmit={(response) => saveLessonResponse(responseLesson, response)}
+        />
+      )}
     </div>
   );
 }

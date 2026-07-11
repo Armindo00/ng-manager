@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { MonthlyEvaluation, Student, User } from "../types";
-import { getStudents } from "../services/studentsService";
 import { getEvaluations } from "../services/evaluationsService";
+import { loadStudentView } from "../utils/studentView";
 
 type Props = {
   user: User;
@@ -12,32 +12,38 @@ function StudentEvaluations({ user }: Props) {
   const [evaluations, setEvaluations] = useState<MonthlyEvaluation[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const [error, setError] = useState<string | null>(null);
+
   useEffect(() => {
     loadData();
-  }, []);
+  }, [user.id, user.studentId]);
 
   async function loadData() {
     setLoading(true);
 
-    const studentsData = await getStudents();
+    const studentResult = await loadStudentView(user);
     const evaluationsData = await getEvaluations();
 
-    const foundStudent = studentsData.find(
-      (student) => student.id === user.studentId
-    );
-
-    if (foundStudent) {
-      setStudent(foundStudent);
-
-      setEvaluations(
-        evaluationsData
-          .filter((evaluation) => evaluation.studentId === foundStudent.id)
-          .sort((a, b) => {
-            if (a.year !== b.year) return b.year - a.year;
-            return b.month - a.month;
-          })
-      );
+    if (!studentResult.student) {
+      setStudent(null);
+      setEvaluations([]);
+      setError(studentResult.error);
+      setLoading(false);
+      return;
     }
+
+    const foundStudent = studentResult.student;
+    setStudent(foundStudent);
+    setError(null);
+
+    setEvaluations(
+      evaluationsData
+        .filter((evaluation) => evaluation.studentId === foundStudent.id)
+        .sort((a, b) => {
+          if (a.year !== b.year) return b.year - a.year;
+          return b.month - a.month;
+        })
+    );
 
     setLoading(false);
   }
@@ -53,7 +59,7 @@ function StudentEvaluations({ user }: Props) {
   }
 
   if (!student) {
-    return <p>Aluno não encontrado.</p>;
+    return <p>{error || "Aluno não encontrado."}</p>;
   }
 
   return (

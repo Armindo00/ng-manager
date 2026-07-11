@@ -7,6 +7,7 @@ import {
   addPayment,
   updatePayment,
   deletePayment,
+  syncStudentPaidStatus,
   type Payment,
   type PaymentStatus,
 } from "../services/paymentsService";
@@ -61,6 +62,7 @@ function AdminPayments() {
       };
 
       await addPayment(newPayment);
+      await syncStudentPaidStatus(studentId);
       await loadData();
 
       toast.success("Pagamento criado com sucesso!");
@@ -86,6 +88,7 @@ function AdminPayments() {
         paymentDate: new Date().toISOString().split("T")[0],
       });
 
+      await syncStudentPaidStatus(payment.studentId);
       await loadData();
       toast.success("Pagamento marcado como pago!");
     } catch (error) {
@@ -99,6 +102,7 @@ function AdminPayments() {
 
     try {
       await deletePayment(paymentToDelete.id);
+      await syncStudentPaidStatus(paymentToDelete.studentId);
       await loadData();
       setPaymentToDelete(null);
       toast.success("Pagamento apagado com sucesso!");

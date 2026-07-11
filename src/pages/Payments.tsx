@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { Student, User } from "../types";
-import { getStudents } from "../services/studentsService";
 import StudentPaymentHistory from "../components/StudentPaymentHistory";
+import { loadStudentView } from "../utils/studentView";
 
 type Props = {
   user: User;
@@ -10,21 +10,17 @@ type Props = {
 function Payments({ user }: Props) {
   const [loading, setLoading] = useState(true);
   const [student, setStudent] = useState<Student | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [user.id, user.studentId]);
 
   async function loadData() {
-    setLoading(true);
-
-    const studentsData = await getStudents();
-    const foundStudent = studentsData.find(
-      (item) => item.id === user.studentId
-    );
-
-    setStudent(foundStudent || null);
-    setLoading(false);
+    const result = await loadStudentView(user);
+    setStudent(result.student);
+    setError(result.error);
+    setLoading(result.loading);
   }
 
   if (loading) {
@@ -32,7 +28,12 @@ function Payments({ user }: Props) {
   }
 
   if (!student) {
-    return <p>Aluno não encontrado.</p>;
+    return (
+      <div className="card section-card">
+        <h1 className="page-title">Pagamentos</h1>
+        <p>{error || "Aluno não encontrado."}</p>
+      </div>
+    );
   }
 
   const pendingPayments = student.paid === false;

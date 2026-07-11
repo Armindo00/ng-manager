@@ -1,15 +1,17 @@
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import type { Coach, Lesson, Student } from "../types";
+import type { Coach, CoachPickup, Lesson, Student } from "../types";
 import { updateLesson } from "../services/lessonsService";
 import { getCoaches } from "../services/coachesService";
+import PickupManager from "./PickupManager";
 
 type Props = {
   lesson: Lesson;
   students: Student[];
+  readOnlyVan?: boolean;
 };
 
-function LessonDetailCard({ lesson, students }: Props) {
+function LessonDetailCard({ lesson, students, readOnlyVan = false }: Props) {
   const [currentLesson, setCurrentLesson] = useState<Lesson>(lesson);
   const [coachNotes, setCoachNotes] = useState(lesson.coachNotes || "");
   const [coaches, setCoaches] = useState<Coach[]>([]);
@@ -138,6 +140,17 @@ function LessonDetailCard({ lesson, students }: Props) {
     );
   }
 
+  function savePickups(pickups: CoachPickup[]) {
+    saveLessonChanges(
+      {
+        ...currentLesson,
+        coachPickups: pickups,
+        pickupTime: pickups[0]?.time || "",
+      },
+      "Pickups atualizados."
+    );
+  }
+
   function saveNotes() {
     saveLessonChanges({ ...currentLesson, coachNotes }, "Notas guardadas.");
   }
@@ -190,7 +203,7 @@ function LessonDetailCard({ lesson, students }: Props) {
           </label>
 
           <label>
-            Hora
+            Hora de chegada à praia
             <input
               type="time"
               value={currentLesson.time || ""}
@@ -225,17 +238,23 @@ function LessonDetailCard({ lesson, students }: Props) {
             <input
               value={currentLesson.van || ""}
               onChange={(e) => updateField("van", e.target.value)}
-            />
-          </label>
-
-          <label>
-            Hora de recolha
-            <input
-              value={currentLesson.pickupTime || ""}
-              onChange={(e) => updateField("pickupTime", e.target.value)}
+              readOnly={readOnlyVan}
+              title={readOnlyVan ? "Definida pelo admin" : undefined}
             />
           </label>
         </div>
+      </div>
+
+      <div className="lesson-section">
+        <h3>🚐 Pickups</h3>
+        <p className="muted">
+          Define os horários de recolha com base nas respostas dos alunos.
+        </p>
+
+        <PickupManager
+          pickups={currentLesson.coachPickups || []}
+          onChange={savePickups}
+        />
       </div>
 
       <div className="lesson-section">

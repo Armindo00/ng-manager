@@ -1,28 +1,25 @@
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import type { Lesson, Student } from "../types";
-import type { Group } from "../types/group";
-import { getGroups } from "../services/groupsService";
 import { getStudents } from "../services/studentsService";
-import { getLessons, addLesson, deleteLesson } from "../services/lessonsService";
+import { getLessons, deleteLesson, updateLesson } from "../services/lessonsService";
 import Modal from "../components/Modal";
 import LessonDetailCard from "../components/LessonDetailCard";
 import ActionButtons from "../components/ActionButtons";
 import ConfirmDialog from "../components/ConfirmDialog";
 
+function statusLabel(status: Lesson["status"]) {
+  if (status === "published") return "Publicado";
+  if (status === "finished") return "Terminado";
+  return "Rascunho";
+}
+
 function AdminLessons() {
-  const [groups, setGroups] = useState<Group[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
   const [lessonToDelete, setLessonToDelete] = useState<Lesson | null>(null);
-
-  const [groupId, setGroupId] = useState("");
-  const [date, setDate] = useState("");
-  const [time, setTime] = useState("");
-  const [beach, setBeach] = useState("");
-  const [van, setVan] = useState("");
-  const [pickupTime, setPickupTime] = useState("");
+  const [publishingDrafts, setPublishingDrafts] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -30,7 +27,6 @@ function AdminLessons() {
 
   async function loadData() {
     try {
-      setGroups(await getGroups());
       setStudents(await getStudents());
       setLessons(await getLessons());
     } catch (error) {
@@ -39,47 +35,28 @@ function AdminLessons() {
     }
   }
 
-  async function createLesson() {
-    const group = groups.find((g) => g.id === groupId);
+  async function publishAllDrafts() {
+    const drafts = lessons.filter((lesson) => lesson.status === "draft");
 
-    if (!group || !date || !time || !beach || !van || !pickupTime) {
-      toast.error("Preenche todos os campos do treino.");
+    if (drafts.length === 0) {
+      toast.error("Não há treinos em rascunho.");
       return;
     }
 
-    const newLesson: Lesson = {
-      id: crypto.randomUUID(),
-      date,
-      time,
-      beach,
-      status: "draft",
-      groupId: group.id,
-      groupName: group.name,
-      coachId: group.coachId,
-      coachName: group.coachName,
-      van,
-      pickupTime,
-      coachPickups: [],
-      bookedStudentIds: group.studentIds,
-      presentStudentIds: [],
-      responses: [],
-    };
-
     try {
-      await addLesson(newLesson);
+      setPublishingDrafts(true);
+
+      for (const lesson of drafts) {
+        await updateLesson({ ...lesson, status: "published" });
+      }
+
       await loadData();
-
-      setGroupId("");
-      setDate("");
-      setTime("");
-      setBeach("");
-      setVan("");
-      setPickupTime("");
-
-      toast.success("Treino criado com sucesso!");
+      toast.success(`${drafts.length} treino(s) publicado(s).`);
     } catch (error) {
       console.error(error);
-      toast.error("Erro ao criar treino.");
+      toast.error("Erro ao publicar treinos.");
+    } finally {
+      setPublishingDrafts(false);
     }
   }
 
@@ -90,7 +67,6 @@ function AdminLessons() {
       await deleteLesson(lessonToDelete.id);
       await loadData();
       setLessonToDelete(null);
-
       toast.success("Treino eliminado com sucesso!");
     } catch (error) {
       console.error(error);
@@ -98,31 +74,44 @@ function AdminLessons() {
     }
   }
 
+  const publishedCount = lessons.filter((lesson) => lesson.status === "published").length;
+  const draftCount = lessons.filter((lesson) => lesson.status === "draft").length;
+
   return (
     <div className="card section-card">
-      <h1 className="page-title">Treinos</h1>
+      <h1 className="page-title">Calendário de Treinos</h1>
 
-      <div className="form-row">
-        <select value={groupId} onChange={(e) => setGroupId(e.target.value)}>
-          <option value="">Selecionar grupo</option>
+      <p className="workflow-help">
+        Os treinos publicados em <strong>Horários</strong> aparecem aqui e ficam
+        visíveis para treinadores e alunos. Treinos em rascunho ainda não são
+        visíveis para os alunos.
+      </p>
 
-          {groups.map((group) => (
-            <option key={group.id} value={group.id}>
-              {group.name}
-            </option>
-          ))}
-        </select>
+      <div className="stats-grid" style={{ marginBottom: 20 }}>
+        <div className="card stat-card">
+          <span className="stat-label">Publicados</span>
+          <strong className="stat-number">{publishedCount}</strong>
+        </div>
 
-        <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-        <input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
-        <input placeholder="Praia" value={beach} onChange={(e) => setBeach(e.target.value)} />
-        <input placeholder="Carrinha" value={van} onChange={(e) => setVan(e.target.value)} />
-        <input placeholder="Pickup inicial" value={pickupTime} onChange={(e) => setPickupTime(e.target.value)} />
-
-        <button className="primary-btn" onClick={createLesson}>
-          Criar treino
-        </button>
+        <div className="card stat-card">
+          <span className="stat-label">Rascunhos</span>
+          <strong className="stat-number">{draftCount}</strong>
+        </div>
       </div>
+
+      {draftCount > 0 && (
+        <div className="quick-actions" style={{ marginBottom: 20 }}>
+          <button
+            className="primary-btn"
+            onClick={publishAllDrafts}
+            disabled={publishingDrafts}
+          >
+            {publishingDrafts
+              ? "A publicar..."
+              : `Publicar ${draftCount} rascunho(s)`}
+          </button>
+        </div>
+      )}
 
       <table className="data-table">
         <thead>
@@ -132,7 +121,7 @@ function AdminLessons() {
             <th>Grupo</th>
             <th>Treinador</th>
             <th>Praia</th>
-            <th>Carrinha</th>
+            <th>Estado</th>
             <th>Ações</th>
           </tr>
         </thead>
@@ -143,11 +132,15 @@ function AdminLessons() {
               <td className="data-table-primary" data-label="Data">
                 {lesson.date}
               </td>
-              <td data-label="Hora">{lesson.time}</td>
-              <td data-label="Grupo">{lesson.groupName}</td>
+              <td data-label="Hora">{lesson.time || "--:--"}</td>
+              <td data-label="Grupo">{lesson.groupName || "—"}</td>
               <td data-label="Treinador">{lesson.coachName}</td>
-              <td data-label="Praia">{lesson.beach}</td>
-              <td data-label="Carrinha">{lesson.van}</td>
+              <td data-label="Praia">{lesson.beach || "A definir"}</td>
+              <td data-label="Estado">
+                <span className={`payment-status payment-status-${lesson.status === "published" ? "paid" : lesson.status === "draft" ? "pending" : "cancelled"}`}>
+                  {statusLabel(lesson.status)}
+                </span>
+              </td>
               <td data-label="Ações">
                 <ActionButtons
                   onView={() => setSelectedLesson(lesson)}
@@ -158,6 +151,12 @@ function AdminLessons() {
           ))}
         </tbody>
       </table>
+
+      {lessons.length === 0 && (
+        <p className="muted">
+          Ainda não existem treinos. Vai a Horários e clica em Publicar.
+        </p>
+      )}
 
       {selectedLesson && (
         <Modal title="Ficha do treino" onClose={() => setSelectedLesson(null)}>

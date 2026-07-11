@@ -281,17 +281,21 @@ function AdminArea() {
         normalizedEmail
       );
 
-      if (!result.password) {
+      if (!result.hasAccess) {
         toast.error("Não foi possível criar o acesso.");
         return;
       }
 
-      setAccessModal({
-        studentName: student.name,
-        email: result.email || student.email,
-        password: result.password,
-        title: "Acesso do aluno criado",
-      });
+      if (result.password) {
+        setAccessModal({
+          studentName: student.name,
+          email: result.email || student.email,
+          password: result.password,
+          title: "Acesso do aluno criado",
+        });
+      } else if (result.hasAccess) {
+        toast.success("Acesso ligado à conta existente. Usa Reset password se precisares de nova password.");
+      }
 
       await loadData();
       toast.success("Acesso criado com sucesso.");

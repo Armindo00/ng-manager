@@ -3,7 +3,7 @@ import Modal from "./Modal";
 type Props = {
   studentName: string;
   email: string;
-  password: string;
+  password?: string;
   title?: string;
   onClose: () => void;
 };
@@ -16,7 +16,9 @@ function StudentAccessModal({
   onClose,
 }: Props) {
   async function copyCredentials() {
-    const text = `Aluno: ${studentName}\nEmail: ${email}\nPassword: ${password}`;
+    const text = password
+      ? `Aluno: ${studentName}\nEmail: ${email}\nPassword: ${password}`
+      : `Aluno: ${studentName}\nEmail: ${email}`;
 
     try {
       await navigator.clipboard.writeText(text);
@@ -38,16 +40,25 @@ function StudentAccessModal({
             <strong>{email}</strong>
           </div>
 
-          <div>
-            <span className="muted">Password</span>
-            <strong>{password}</strong>
-          </div>
+          {password && (
+            <div>
+              <span className="muted">Password</span>
+              <strong>{password}</strong>
+            </div>
+          )}
         </div>
 
-        <p className="muted">
-          Guarda esta password agora. Por segurança, não será mostrada outra
-          vez.
-        </p>
+        {password ? (
+          <p className="muted">
+            Guarda esta password agora. Por segurança, não será mostrada outra
+            vez.
+          </p>
+        ) : (
+          <p className="muted">
+            A conta já existia em Authentication. Usa Reset password para gerar
+            uma nova password.
+          </p>
+        )}
 
         <div className="student-access-actions">
           <button className="primary-btn" onClick={copyCredentials}>
