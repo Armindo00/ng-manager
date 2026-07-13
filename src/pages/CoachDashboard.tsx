@@ -305,6 +305,10 @@ function CoachDashboard({ user }: Props) {
             students={students}
             readOnlyVan
             coachMode
+            onClose={() => {
+              setSelectedLesson(null);
+              loadData();
+            }}
           />
         </Modal>
       )}

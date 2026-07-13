@@ -18,6 +18,7 @@ type Props = {
   students: Student[];
   readOnlyVan?: boolean;
   coachMode?: boolean;
+  onClose?: () => void;
 };
 
 function LessonDetailCard({
@@ -25,6 +26,7 @@ function LessonDetailCard({
   students,
   readOnlyVan = false,
   coachMode = false,
+  onClose,
 }: Props) {
   const [currentLesson, setCurrentLesson] = useState<Lesson>(lesson);
   const [coachNotes, setCoachNotes] = useState(lesson.coachNotes || "");
@@ -183,6 +185,11 @@ function LessonDetailCard({
     }
   }
 
+  async function handlePlanSent() {
+    await refreshLesson();
+    onClose?.();
+  }
+
   return (
     <div className="lesson-detail-card">
       <div className="lesson-detail-hero">
@@ -238,7 +245,9 @@ function LessonDetailCard({
               <h3>📢 Enviar plano (antes do treino)</h3>
               <CoachLessonSetup
                 lesson={currentLesson}
-                onSaved={refreshLesson}
+                onSaved={() => {
+                  void handlePlanSent();
+                }}
               />
             </div>
           )}
