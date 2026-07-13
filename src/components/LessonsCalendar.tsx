@@ -100,13 +100,27 @@ function LessonsCalendar({
       <h3 className="calendar-month">{monthName}</h3>
 
       <div className="calendar-grid calendar-header">
-        <span>Seg</span>
-        <span>Ter</span>
-        <span>Qua</span>
-        <span>Qui</span>
-        <span>Sex</span>
-        <span>Sáb</span>
-        <span>Dom</span>
+        <span className="calendar-weekday" data-short="S">
+          Seg
+        </span>
+        <span className="calendar-weekday" data-short="T">
+          Ter
+        </span>
+        <span className="calendar-weekday" data-short="Q">
+          Qua
+        </span>
+        <span className="calendar-weekday" data-short="Q">
+          Qui
+        </span>
+        <span className="calendar-weekday" data-short="S">
+          Sex
+        </span>
+        <span className="calendar-weekday" data-short="S">
+          Sáb
+        </span>
+        <span className="calendar-weekday" data-short="D">
+          Dom
+        </span>
       </div>
 
       <div className="calendar-grid">

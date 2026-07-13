@@ -772,7 +772,7 @@ textarea:focus {
 /* MOBILE */
 
 @media (max-width: 768px) {
-  body::before {
+  .app-layout::before {
     content: "";
     position: fixed;
     top: 0;
@@ -1188,7 +1188,7 @@ textarea:focus {
 /* ===== POLISH FINAL MOBILE ===== */
 
 @media (max-width: 768px) {
-  body::before {
+  .app-layout::before {
     height: 120px;
   }
 
@@ -1203,9 +1203,9 @@ textarea:focus {
 
   .dashboard-row .section-card h2,
   .calendar-card h2 {
-    text-align: center;
-    font-size: 28px;
-    line-height: 1.15;
+    text-align: left;
+    font-size: 18px;
+    line-height: 1.2;
   }
 
   .lesson-preview {
@@ -1244,17 +1244,17 @@ textarea:focus {
   }
 
   .calendar-card {
-    text-align: center;
+    text-align: left;
   }
 
   .calendar-month {
     text-align: left;
-    font-size: 24px;
+    font-size: 18px;
   }
 
   .calendar-day {
-    aspect-ratio: 1 / 1.15;
-    min-height: auto;
+    aspect-ratio: 1;
+    min-height: 0;
   }
 
   .mobile-menu-backdrop {
@@ -1268,7 +1268,7 @@ textarea:focus {
 /* ===== FIX FINAL: TOPO + SEÇÕES CENTRADAS ===== */
 
 @media (max-width: 768px) {
-  body::before {
+  .app-layout::before {
     content: "";
     position: fixed;
     top: 0;
@@ -1342,7 +1342,7 @@ textarea:focus {
     border-radius: 16px !important;
   }
 }
-body::before {
+.app-layout::before {
   pointer-events: none !important;
 }
 
@@ -2001,10 +2001,6 @@ body::before {
 @media (max-width: 720px) {
   .lessons-calendar-layout {
     grid-template-columns: 1fr;
-  }
-
-  .calendar-day {
-    min-height: 84px;
   }
 
   .coach-responses-table thead {
