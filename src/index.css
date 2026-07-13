@@ -1612,6 +1612,7 @@ textarea:focus {
   background: #f8fafc;
   border: 1px solid #e2e8f0;
   color: #0f172a;
+  cursor: pointer;
 }
 
 .calendar-day-lesson-row:hover {
@@ -2036,6 +2037,31 @@ textarea:focus {
   display: flex;
   flex-direction: column;
   gap: 18px;
+}
+
+.student-lesson-detail-block {
+  padding: 16px;
+  border-radius: 16px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.student-lesson-detail-date {
+  margin: 0 0 12px;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.student-lesson-detail-grid p {
+  margin: 0 0 8px;
+  color: #334155;
+  font-size: 14px;
+}
+
+.student-response-form-title {
+  margin: 0;
+  font-size: 16px;
+  color: #0f172a;
 }
 
 .student-response-section {

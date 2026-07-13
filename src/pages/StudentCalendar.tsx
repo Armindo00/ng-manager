@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
-import type { Lesson, Student, User } from "../types";
-import { getLessons } from "../services/lessonsService";
+import toast from "react-hot-toast";
+import type { Lesson, LessonResponse, Student, User } from "../types";
+import { getLessons, updateLesson } from "../services/lessonsService";
 import { loadStudentView } from "../utils/studentView";
 import LessonsCalendar from "../components/LessonsCalendar";
+import StudentLessonResponseModal from "../components/StudentLessonResponseModal";
 import {
   formatCalendarDayLabel,
   pickInitialCalendarDate,
 } from "../utils/calendarUtils";
-import { isLessonPlanSent } from "../utils/lessonWorkflow";
 import { getResponseStatusLabel } from "../utils/lessonResponse";
 
 type Props = {
@@ -20,6 +21,8 @@ function StudentCalendar({ user }: Props) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
+  const [savingResponse, setSavingResponse] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -70,6 +73,55 @@ function StudentCalendar({ user }: Props) {
     );
   }
 
+  async function saveLessonResponse(lesson: Lesson, response: LessonResponse) {
+    const filteredResponses = (lesson.responses || []).filter(
+      (item) => item.studentId !== studentId
+    );
+
+    const updatedLesson: Lesson = {
+      ...lesson,
+      responses: [...filteredResponses, response],
+    };
+
+    try {
+      setSavingResponse(true);
+      await updateLesson(updatedLesson);
+      await loadData();
+      setSelectedLesson(null);
+
+      toast.success(
+        response.status === "confirmed"
+          ? "Resposta enviada ao treinador."
+          : "Marcaste que não vais."
+      );
+    } catch (saveError) {
+      console.error(saveError);
+      toast.error("Erro ao guardar resposta.");
+    } finally {
+      setSavingResponse(false);
+    }
+  }
+
+  async function declineLesson(lesson: Lesson) {
+    await saveLessonResponse(lesson, {
+      studentId,
+      status: "declined",
+      transportType: "pickup",
+      pickupLocation: "",
+      availableFrom: "",
+      material: {
+        softboard: false,
+        fiberBoard: false,
+        wetsuit: false,
+        lycra: false,
+        leash: false,
+        vest: false,
+        other: "",
+      },
+      notes: "",
+    });
+  }
+
   return (
     <div>
       <h1 className="page-title">Calendário</h1>
@@ -98,7 +150,12 @@ function StudentCalendar({ user }: Props) {
                   const status = getResponseStatusLabel(response);
 
                   return (
-                    <div className="calendar-day-lesson-row" key={lesson.id}>
+                    <button
+                      type="button"
+                      className="calendar-day-lesson-row"
+                      key={lesson.id}
+                      onClick={() => setSelectedLesson(lesson)}
+                    >
                       <strong>
                         {lesson.groupName || "Treino"}
                         {lesson.time ? ` · ${lesson.time}` : ""}
@@ -108,13 +165,7 @@ function StudentCalendar({ user }: Props) {
                       <span className={`coach-response-badge ${status.className}`}>
                         {status.label}
                       </span>
-                      {isLessonPlanSent(lesson) &&
-                        (lesson.coachPickups || []).map((pickup) => (
-                          <small key={pickup.id}>
-                            Pickup: {pickup.time} — {pickup.location}
-                          </small>
-                        ))}
-                    </div>
+                    </button>
                   );
                 })}
               </div>
@@ -124,6 +175,18 @@ function StudentCalendar({ user }: Props) {
           )}
         </div>
       </div>
+
+      {selectedLesson && (
+        <StudentLessonResponseModal
+          lesson={selectedLesson}
+          student={student}
+          existingResponse={getResponse(selectedLesson)}
+          saving={savingResponse}
+          onClose={() => setSelectedLesson(null)}
+          onSubmit={(response) => saveLessonResponse(selectedLesson, response)}
+          onDecline={() => declineLesson(selectedLesson)}
+        />
+      )}
     </div>
   );
 }

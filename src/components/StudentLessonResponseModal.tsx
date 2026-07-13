@@ -1,6 +1,8 @@
 import { useState } from "react";
 import toast from "react-hot-toast";
 import type { Lesson, LessonResponse, MaterialRequest, Student } from "../types";
+import { formatStudentResponseSummary } from "../utils/lessonResponse";
+import { isLessonPlanSent } from "../utils/lessonWorkflow";
 import Modal from "./Modal";
 
 const emptyMaterial = (): MaterialRequest => ({
@@ -20,6 +22,7 @@ type Props = {
   saving?: boolean;
   onClose: () => void;
   onSubmit: (response: LessonResponse) => void;
+  onDecline: () => void;
 };
 
 function StudentLessonResponseModal({
@@ -29,6 +32,7 @@ function StudentLessonResponseModal({
   saving = false,
   onClose,
   onSubmit,
+  onDecline,
 }: Props) {
   const defaultPickup =
     existingResponse?.pickupLocation ||
@@ -90,16 +94,61 @@ function StudentLessonResponseModal({
     availableFrom.trim().length > 0 &&
     (transportType === "beach" || pickupLocation.trim().length > 0);
 
+  const isConfirmed = existingResponse?.status === "confirmed";
+  const isDeclined = existingResponse?.status === "declined";
+  const summary = existingResponse ? formatStudentResponseSummary(existingResponse) : [];
+
   return (
     <Modal
-      title={`Confirmar presença — ${lesson.date}`}
+      title={`${lesson.groupName || "Treino"}${lesson.time ? ` · ${lesson.time}` : ""}`}
       onClose={onClose}
     >
       <div className="student-response-form">
-        <p className="muted">
-          {lesson.time || "--:--"} · {lesson.beach || "Praia por definir"} ·{" "}
-          {lesson.groupName || "Treino"}
-        </p>
+        <div className="student-lesson-detail-block">
+          <p className="muted student-lesson-detail-date">{lesson.date}</p>
+
+          <div className="student-lesson-detail-grid">
+            <p>🏖️ {lesson.beach || "Praia por definir pelo treinador"}</p>
+            <p>🕒 Chegada à praia: {lesson.time || "Por definir pelo treinador"}</p>
+            <p>👨‍🏫 Treinador: {lesson.coachName}</p>
+            <p>🚐 Carrinha: {lesson.van || "Por definir"}</p>
+          </div>
+
+          {isLessonPlanSent(lesson) && (lesson.coachPickups || []).length > 0 && (
+            <div className="student-plan-pickups">
+              <strong>Pickups do treinador:</strong>
+              {(lesson.coachPickups || []).map((pickup) => (
+                <p key={pickup.id}>
+                  {pickup.time} — {pickup.location}
+                </p>
+              ))}
+            </div>
+          )}
+
+          {isConfirmed && !isLessonPlanSent(lesson) && (
+            <p className="student-plan-pending">
+              O treinador ainda não enviou o plano final (praia/hora/pickups).
+            </p>
+          )}
+
+          {isConfirmed && <p className="student-status confirmed">✅ Vou</p>}
+          {isDeclined && <p className="student-status declined">❌ Não vou</p>}
+          {!isConfirmed && !isDeclined && (
+            <p className="student-status pending">⏳ Por responder</p>
+          )}
+
+          {isConfirmed && summary.length > 0 && (
+            <div className="student-response-summary">
+              {summary.map((line) => (
+                <p key={line}>{line}</p>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <h3 className="student-response-form-title">
+          {existingResponse ? "Atualizar resposta" : "A tua resposta"}
+        </h3>
 
         <div className="student-response-section">
           <span className="student-response-label">Como vais?</span>
@@ -256,11 +305,19 @@ function StudentLessonResponseModal({
 
         <div className="student-response-actions">
           <button className="primary-btn" disabled={!canSubmit || saving} onClick={handleSubmit}>
-            {saving ? "A guardar..." : "Confirmar presença"}
+            {saving ? "A guardar..." : isConfirmed ? "Guardar alterações" : "Confirmar presença"}
+          </button>
+
+          <button
+            className="danger-btn"
+            disabled={saving}
+            onClick={onDecline}
+          >
+            {saving ? "A guardar..." : "Não vou"}
           </button>
 
           <button onClick={onClose} disabled={saving}>
-            Cancelar
+            Fechar
           </button>
         </div>
       </div>

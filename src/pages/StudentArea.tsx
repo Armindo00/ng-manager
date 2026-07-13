@@ -3,8 +3,7 @@ import toast from "react-hot-toast";
 import type { Lesson, LessonResponse, Student, User } from "../types";
 import { getLessons, updateLesson } from "../services/lessonsService";
 import { loadStudentView } from "../utils/studentView";
-import { formatStudentResponseSummary } from "../utils/lessonResponse";
-import { isLessonPlanSent } from "../utils/lessonWorkflow";
+import { getResponseStatusLabel } from "../utils/lessonResponse";
 import {
   formatCalendarDayLabel,
   pickInitialCalendarDate,
@@ -21,7 +20,7 @@ function StudentArea({ user }: Props) {
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [responseLesson, setResponseLesson] = useState<Lesson | null>(null);
+  const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
   const [savingResponse, setSavingResponse] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
@@ -89,14 +88,6 @@ function StudentArea({ user }: Props) {
     ? lessons.filter((lesson) => lesson.date === selectedDate)
     : [];
 
-  const pendingDayLessons = selectedDayLessons.filter((lesson) => !getResponse(lesson));
-  const confirmedDayLessons = selectedDayLessons.filter(
-    (lesson) => getResponse(lesson)?.status === "confirmed"
-  );
-  const declinedDayLessons = selectedDayLessons.filter(
-    (lesson) => getResponse(lesson)?.status === "declined"
-  );
-
   async function saveLessonResponse(lesson: Lesson, response: LessonResponse) {
     const filteredResponses = (lesson.responses || []).filter(
       (item) => item.studentId !== studentId
@@ -111,7 +102,7 @@ function StudentArea({ user }: Props) {
       setSavingResponse(true);
       await updateLesson(updatedLesson);
       await loadData();
-      setResponseLesson(null);
+      setSelectedLesson(null);
 
       toast.success(
         response.status === "confirmed"
@@ -144,93 +135,6 @@ function StudentArea({ user }: Props) {
       },
       notes: "",
     });
-  }
-
-  function renderLessonCard(lesson: Lesson, options?: { allowEdit?: boolean }) {
-    const response = getResponse(lesson);
-    const isConfirmed = response?.status === "confirmed";
-    const isDeclined = response?.status === "declined";
-    const summary = response ? formatStudentResponseSummary(response) : [];
-
-    return (
-      <div className="lesson-card student-lesson-card" key={lesson.id}>
-        <div>
-          <h3>
-            {lesson.groupName || "Treino"}
-            {lesson.time ? ` · ${lesson.time}` : ""}
-          </h3>
-
-          <p>🏖️ {lesson.beach || "Praia por definir pelo treinador"}</p>
-          <p>🕒 Chegada à praia: {lesson.time || "Por definir pelo treinador"}</p>
-          <p>👨‍🏫 Treinador: {lesson.coachName}</p>
-          <p>🚐 Carrinha: {lesson.van || "Por definir"}</p>
-
-          {isLessonPlanSent(lesson) ? (
-            <>
-              {(lesson.coachPickups || []).length > 0 && (
-                <div className="student-plan-pickups">
-                  <strong>Pickups do treinador:</strong>
-                  {(lesson.coachPickups || []).map((pickup) => (
-                    <p key={pickup.id}>
-                      {pickup.time} — {pickup.location}
-                    </p>
-                  ))}
-                </div>
-              )}
-            </>
-          ) : (
-            isConfirmed && (
-              <p className="student-plan-pending">
-                O treinador ainda não enviou o plano final (praia/hora/pickups).
-              </p>
-            )
-          )}
-
-          {isConfirmed && <p className="student-status confirmed">✅ Vou</p>}
-          {isDeclined && <p className="student-status declined">❌ Não vou</p>}
-          {!isConfirmed && !isDeclined && (
-            <p className="student-status pending">⏳ Por responder</p>
-          )}
-
-          {isConfirmed && summary.length > 0 && (
-            <div className="student-response-summary">
-              {summary.map((line) => (
-                <p key={line}>{line}</p>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div className="student-lesson-actions">
-          {!isConfirmed && !isDeclined && (
-            <>
-              <button
-                className="primary-btn"
-                onClick={() => setResponseLesson(lesson)}
-              >
-                ✅ Vou
-              </button>
-
-              <button
-                className="danger-btn"
-                onClick={() => declineLesson(lesson)}
-              >
-                ❌ Não vou
-              </button>
-            </>
-          )}
-
-          {options?.allowEdit && isConfirmed && (
-            <button
-              className="compact-btn"
-              onClick={() => setResponseLesson(lesson)}
-            >
-              Editar resposta
-            </button>
-          )}
-        </div>
-      </div>
-    );
   }
 
   return (
@@ -272,34 +176,31 @@ function StudentArea({ user }: Props) {
                 <p className="muted">Sem treinos neste dia.</p>
               )}
 
-              {pendingDayLessons.length > 0 && (
-                <section className="calendar-day-section">
-                  <h3>⏳ Por responder</h3>
-                  <div className="lesson-list">
-                    {pendingDayLessons.map((lesson) => renderLessonCard(lesson))}
-                  </div>
-                </section>
-              )}
+              <div className="calendar-day-lessons-list">
+                {selectedDayLessons.map((lesson) => {
+                  const response = getResponse(lesson);
+                  const status = getResponseStatusLabel(response);
 
-              {confirmedDayLessons.length > 0 && (
-                <section className="calendar-day-section">
-                  <h3>✅ Vou</h3>
-                  <div className="lesson-list">
-                    {confirmedDayLessons.map((lesson) =>
-                      renderLessonCard(lesson, { allowEdit: true })
-                    )}
-                  </div>
-                </section>
-              )}
-
-              {declinedDayLessons.length > 0 && (
-                <section className="calendar-day-section">
-                  <h3>❌ Não vou</h3>
-                  <div className="lesson-list">
-                    {declinedDayLessons.map((lesson) => renderLessonCard(lesson))}
-                  </div>
-                </section>
-              )}
+                  return (
+                    <button
+                      type="button"
+                      className="calendar-day-lesson-row"
+                      key={lesson.id}
+                      onClick={() => setSelectedLesson(lesson)}
+                    >
+                      <strong>
+                        {lesson.groupName || "Treino"}
+                        {lesson.time ? ` · ${lesson.time}` : ""}
+                      </strong>
+                      <span>{lesson.beach || "Praia por definir"}</span>
+                      <span>👨‍🏫 {lesson.coachName}</span>
+                      <span className={`coach-response-badge ${status.className}`}>
+                        {status.label}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
             </>
           ) : (
             <p className="muted">Seleciona um dia no calendário.</p>
@@ -307,14 +208,15 @@ function StudentArea({ user }: Props) {
         </div>
       </div>
 
-      {responseLesson && (
+      {selectedLesson && (
         <StudentLessonResponseModal
-          lesson={responseLesson}
+          lesson={selectedLesson}
           student={student}
-          existingResponse={getResponse(responseLesson)}
+          existingResponse={getResponse(selectedLesson)}
           saving={savingResponse}
-          onClose={() => setResponseLesson(null)}
-          onSubmit={(response) => saveLessonResponse(responseLesson, response)}
+          onClose={() => setSelectedLesson(null)}
+          onSubmit={(response) => saveLessonResponse(selectedLesson, response)}
+          onDecline={() => declineLesson(selectedLesson)}
         />
       )}
     </div>
