@@ -52,6 +52,8 @@ export type LessonResponse = {
   material: MaterialRequest;
 
   notes: string;
+
+  declineReason?: string;
 };
 
 export type CoachPickup = {

@@ -32,7 +32,11 @@ export function formatMaterialText(response?: LessonResponse) {
 
 export function formatTransportText(response?: LessonResponse) {
   if (!response) return "Por responder";
-  if (response.status === "declined") return "Não vai";
+  if (response.status === "declined") {
+    return response.declineReason
+      ? `Não vai · ${response.declineReason}`
+      : "Não vai";
+  }
 
   if (response.transportType === "pickup") {
     return `Carrinha · ${response.pickupLocation} · ${response.availableFrom}`;
@@ -43,7 +47,12 @@ export function formatTransportText(response?: LessonResponse) {
 
 export function getResponseStatusLabel(response?: LessonResponse) {
   if (!response) return { label: "Por responder", className: "pending" };
-  if (response.status === "declined") return { label: "Não vai", className: "declined" };
+  if (response.status === "declined") {
+    return {
+      label: response.declineReason ? "Não vai (justificado)" : "Não vai",
+      className: "declined",
+    };
+  }
   return { label: "Vou", className: "confirmed" };
 }
 

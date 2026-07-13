@@ -22,7 +22,7 @@ type Props = {
   saving?: boolean;
   onClose: () => void;
   onSubmit: (response: LessonResponse) => void;
-  onDecline: () => void;
+  onDecline: (reason: string) => void;
 };
 
 function StudentLessonResponseModal({
@@ -51,6 +51,10 @@ function StudentLessonResponseModal({
     existingResponse?.material || emptyMaterial()
   );
   const [notes, setNotes] = useState(existingResponse?.notes || "");
+  const [declineMode, setDeclineMode] = useState(false);
+  const [declineReason, setDeclineReason] = useState(
+    existingResponse?.declineReason || ""
+  );
 
   const pickupOptions = [
     ...(lesson.coachPickups || []).map((pickup) => pickup.location),
@@ -98,6 +102,79 @@ function StudentLessonResponseModal({
   const isDeclined = existingResponse?.status === "declined";
   const summary = existingResponse ? formatStudentResponseSummary(existingResponse) : [];
 
+  function handleDecline() {
+    if (!declineReason.trim()) {
+      toast.error("Indica a justificação para não ires ao treino.");
+      return;
+    }
+
+    onDecline(declineReason.trim());
+  }
+
+  if (declineMode || isDeclined) {
+    return (
+      <Modal
+        title={`${lesson.groupName || "Treino"}${lesson.time ? ` · ${lesson.time}` : ""}`}
+        onClose={onClose}
+      >
+        <div className="student-response-form">
+          <div className="student-lesson-detail-block">
+            <p className="muted student-lesson-detail-date">{lesson.date}</p>
+            <p>👨‍🏫 Treinador: {lesson.coachName}</p>
+            {isDeclined && (
+              <p className="student-status declined">❌ Não vou</p>
+            )}
+          </div>
+
+          <h3 className="student-response-form-title">
+            {isDeclined ? "Justificação registada" : "Justificar ausência"}
+          </h3>
+
+          <p className="muted workflow-help">
+            Explica o motivo da ausência. O admin vai validar e, se for aceite,
+            o treino fica registado para compensação.
+          </p>
+
+          <div className="student-response-section">
+            <label className="student-response-label" htmlFor="decline-reason">
+              Justificação
+            </label>
+            <textarea
+              id="decline-reason"
+              rows={4}
+              placeholder="Ex: Consulta médica, exame escolar, viagem familiar..."
+              value={declineReason}
+              onChange={(e) => setDeclineReason(e.target.value)}
+              disabled={isDeclined}
+            />
+          </div>
+
+          <div className="student-response-actions">
+            {!isDeclined && (
+              <button
+                className="danger-btn"
+                disabled={saving || !declineReason.trim()}
+                onClick={handleDecline}
+              >
+                {saving ? "A guardar..." : "Confirmar ausência"}
+              </button>
+            )}
+
+            {!isDeclined && (
+              <button onClick={() => setDeclineMode(false)} disabled={saving}>
+                Voltar
+              </button>
+            )}
+
+            <button onClick={onClose} disabled={saving}>
+              Fechar
+            </button>
+          </div>
+        </div>
+      </Modal>
+    );
+  }
+
   return (
     <Modal
       title={`${lesson.groupName || "Treino"}${lesson.time ? ` · ${lesson.time}` : ""}`}
@@ -142,6 +219,12 @@ function StudentLessonResponseModal({
               {summary.map((line) => (
                 <p key={line}>{line}</p>
               ))}
+            </div>
+          )}
+
+          {isDeclined && existingResponse?.declineReason && (
+            <div className="student-response-summary">
+              <p>Justificação: {existingResponse.declineReason}</p>
             </div>
           )}
         </div>
@@ -311,9 +394,9 @@ function StudentLessonResponseModal({
           <button
             className="danger-btn"
             disabled={saving}
-            onClick={onDecline}
+            onClick={() => setDeclineMode(true)}
           >
-            {saving ? "A guardar..." : "Não vou"}
+            Não vou
           </button>
 
           <button onClick={onClose} disabled={saving}>

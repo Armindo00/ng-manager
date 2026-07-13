@@ -20,6 +20,7 @@ import AdminLessons from "./pages/AdminLessons";
 import RecurringTrainings from "./pages/RecurringTrainings";
 import AdminInventory from "./pages/AdminInventory";
 import AdminVans from "./pages/AdminVans";
+import AdminCompensations from "./pages/AdminCompensations";
 import Sidebar from "./components/Sidebar";
 import Evaluations from "./pages/Evaluations";
 import Topbar from "./components/Topbar";
@@ -37,6 +38,7 @@ type AdminSection =
   | "lessons"
   | "inventory"
   | "vans"
+  | "compensations"
   | "payments";
 
 type CoachSection = "dashboard" | "lessons" | "evaluations";
@@ -199,6 +201,9 @@ function App() {
 
           {currentUser.role === "admin" &&
             activeSection === "vans" && <AdminVans />}
+
+          {currentUser.role === "admin" &&
+            activeSection === "compensations" && <AdminCompensations />}
 
           {currentUser.role === "admin" &&
             activeSection === "payments" && <AdminPayments />}

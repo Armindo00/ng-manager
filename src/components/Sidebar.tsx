@@ -10,6 +10,7 @@ import {
   CreditCard,
   Package,
   Truck,
+  CalendarClock,
   CalendarDays,
   Star,
   Award,
@@ -133,6 +134,7 @@ function Sidebar({ user, activeSection, onChangeSection, onLogout }: Props) {
               {item(Calendar, "Calendário", "lessons")}
               {item(Package, "Inventário", "inventory")}
               {item(Truck, "Carrinhas", "vans")}
+              {item(CalendarClock, "Compensações", "compensations")}
               {item(CreditCard, "Pagamentos", "payments")}
             </nav>
           )}

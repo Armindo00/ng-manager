@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import type { Lesson, LessonResponse, Student, User } from "../types";
 import { getLessons, updateLesson } from "../services/lessonsService";
+import { declineLessonWithCompensation } from "../services/compensationsService";
 import { loadStudentView } from "../utils/studentView";
 import { getResponseStatusLabel } from "../utils/lessonResponse";
 import {
@@ -117,24 +118,21 @@ function StudentArea({ user }: Props) {
     }
   }
 
-  async function declineLesson(lesson: Lesson) {
-    await saveLessonResponse(lesson, {
-      studentId,
-      status: "declined",
-      transportType: "pickup",
-      pickupLocation: "",
-      availableFrom: "",
-      material: {
-        softboard: false,
-        fiberBoard: false,
-        wetsuit: false,
-        lycra: false,
-        leash: false,
-        vest: false,
-        other: "",
-      },
-      notes: "",
-    });
+  async function declineLesson(lesson: Lesson, reason: string) {
+    try {
+      setSavingResponse(true);
+      await declineLessonWithCompensation(lesson, studentId, reason);
+      await loadData();
+      setSelectedLesson(null);
+      toast.success(
+        "Ausência registada. O admin vai validar a justificação para compensação."
+      );
+    } catch (saveError) {
+      console.error(saveError);
+      toast.error("Erro ao registar ausência.");
+    } finally {
+      setSavingResponse(false);
+    }
   }
 
   return (
@@ -216,7 +214,7 @@ function StudentArea({ user }: Props) {
           saving={savingResponse}
           onClose={() => setSelectedLesson(null)}
           onSubmit={(response) => saveLessonResponse(selectedLesson, response)}
-          onDecline={() => declineLesson(selectedLesson)}
+          onDecline={(reason) => declineLesson(selectedLesson, reason)}
         />
       )}
     </div>
