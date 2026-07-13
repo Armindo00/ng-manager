@@ -51,7 +51,8 @@ function StudentAccessModal({
         {password ? (
           <p className="muted">
             Guarda esta password agora. Por segurança, não será mostrada outra
-            vez.
+            vez. No primeiro login, o utilizador terá de definir uma password
+            nova.
           </p>
         ) : (
           <p className="muted">

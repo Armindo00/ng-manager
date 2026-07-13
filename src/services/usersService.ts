@@ -7,6 +7,7 @@ type DbUser = {
   email: string;
   role: "student" | "coach" | "admin";
   student_id: string | null;
+  must_change_password?: boolean | null;
 };
 
 function fromDb(user: DbUser): User {
@@ -16,7 +17,12 @@ function fromDb(user: DbUser): User {
     email: user.email,
     role: user.role,
     studentId: user.student_id || undefined,
+    mustChangePassword: user.must_change_password ?? false,
   };
+}
+
+export function requiresPasswordChange(user: User) {
+  return Boolean(user.mustChangePassword) && user.role !== "admin";
 }
 
 export async function getUsers() {

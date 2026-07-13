@@ -6,6 +6,7 @@ export type User = {
   email: string;
   role: Role;
   studentId?: string;
+  mustChangePassword?: boolean;
 };
 
 export type Student = {

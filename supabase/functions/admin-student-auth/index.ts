@@ -16,7 +16,8 @@ type Action =
   | "create-coach"
   | "create-coach-access"
   | "reset-coach-password"
-  | "delete-coach-access";
+  | "delete-coach-access"
+  | "complete-password-change";
 
 type RequestBody = {
   action: Action;
@@ -95,6 +96,45 @@ async function assertAdmin(authHeader: string | null) {
   }
 
   return adminClient;
+}
+
+async function assertAuthenticatedUser(authHeader: string | null) {
+  if (!authHeader) {
+    throw new Error("Sessão inválida.");
+  }
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+  const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+
+  const userClient = createClient(supabaseUrl, supabaseAnonKey, {
+    global: { headers: { Authorization: authHeader } },
+  });
+
+  const {
+    data: { user },
+    error: userError,
+  } = await userClient.auth.getUser();
+
+  if (userError || !user?.id) {
+    throw new Error("Sessão inválida.");
+  }
+
+  const adminClient = createClient(supabaseUrl, serviceRoleKey);
+
+  return { adminClient, user };
+}
+
+async function markMustChangePassword(
+  adminClient: ReturnType<typeof createClient>,
+  userId: string
+) {
+  const { error } = await adminClient
+    .from("app_users")
+    .update({ must_change_password: true })
+    .eq("id", userId);
+
+  if (error) throw error;
 }
 
 async function findStudentAccess(adminClient: ReturnType<typeof createClient>, studentId: string) {
@@ -189,12 +229,48 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const adminClient = await assertAdmin(req.headers.get("Authorization"));
     const body = (await req.json()) as RequestBody;
 
     if (!body.action) {
       return jsonResponse({ error: "Pedido inválido." }, 400);
     }
+
+    if (body.action === "complete-password-change") {
+      const { adminClient, user } = await assertAuthenticatedUser(
+        req.headers.get("Authorization")
+      );
+
+      const { data: appUser, error: appUserError } = await adminClient
+        .from("app_users")
+        .select("role, must_change_password")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (appUserError) {
+        return jsonResponse({ error: appUserError.message }, 400);
+      }
+
+      if (!appUser) {
+        return jsonResponse({ error: "Utilizador sem permissões na aplicação." }, 403);
+      }
+
+      if (appUser.role === "admin" || !appUser.must_change_password) {
+        return jsonResponse({ success: true });
+      }
+
+      const { error: updateError } = await adminClient
+        .from("app_users")
+        .update({ must_change_password: false })
+        .eq("id", user.id);
+
+      if (updateError) {
+        return jsonResponse({ error: updateError.message }, 400);
+      }
+
+      return jsonResponse({ success: true });
+    }
+
+    const adminClient = await assertAdmin(req.headers.get("Authorization"));
 
     if (STUDENT_ACTIONS.has(body.action) && !body.studentId) {
       return jsonResponse({ error: "studentId é obrigatório." }, 400);
@@ -262,6 +338,7 @@ Deno.serve(async (req) => {
         name: body.name,
         email: normalizedEmail,
         role: "coach",
+        must_change_password: true,
       });
 
       if (appUserError) {
@@ -376,6 +453,7 @@ Deno.serve(async (req) => {
         name: coach.name,
         email: normalizedEmail,
         role: "coach",
+        must_change_password: true,
       });
 
       if (appUserError) {
@@ -408,6 +486,8 @@ Deno.serve(async (req) => {
       if (error) {
         return jsonResponse({ error: error.message }, 400);
       }
+
+      await markMustChangePassword(adminClient, access.id);
 
       return jsonResponse({
         hasAccess: true,
@@ -562,6 +642,7 @@ Deno.serve(async (req) => {
         email: normalizedEmail,
         role: "student",
         student_id: body.studentId,
+        must_change_password: true,
       });
 
       if (appUserError) {
@@ -601,7 +682,7 @@ Deno.serve(async (req) => {
 
       await adminClient
         .from("app_users")
-        .update({ blocked: false })
+        .update({ blocked: false, must_change_password: true })
         .eq("id", access.id)
         .then(() => undefined)
         .catch(() => undefined);

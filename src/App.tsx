@@ -23,7 +23,8 @@ import Evaluations from "./pages/Evaluations";
 import Topbar from "./components/Topbar";
 
 import { supabase } from "./services/supabase";
-import { getUserByEmail } from "./services/usersService";
+import { getUserByEmail, requiresPasswordChange } from "./services/usersService";
+import ChangePassword from "./pages/ChangePassword";
 
 type AdminSection =
   | "dashboard"
@@ -95,6 +96,19 @@ function App() {
       <>
         <Toaster position="top-right" />
         <Login onLogin={setCurrentUser} />
+      </>
+    );
+  }
+
+  if (requiresPasswordChange(currentUser)) {
+    return (
+      <>
+        <Toaster position="top-right" />
+        <ChangePassword
+          user={currentUser}
+          onComplete={setCurrentUser}
+          onLogout={logout}
+        />
       </>
     );
   }
