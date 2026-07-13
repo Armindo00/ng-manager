@@ -6,6 +6,7 @@ import {
   getRecurringTrainings,
   addRecurringTraining,
   deleteRecurringTraining,
+  getRecurringTrainingErrorMessage,
   type RecurringTraining,
 } from "../services/recurringTrainingsService";
 import {
@@ -54,7 +55,7 @@ function RecurringTrainings() {
       setLessons(await getLessons());
     } catch (error) {
       console.error(error);
-      toast.error("Erro ao carregar horários.");
+      toast.error(getRecurringTrainingErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -68,6 +69,11 @@ function RecurringTrainings() {
       return;
     }
 
+    if (!group.coachId) {
+      toast.error("Este grupo não tem treinador associado. Edita o grupo primeiro.");
+      return;
+    }
+
     const newTraining: RecurringTraining = {
       id: crypto.randomUUID(),
       groupId: group.id,
@@ -77,6 +83,7 @@ function RecurringTrainings() {
       van,
       weekDay,
       repeatUntil,
+      active: true,
     };
 
     try {
@@ -91,7 +98,7 @@ function RecurringTrainings() {
       toast.success("Horário guardado. Agora clica em Publicar.");
     } catch (error) {
       console.error(error);
-      toast.error("Erro ao guardar horário.");
+      toast.error(getRecurringTrainingErrorMessage(error));
     }
   }
 
