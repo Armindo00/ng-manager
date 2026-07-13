@@ -8,6 +8,7 @@ import {
   Repeat,
   Calendar,
   CreditCard,
+  Package,
   CalendarDays,
   Star,
   Award,
@@ -129,6 +130,7 @@ function Sidebar({ user, activeSection, onChangeSection, onLogout }: Props) {
               {item(UsersRound, "Grupos", "groups")}
               {item(Repeat, "Horários", "recurring")}
               {item(Calendar, "Calendário", "lessons")}
+              {item(Package, "Inventário", "inventory")}
               {item(CreditCard, "Pagamentos", "payments")}
             </nav>
           )}

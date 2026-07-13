@@ -180,6 +180,9 @@ DROP POLICY IF EXISTS "payments_admin_write" ON payments;
 DROP POLICY IF EXISTS "recurring_select" ON recurring_trainings;
 DROP POLICY IF EXISTS "recurring_admin_write" ON recurring_trainings;
 
+DROP POLICY IF EXISTS "inventory_admin_select" ON inventory_items;
+DROP POLICY IF EXISTS "inventory_admin_write" ON inventory_items;
+
 CREATE POLICY "app_users_select"
 ON app_users
 FOR SELECT
@@ -423,6 +426,19 @@ USING (
 
 CREATE POLICY "recurring_admin_write"
 ON recurring_trainings
+FOR ALL
+TO authenticated
+USING (public.is_admin())
+WITH CHECK (public.is_admin());
+
+CREATE POLICY "inventory_admin_select"
+ON inventory_items
+FOR SELECT
+TO authenticated
+USING (public.is_admin());
+
+CREATE POLICY "inventory_admin_write"
+ON inventory_items
 FOR ALL
 TO authenticated
 USING (public.is_admin())
