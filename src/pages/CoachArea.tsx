@@ -6,6 +6,8 @@ import { getLessons, updateLesson } from "../services/lessonsService";
 import CoachLessonSetup from "../components/CoachLessonSetup";
 import CoachStudentResponsesPanel from "../components/CoachStudentResponsesPanel";
 import CoachAttendancePanel from "../components/CoachAttendancePanel";
+import LessonsCalendar from "../components/LessonsCalendar";
+import { formatCalendarDayLabel, pickInitialCalendarDate } from "../utils/calendarUtils";
 import { canFinishLesson, canMarkAttendance } from "../utils/lessonWorkflow";
 
 type Props = {
@@ -15,6 +17,7 @@ type Props = {
 function CoachArea({ user }: Props) {
   const [students, setStudents] = useState<Student[]>([]);
   const [lessons, setLessons] = useState<Lesson[]>([]);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
@@ -24,12 +27,13 @@ function CoachArea({ user }: Props) {
     const studentsData = await getStudents();
     const lessonsData = await getLessons();
 
+    const coachLessons = lessonsData
+      .filter((lesson) => lesson.coachId === user.id)
+      .sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`));
+
     setStudents(studentsData);
-    setLessons(
-      lessonsData
-        .filter((lesson) => lesson.coachId === user.id)
-        .sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`))
-    );
+    setLessons(coachLessons);
+    setSelectedDate((current) => current ?? pickInitialCalendarDate(coachLessons));
   }
 
   async function finishLesson(lessonId: string) {
@@ -44,7 +48,14 @@ function CoachArea({ user }: Props) {
     toast.success("Treino finalizado.");
   }
 
-  const upcomingLessons = lessons.filter((lesson) => lesson.status !== "finished");
+  function handleSelectDay(_dayLessons: Lesson[], date: string) {
+    setSelectedDate(date);
+  }
+
+  const calendarLessons = lessons.filter((lesson) => lesson.status !== "draft");
+  const selectedDayLessons = selectedDate
+    ? calendarLessons.filter((lesson) => lesson.date === selectedDate)
+    : [];
 
   return (
     <div>
@@ -52,80 +63,104 @@ function CoachArea({ user }: Props) {
 
       <div className="workflow-help">
         <p>
-          <strong>Antes do treino:</strong> vê as respostas dos alunos e envia praia,
-          hora e pickups.
-        </p>
-        <p>
-          <strong>No dia do treino ou depois:</strong> marca presenças e finaliza o
-          treino.
+          Usa o <strong>calendário</strong> para escolher o dia. Antes do treino envia
+          o plano; no dia marca presenças.
         </p>
       </div>
 
-      <div className="card section-card">
-        <h2>Treinos marcados</h2>
+      <div className="lessons-calendar-layout">
+        <LessonsCalendar
+          lessons={calendarLessons}
+          selectedDate={selectedDate}
+          onSelectDay={handleSelectDay}
+          title="Calendário"
+        />
 
-        {upcomingLessons.length === 0 && (
-          <p className="muted">Ainda não tens treinos publicados pelo admin.</p>
-        )}
+        <div className="calendar-day-panel card section-card">
+          {selectedDate ? (
+            <>
+              <h2>{formatCalendarDayLabel(selectedDate)}</h2>
 
-        <div className="lesson-list coach-lesson-list">
-          {upcomingLessons.map((lesson) => (
-            <div className="lesson-card coach-lesson-card" key={lesson.id}>
-              <div className="coach-lesson-header">
-                <div>
-                  <h3>
-                    {lesson.date}
-                    {lesson.time ? ` · Chegada à praia: ${lesson.time}` : ""}
-                  </h3>
+              {selectedDayLessons.length === 0 && (
+                <p className="muted">Sem treinos neste dia.</p>
+              )}
 
-                  {lesson.groupName && <p>Grupo: {lesson.groupName}</p>}
-                  <p>🏖️ {lesson.beach || "Praia por definir"}</p>
-                  <p>🚐 Carrinha: {lesson.van}</p>
-                </div>
+              <div className="lesson-list coach-lesson-list">
+                {selectedDayLessons.map((lesson) => (
+                  <div className="lesson-card coach-lesson-card" key={lesson.id}>
+                    <div className="coach-lesson-header">
+                      <div>
+                        <h3>
+                          {lesson.groupName || "Treino"}
+                          {lesson.time ? ` · ${lesson.time}` : ""}
+                        </h3>
 
-                {canFinishLesson(lesson) && (
-                  <button
-                    className="primary-btn compact-btn"
-                    onClick={() => finishLesson(lesson.id)}
-                  >
-                    Finalizar treino
-                  </button>
-                )}
+                        <p>🏖️ {lesson.beach || "Praia por definir"}</p>
+                        <p>🚐 Carrinha: {lesson.van}</p>
+                        <p>
+                          Estado:{" "}
+                          {lesson.status === "published" ? "Publicado" : "Concluído"}
+                        </p>
+                      </div>
+
+                      {canFinishLesson(lesson) && (
+                        <button
+                          className="primary-btn compact-btn"
+                          onClick={() => finishLesson(lesson.id)}
+                        >
+                          Finalizar treino
+                        </button>
+                      )}
+                    </div>
+
+                    {lesson.status !== "finished" && (
+                      <>
+                        <section className="coach-lesson-section">
+                          <h4>1. Respostas dos alunos</h4>
+                          <CoachStudentResponsesPanel
+                            lesson={lesson}
+                            students={students}
+                          />
+                        </section>
+
+                        <section className="coach-lesson-section">
+                          <h4>2. Enviar plano (antes do treino)</h4>
+                          <CoachLessonSetup lesson={lesson} onSaved={loadData} />
+
+                          <div className="coach-planned-pickups">
+                            <strong>Pickups enviados</strong>
+                            {(lesson.coachPickups || []).length === 0 ? (
+                              <p className="muted">Ainda não enviaste pickups.</p>
+                            ) : (
+                              (lesson.coachPickups || []).map((pickup) => (
+                                <p key={pickup.id}>
+                                  {pickup.time} — {pickup.location}
+                                </p>
+                              ))
+                            )}
+                          </div>
+                        </section>
+
+                        <section className="coach-lesson-section">
+                          <h4>
+                            3. Presenças{" "}
+                            {canMarkAttendance(lesson) ? "(disponível)" : "(bloqueado)"}
+                          </h4>
+                          <CoachAttendancePanel
+                            lesson={lesson}
+                            students={students}
+                            onSaved={loadData}
+                          />
+                        </section>
+                      </>
+                    )}
+                  </div>
+                ))}
               </div>
-
-              <section className="coach-lesson-section">
-                <h4>1. Respostas dos alunos</h4>
-                <CoachStudentResponsesPanel lesson={lesson} students={students} />
-              </section>
-
-              <section className="coach-lesson-section">
-                <h4>2. Enviar plano (antes do treino)</h4>
-                <CoachLessonSetup lesson={lesson} onSaved={loadData} />
-
-                <div className="coach-planned-pickups">
-                  <strong>Pickups enviados</strong>
-                  {(lesson.coachPickups || []).length === 0 ? (
-                    <p className="muted">Ainda não enviaste pickups.</p>
-                  ) : (
-                    (lesson.coachPickups || []).map((pickup) => (
-                      <p key={pickup.id}>
-                        {pickup.time} — {pickup.location}
-                      </p>
-                    ))
-                  )}
-                </div>
-              </section>
-
-              <section className="coach-lesson-section">
-                <h4>3. Presenças {canMarkAttendance(lesson) ? "(disponível)" : "(bloqueado)"}</h4>
-                <CoachAttendancePanel
-                  lesson={lesson}
-                  students={students}
-                  onSaved={loadData}
-                />
-              </section>
-            </div>
-          ))}
+            </>
+          ) : (
+            <p className="muted">Seleciona um dia no calendário.</p>
+          )}
         </div>
       </div>
     </div>

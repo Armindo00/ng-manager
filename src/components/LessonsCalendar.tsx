@@ -1,35 +1,55 @@
+import { useMemo, useState } from "react";
 import type { Lesson } from "../types";
+import { getLessonDotClass } from "../utils/calendarUtils";
 
 type Props = {
   lessons: Lesson[];
+  selectedDate?: string | null;
   onSelectDay: (lessons: Lesson[], date: string) => void;
+  title?: string;
+  studentId?: string;
 };
 
-function LessonsCalendar({ lessons, onSelectDay }: Props) {
-  const today = new Date();
-  const year = today.getFullYear();
-  const month = today.getMonth();
+function LessonsCalendar({
+  lessons,
+  selectedDate,
+  onSelectDay,
+  title = "Calendário de treinos",
+  studentId,
+}: Props) {
+  const [viewDate, setViewDate] = useState(() => new Date());
 
-  const monthName = today.toLocaleDateString("pt-PT", {
+  const year = viewDate.getFullYear();
+  const month = viewDate.getMonth();
+
+  const monthName = viewDate.toLocaleDateString("pt-PT", {
     month: "long",
     year: "numeric",
   });
 
-  const firstDay = new Date(year, month, 1);
-  const lastDay = new Date(year, month + 1, 0);
+  const { cells, todayDay } = useMemo(() => {
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const startOffset = (firstDay.getDay() + 6) % 7;
+    const daysInMonth = lastDay.getDate();
+    const monthCells: Array<number | null> = [];
 
-  const startOffset = (firstDay.getDay() + 6) % 7;
-  const daysInMonth = lastDay.getDate();
+    for (let i = 0; i < startOffset; i++) {
+      monthCells.push(null);
+    }
 
-  const cells: Array<number | null> = [];
+    for (let day = 1; day <= daysInMonth; day++) {
+      monthCells.push(day);
+    }
 
-  for (let i = 0; i < startOffset; i++) {
-    cells.push(null);
-  }
+    const isCurrentMonth =
+      year === new Date().getFullYear() && month === new Date().getMonth();
 
-  for (let day = 1; day <= daysInMonth; day++) {
-    cells.push(day);
-  }
+    return {
+      cells: monthCells,
+      todayDay: isCurrentMonth ? new Date().getDate() : null,
+    };
+  }, [year, month]);
 
   function getDateForDay(day: number) {
     return `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(
@@ -40,13 +60,41 @@ function LessonsCalendar({ lessons, onSelectDay }: Props) {
 
   function lessonsForDay(day: number) {
     const date = getDateForDay(day);
-    return lessons.filter((lesson) => lesson.date === date);
+    return lessons
+      .filter((lesson) => lesson.date === date)
+      .sort((a, b) => (a.time || "").localeCompare(b.time || ""));
+  }
+
+  function goToPreviousMonth() {
+    setViewDate(new Date(year, month - 1, 1));
+  }
+
+  function goToNextMonth() {
+    setViewDate(new Date(year, month + 1, 1));
+  }
+
+  function goToCurrentMonth() {
+    setViewDate(new Date());
   }
 
   return (
     <div className="card section-card calendar-card">
       <div className="calendar-title-row">
-        <h2>📅 Calendário de treinos</h2>
+        <h2>📅 {title}</h2>
+
+        <div className="calendar-nav">
+          <button type="button" className="compact-btn" onClick={goToPreviousMonth}>
+            ←
+          </button>
+
+          <button type="button" className="compact-btn" onClick={goToCurrentMonth}>
+            Hoje
+          </button>
+
+          <button type="button" className="compact-btn" onClick={goToNextMonth}>
+            →
+          </button>
+        </div>
       </div>
 
       <h3 className="calendar-month">{monthName}</h3>
@@ -65,19 +113,25 @@ function LessonsCalendar({ lessons, onSelectDay }: Props) {
         {cells.map((day, index) => {
           const dayLessons = day ? lessonsForDay(day) : [];
           const date = day ? getDateForDay(day) : "";
+          const hasLessons = dayLessons.length > 0;
+          const isToday = day !== null && day === todayDay;
+          const isSelected = Boolean(selectedDate && date === selectedDate);
 
           return (
             <button
               type="button"
-              className={
-                day === today.getDate()
-                  ? "calendar-day calendar-today"
-                  : "calendar-day"
-              }
+              className={[
+                "calendar-day",
+                isToday ? "calendar-today" : "",
+                isSelected ? "calendar-selected" : "",
+                hasLessons ? "calendar-has-lessons" : "",
+              ]
+                .filter(Boolean)
+                .join(" ")}
               key={index}
-              disabled={!day || dayLessons.length === 0}
+              disabled={!day}
               onClick={() => {
-                if (day && dayLessons.length > 0) {
+                if (day) {
                   onSelectDay(dayLessons, date);
                 }
               }}
@@ -86,10 +140,13 @@ function LessonsCalendar({ lessons, onSelectDay }: Props) {
                 <>
                   <strong>{day}</strong>
 
-                  {dayLessons.length > 0 && (
+                  {hasLessons && (
                     <div className="calendar-dots">
                       {dayLessons.slice(0, 3).map((lesson) => (
-                        <span key={lesson.id} />
+                        <span
+                          key={lesson.id}
+                          className={getLessonDotClass(lesson, { studentId })}
+                        />
                       ))}
                     </div>
                   )}
@@ -102,6 +159,31 @@ function LessonsCalendar({ lessons, onSelectDay }: Props) {
             </button>
           );
         })}
+      </div>
+
+      <div className="calendar-legend">
+        {studentId ? (
+          <>
+            <span>
+              <i className="legend-dot dot-confirmed" /> Confirmado
+            </span>
+            <span>
+              <i className="legend-dot dot-pending" /> Por responder
+            </span>
+            <span>
+              <i className="legend-dot dot-declined" /> Não vou
+            </span>
+          </>
+        ) : (
+          <>
+            <span>
+              <i className="legend-dot dot-published" /> Publicado
+            </span>
+            <span>
+              <i className="legend-dot dot-finished" /> Concluído
+            </span>
+          </>
+        )}
       </div>
     </div>
   );

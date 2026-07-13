@@ -5,7 +5,12 @@ import { getLessons, updateLesson } from "../services/lessonsService";
 import { loadStudentView } from "../utils/studentView";
 import { formatStudentResponseSummary } from "../utils/lessonResponse";
 import { isLessonPlanSent } from "../utils/lessonWorkflow";
+import {
+  formatCalendarDayLabel,
+  pickInitialCalendarDate,
+} from "../utils/calendarUtils";
 import StudentLessonResponseModal from "../components/StudentLessonResponseModal";
+import LessonsCalendar from "../components/LessonsCalendar";
 
 type Props = {
   user: User;
@@ -18,6 +23,7 @@ function StudentArea({ user }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [responseLesson, setResponseLesson] = useState<Lesson | null>(null);
   const [savingResponse, setSavingResponse] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
@@ -37,14 +43,21 @@ function StudentArea({ user }: Props) {
       }
 
       const lessonsData = await getLessons();
-      const today = new Date().toISOString().split("T")[0];
+      const foundStudent = studentResult.student;
 
-      setStudent(studentResult.student);
-      setError(null);
-      setLessons(
-        lessonsData.filter(
-          (lesson) => lesson.status === "published" && lesson.date >= today
+      const myLessonsData = lessonsData
+        .filter(
+          (lesson) =>
+            lesson.status === "published" &&
+            lesson.bookedStudentIds.includes(foundStudent.id)
         )
+        .sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`));
+
+      setStudent(foundStudent);
+      setError(null);
+      setLessons(myLessonsData);
+      setSelectedDate(
+        (current) => current ?? pickInitialCalendarDate(myLessonsData)
       );
     } catch (loadError) {
       console.error(loadError);
@@ -60,10 +73,6 @@ function StudentArea({ user }: Props) {
 
   const studentId = student.id;
 
-  const myLessons = lessons
-    .filter((lesson) => lesson.bookedStudentIds.includes(studentId))
-    .sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`));
-
   const attended = lessons.filter((lesson) =>
     lesson.presentStudentIds.includes(studentId)
   );
@@ -72,11 +81,19 @@ function StudentArea({ user }: Props) {
     return lesson.responses?.find((response) => response.studentId === studentId);
   }
 
-  const pendingLessons = myLessons.filter((lesson) => !getResponse(lesson));
-  const confirmedLessons = myLessons.filter(
+  function handleSelectDay(_dayLessons: Lesson[], date: string) {
+    setSelectedDate(date);
+  }
+
+  const selectedDayLessons = selectedDate
+    ? lessons.filter((lesson) => lesson.date === selectedDate)
+    : [];
+
+  const pendingDayLessons = selectedDayLessons.filter((lesson) => !getResponse(lesson));
+  const confirmedDayLessons = selectedDayLessons.filter(
     (lesson) => getResponse(lesson)?.status === "confirmed"
   );
-  const declinedLessons = myLessons.filter(
+  const declinedDayLessons = selectedDayLessons.filter(
     (lesson) => getResponse(lesson)?.status === "declined"
   );
 
@@ -139,11 +156,9 @@ function StudentArea({ user }: Props) {
       <div className="lesson-card student-lesson-card" key={lesson.id}>
         <div>
           <h3>
-            {lesson.date}
+            {lesson.groupName || "Treino"}
             {lesson.time ? ` · ${lesson.time}` : ""}
           </h3>
-
-          {lesson.groupName && <p>Grupo: {lesson.groupName}</p>}
 
           <p>🏖️ {lesson.beach || "Praia por definir pelo treinador"}</p>
           <p>🕒 Chegada à praia: {lesson.time || "Por definir pelo treinador"}</p>
@@ -239,41 +254,56 @@ function StudentArea({ user }: Props) {
         </div>
       </div>
 
-      <div className="card section-card">
-        <h2>⏳ Por responder</h2>
+      <div className="lessons-calendar-layout">
+        <LessonsCalendar
+          lessons={lessons}
+          selectedDate={selectedDate}
+          onSelectDay={handleSelectDay}
+          title="Calendário"
+          studentId={studentId}
+        />
 
-        {pendingLessons.length === 0 && (
-          <p className="muted">Não tens treinos por responder.</p>
-        )}
+        <div className="calendar-day-panel card section-card">
+          {selectedDate ? (
+            <>
+              <h2>{formatCalendarDayLabel(selectedDate)}</h2>
 
-        <div className="lesson-list">
-          {pendingLessons.map((lesson) => renderLessonCard(lesson))}
-        </div>
-      </div>
+              {selectedDayLessons.length === 0 && (
+                <p className="muted">Sem treinos neste dia.</p>
+              )}
 
-      <div className="card section-card">
-        <h2>✅ Vou</h2>
+              {pendingDayLessons.length > 0 && (
+                <section className="calendar-day-section">
+                  <h3>⏳ Por responder</h3>
+                  <div className="lesson-list">
+                    {pendingDayLessons.map((lesson) => renderLessonCard(lesson))}
+                  </div>
+                </section>
+              )}
 
-        {confirmedLessons.length === 0 && (
-          <p className="muted">Ainda não confirmaste nenhum treino.</p>
-        )}
+              {confirmedDayLessons.length > 0 && (
+                <section className="calendar-day-section">
+                  <h3>✅ Vou</h3>
+                  <div className="lesson-list">
+                    {confirmedDayLessons.map((lesson) =>
+                      renderLessonCard(lesson, { allowEdit: true })
+                    )}
+                  </div>
+                </section>
+              )}
 
-        <div className="lesson-list">
-          {confirmedLessons.map((lesson) =>
-            renderLessonCard(lesson, { allowEdit: true })
+              {declinedDayLessons.length > 0 && (
+                <section className="calendar-day-section">
+                  <h3>❌ Não vou</h3>
+                  <div className="lesson-list">
+                    {declinedDayLessons.map((lesson) => renderLessonCard(lesson))}
+                  </div>
+                </section>
+              )}
+            </>
+          ) : (
+            <p className="muted">Seleciona um dia no calendário.</p>
           )}
-        </div>
-      </div>
-
-      <div className="card section-card">
-        <h2>❌ Não vou</h2>
-
-        {declinedLessons.length === 0 && (
-          <p className="muted">Nenhum treino recusado.</p>
-        )}
-
-        <div className="lesson-list">
-          {declinedLessons.map((lesson) => renderLessonCard(lesson))}
         </div>
       </div>
 

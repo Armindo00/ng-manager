@@ -440,6 +440,111 @@ textarea:focus {
   background: #f0f9ff;
 }
 
+.calendar-selected {
+  border-color: #1d4ed8;
+  background: #eff6ff;
+  box-shadow: inset 0 0 0 2px #bfdbfe;
+}
+
+.calendar-has-lessons:not(.calendar-selected) {
+  background: #fafafa;
+}
+
+.calendar-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+
+.calendar-title-row h2 {
+  margin: 0;
+}
+
+.calendar-nav {
+  display: flex;
+  gap: 8px;
+}
+
+.calendar-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 16px;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.calendar-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legend-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.calendar-dots span.dot-published,
+.legend-dot.dot-published {
+  background: #1d4ed8;
+}
+
+.calendar-dots span.dot-finished,
+.legend-dot.dot-finished {
+  background: #94a3b8;
+}
+
+.calendar-dots span.dot-draft,
+.legend-dot.dot-draft {
+  background: #f59e0b;
+}
+
+.calendar-dots span.dot-confirmed,
+.legend-dot.dot-confirmed {
+  background: #16a34a;
+}
+
+.calendar-dots span.dot-pending,
+.legend-dot.dot-pending {
+  background: #f59e0b;
+}
+
+.calendar-dots span.dot-declined,
+.legend-dot.dot-declined {
+  background: #dc2626;
+}
+
+.lessons-calendar-layout {
+  display: grid;
+  grid-template-columns: minmax(280px, 1.1fr) minmax(320px, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.lessons-calendar-layout-single {
+  grid-template-columns: 1fr;
+}
+
+.calendar-day-panel h2 {
+  margin-top: 0;
+  text-transform: capitalize;
+}
+
+.calendar-day-section {
+  margin-top: 20px;
+}
+
+.calendar-day-section h3 {
+  margin: 0 0 12px;
+  font-size: 16px;
+}
+
 /* TABLES / FORMS */
 
 .form-row {
@@ -1894,6 +1999,14 @@ body::before {
 }
 
 @media (max-width: 720px) {
+  .lessons-calendar-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .calendar-day {
+    min-height: 84px;
+  }
+
   .coach-responses-table thead {
     display: none;
   }
