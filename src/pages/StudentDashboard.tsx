@@ -3,6 +3,7 @@ import type { Lesson, MonthlyEvaluation, Student, User } from "../types";
 import { getLessons } from "../services/lessonsService";
 import { getEvaluations } from "../services/evaluationsService";
 import { loadStudentView } from "../utils/studentView";
+import { getNextLesson } from "../utils/calendarUtils";
 
 type Props = {
   user: User;
@@ -41,9 +42,15 @@ function StudentDashboard({ user }: Props) {
     setError(null);
 
     setLessons(
-      lessonsData.filter((lesson) =>
-        lesson.bookedStudentIds.includes(foundStudent.id)
-      )
+      lessonsData
+        .filter(
+          (lesson) =>
+            lesson.status === "published" &&
+            lesson.bookedStudentIds.includes(foundStudent.id)
+        )
+        .sort((a, b) =>
+          `${a.date} ${a.time || ""}`.localeCompare(`${b.date} ${b.time || ""}`)
+        )
     );
 
     setEvaluations(
@@ -62,7 +69,7 @@ function StudentDashboard({ user }: Props) {
   if (!student) return <p>{error || "Aluno não encontrado."}</p>;
 
   const studentId = student.id;
-  const nextLesson = lessons.find((lesson) => lesson.status === "published");
+  const nextLesson = getNextLesson(lessons);
   const lastEvaluation = evaluations[0];
 
   function getMaterialText(lesson: Lesson) {
@@ -131,7 +138,9 @@ function StudentDashboard({ user }: Props) {
       <div className="card section-card">
         <h2>Próximo treino</h2>
 
-        {!nextLesson && <p className="muted">Não tens treinos publicados.</p>}
+        {!nextLesson && (
+          <p className="muted">Não tens próximos treinos agendados.</p>
+        )}
 
         {nextLesson && (
           <>
