@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
 import type { User } from "./types";
 
 import Login from "./pages/Login";
@@ -61,15 +62,49 @@ function App() {
 
   useEffect(() => {
     restoreSession();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === "SIGNED_OUT" || !session?.user?.email) {
+        setCurrentUser(null);
+        return;
+      }
+
+      if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+        try {
+          const appUser = await getUserByEmail(session.user.email);
+          setCurrentUser(appUser);
+        } catch (error) {
+          console.error(error);
+          await supabase.auth.signOut();
+          setCurrentUser(null);
+          toast.error("Sessão inválida. Volta a iniciar sessão.");
+        }
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   async function restoreSession() {
-    const { data } = await supabase.auth.getUser();
+    const { data, error } = await supabase.auth.getUser();
 
-    if (!data.user?.email) return;
+    if (error || !data.user?.email) {
+      if (error) {
+        await supabase.auth.signOut();
+      }
+      return;
+    }
 
-    const appUser = await getUserByEmail(data.user.email);
-    setCurrentUser(appUser);
+    try {
+      const appUser = await getUserByEmail(data.user.email);
+      setCurrentUser(appUser);
+    } catch (sessionError) {
+      console.error(sessionError);
+      await supabase.auth.signOut();
+      setCurrentUser(null);
+    }
   }
 
   async function logout() {

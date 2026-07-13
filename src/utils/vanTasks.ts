@@ -1,8 +1,7 @@
 import type { VanTask, VanTaskStatus } from "../types/van";
+import { getTodayDate } from "./dateUtils";
 
-export function getTodayDate() {
-  return new Date().toISOString().split("T")[0];
-}
+export { getTodayDate };
 
 export function getVanTaskStatus(task: VanTask, today = getTodayDate()): VanTaskStatus {
   if (task.completed) return "completed";

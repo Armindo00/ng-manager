@@ -1,4 +1,5 @@
 import { useState } from "react";
+import toast from "react-hot-toast";
 import type { User } from "../types";
 import { supabase } from "../services/supabase";
 import { getUserByEmail } from "../services/usersService";
@@ -26,26 +27,26 @@ function Login({ onLogin }: Props) {
       });
 
       if (error) {
-        alert("Email ou password inválidos.");
+        toast.error("Email ou password inválidos.");
         return;
       }
 
       if (!data.user?.email) {
-        alert("Utilizador sem email.");
+        toast.error("Utilizador sem email.");
         return;
       }
 
       try {
         const appUser = await getUserByEmail(data.user.email);
         onLogin(appUser);
-      } catch (error) {
-        console.error(error);
+      } catch (loginError) {
+        console.error(loginError);
         await supabase.auth.signOut();
-        alert("Este utilizador ainda não tem permissões na aplicação.");
+        toast.error("Este utilizador ainda não tem permissões na aplicação.");
       }
     } catch (error) {
       console.error(error);
-      alert("Erro ao iniciar sessão.");
+      toast.error("Erro ao iniciar sessão.");
     } finally {
       setLoading(false);
     }

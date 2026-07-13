@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import toast from "react-hot-toast";
 import type { Lesson, MonthlyEvaluation, Student, User } from "../types";
 import { getStudents } from "../services/studentsService";
 import { getLessons } from "../services/lessonsService";
@@ -7,16 +8,18 @@ import {
   addEvaluation,
   updateEvaluation,
 } from "../services/evaluationsService";
+import { getCurrentMonthYear, isDateInMonthYear } from "../utils/dateUtils";
 
 type Props = {
   user: User;
 };
 
 function Evaluations({ user }: Props) {
-  console.log(user);
   const [students, setStudents] = useState<Student[]>([]);
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [evaluations, setEvaluations] = useState<MonthlyEvaluation[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
   const [selectedStudent, setSelectedStudent] = useState("");
   const [effort, setEffort] = useState(3);
@@ -27,25 +30,46 @@ function Evaluations({ user }: Props) {
   const [coachComment, setCoachComment] = useState("");
   const [nextGoal, setNextGoal] = useState("");
 
-  const currentMonth = new Date().getMonth() + 1;
-  const currentYear = new Date().getFullYear();
+  const { month: currentMonth, year: currentYear } = getCurrentMonthYear();
 
   useEffect(() => {
     loadData();
   }, []);
 
   async function loadData() {
-  const studentsData = await getStudents();
-  const lessonsData = await getLessons();
-  const evaluationsData = await getEvaluations();
+    try {
+      setLoading(true);
 
-  // Mostrar todos os alunos por agora
-  setStudents(studentsData);
+      const [studentsData, lessonsData, evaluationsData] = await Promise.all([
+        getStudents(),
+        getLessons(),
+        getEvaluations(),
+      ]);
 
-  setLessons(lessonsData);
-  setEvaluations(evaluationsData);
-}
+      const coachLessons = lessonsData.filter(
+        (lesson) => lesson.coachId === user.id
+      );
 
+      setLessons(coachLessons);
+      setEvaluations(evaluationsData);
+      setStudents(studentsData);
+    } catch (error) {
+      console.error(error);
+      toast.error("Erro ao carregar avaliações.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const coachStudents = useMemo(() => {
+    const coachStudentIds = new Set(
+      lessons.flatMap((lesson) => lesson.bookedStudentIds)
+    );
+
+    return students
+      .filter((student) => coachStudentIds.has(student.id))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [lessons, students]);
 
   const evaluationsThisMonth = evaluations.filter(
     (evaluation) =>
@@ -55,17 +79,19 @@ function Evaluations({ user }: Props) {
   );
 
   function getAttendance(studentId: string) {
-    const present = lessons.filter((lesson) =>
+    const monthLessons = lessons.filter(
+      (lesson) =>
+        lesson.bookedStudentIds.includes(studentId) &&
+        isDateInMonthYear(lesson.date, currentMonth, currentYear)
+    );
+
+    const present = monthLessons.filter((lesson) =>
       lesson.presentStudentIds.includes(studentId)
     ).length;
 
-    const total = lessons.filter((lesson) =>
-      lesson.bookedStudentIds.includes(studentId)
-    ).length;
+    if (monthLessons.length === 0) return 0;
 
-    if (total === 0) return 0;
-
-    return Math.round((present / total) * 100);
+    return Math.round((present / monthLessons.length) * 100);
   }
 
   function hasEvaluationThisMonth(studentId: string) {
@@ -107,7 +133,15 @@ function Evaluations({ user }: Props) {
   }
 
   async function saveEvaluation() {
-    if (!selectedStudent || !technicalGoal || !nextGoal) return;
+    if (!selectedStudent) {
+      toast.error("Seleciona um aluno.");
+      return;
+    }
+
+    if (!technicalGoal.trim() || !nextGoal.trim()) {
+      toast.error("Preenche o objetivo técnico e o objetivo do próximo mês.");
+      return;
+    }
 
     const existing = evaluationsThisMonth.find(
       (evaluation) => evaluation.studentId === selectedStudent
@@ -121,111 +155,144 @@ function Evaluations({ user }: Props) {
       year: currentYear,
       effort,
       attendance: getAttendance(selectedStudent),
-      technicalGoal,
+      technicalGoal: technicalGoal.trim(),
       goalResult,
-      coachComment,
-      nextGoal,
+      coachComment: coachComment.trim(),
+      nextGoal: nextGoal.trim(),
     };
 
-    if (existing) {
-      await updateEvaluation(evaluation);
-    } else {
-      await addEvaluation(evaluation);
+    try {
+      setSaving(true);
+
+      if (existing) {
+        await updateEvaluation(evaluation);
+        toast.success("Avaliação atualizada.");
+      } else {
+        await addEvaluation(evaluation);
+        toast.success("Avaliação guardada.");
+      }
+
+      await loadData();
+
+      setSelectedStudent("");
+      setEffort(3);
+      setTechnicalGoal("");
+      setGoalResult("progress");
+      setCoachComment("");
+      setNextGoal("");
+    } catch (error) {
+      console.error(error);
+      toast.error("Erro ao guardar avaliação.");
+    } finally {
+      setSaving(false);
     }
+  }
 
-    await loadData();
-
-    setSelectedStudent("");
-    setEffort(3);
-    setTechnicalGoal("");
-    setGoalResult("progress");
-    setCoachComment("");
-    setNextGoal("");
+  if (loading) {
+    return <p className="muted">A carregar avaliações...</p>;
   }
 
   return (
     <div>
       <h1 className="page-title">Avaliações</h1>
 
+      <p className="muted workflow-help">
+        Avalia apenas os teus alunos. A presença é calculada com base nos
+        treinos deste mês em que estavam inscritos.
+      </p>
+
       <div className="card section-card">
         <h2>Nova avaliação</h2>
 
-        <select
-          value={selectedStudent}
-          onChange={(e) => selectStudent(e.target.value)}
-        >
-          <option value="">Selecionar aluno</option>
-
-          {students.map((student) => (
-            <option key={student.id} value={student.id}>
-              {hasEvaluationThisMonth(student.id) ? "✅ " : "⬜ "}
-              {student.name}
-            </option>
-          ))}
-        </select>
-
-        {selectedStudent && (
+        {coachStudents.length === 0 ? (
+          <p className="muted">
+            Ainda não tens alunos em treinos publicados. Publica treinos com
+            este treinador para poder avaliar.
+          </p>
+        ) : (
           <>
-            <h3>Empenho</h3>
-
-            <div style={{ display: "flex", gap: 10, fontSize: 32 }}>
-              {[1, 2, 3, 4, 5].map((star) => (
-                <span
-                  key={star}
-                  style={{
-                    cursor: "pointer",
-                    color: star <= effort ? "#f5b301" : "#d1d5db",
-                  }}
-                  onClick={() => setEffort(star)}
-                >
-                  ★
-                </span>
-              ))}
-            </div>
-
-            <p>{effort} de 5 estrelas</p>
-
-            <h3>Presença</h3>
-            <strong>{getAttendance(selectedStudent)}%</strong>
-
-            <h3>Objetivo técnico</h3>
-            <input
-              placeholder="Ex: Melhorar o bottom turn"
-              value={technicalGoal}
-              onChange={(e) => setTechnicalGoal(e.target.value)}
-            />
-
-            <h3>Resultado</h3>
             <select
-              value={goalResult}
-              onChange={(e) =>
-                setGoalResult(
-                  e.target.value as "completed" | "progress" | "continue"
-                )
-              }
+              value={selectedStudent}
+              onChange={(e) => selectStudent(e.target.value)}
             >
-              <option value="completed">Cumprido</option>
-              <option value="progress">Em progresso</option>
-              <option value="continue">Continuar</option>
+              <option value="">Selecionar aluno</option>
+
+              {coachStudents.map((student) => (
+                <option key={student.id} value={student.id}>
+                  {hasEvaluationThisMonth(student.id) ? "✅ " : "⬜ "}
+                  {student.name}
+                </option>
+              ))}
             </select>
 
-            <h3>Comentário</h3>
-            <textarea
-              rows={5}
-              value={coachComment}
-              onChange={(e) => setCoachComment(e.target.value)}
-            />
+            {selectedStudent && (
+              <>
+                <h3>Empenho</h3>
 
-            <h3>Objetivo do próximo mês</h3>
-            <input
-              placeholder="Ex: Trabalhar leitura da onda"
-              value={nextGoal}
-              onChange={(e) => setNextGoal(e.target.value)}
-            />
+                <div style={{ display: "flex", gap: 10, fontSize: 32 }}>
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <span
+                      key={star}
+                      style={{
+                        cursor: "pointer",
+                        color: star <= effort ? "#f5b301" : "#d1d5db",
+                      }}
+                      onClick={() => setEffort(star)}
+                    >
+                      ★
+                    </span>
+                  ))}
+                </div>
 
-            <button className="primary-btn" onClick={saveEvaluation}>
-              Guardar avaliação
-            </button>
+                <p>{effort} de 5 estrelas</p>
+
+                <h3>Presença este mês</h3>
+                <strong>{getAttendance(selectedStudent)}%</strong>
+
+                <h3>Objetivo técnico</h3>
+                <input
+                  placeholder="Ex: Melhorar o bottom turn"
+                  value={technicalGoal}
+                  onChange={(e) => setTechnicalGoal(e.target.value)}
+                />
+
+                <h3>Resultado</h3>
+                <select
+                  value={goalResult}
+                  onChange={(e) =>
+                    setGoalResult(
+                      e.target.value as "completed" | "progress" | "continue"
+                    )
+                  }
+                >
+                  <option value="completed">Cumprido</option>
+                  <option value="progress">Em progresso</option>
+                  <option value="continue">Continuar</option>
+                </select>
+
+                <h3>Comentário</h3>
+                <textarea
+                  rows={5}
+                  value={coachComment}
+                  onChange={(e) => setCoachComment(e.target.value)}
+                />
+
+                <h3>Objetivo do próximo mês</h3>
+                <input
+                  placeholder="Ex: Trabalhar leitura da onda"
+                  value={nextGoal}
+                  onChange={(e) => setNextGoal(e.target.value)}
+                />
+
+                <button
+                  className="primary-btn"
+                  onClick={saveEvaluation}
+                  disabled={saving}
+                >
+                  {saving ? "A guardar..." : "Guardar avaliação"}
+                </button>
+              </>
+            )}
           </>
         )}
       </div>

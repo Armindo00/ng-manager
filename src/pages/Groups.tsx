@@ -4,7 +4,12 @@ import type { Student, Coach } from "../types";
 import type { Group } from "../types/group";
 import { getStudents } from "../services/studentsService";
 import { getCoaches } from "../services/coachesService";
-import { getGroups, addGroup, deleteGroup } from "../services/groupsService";
+import {
+  getGroups,
+  addGroup,
+  updateGroup,
+  deleteGroup,
+} from "../services/groupsService";
 import ActionButtons from "../components/ActionButtons";
 import ConfirmDialog from "../components/ConfirmDialog";
 
@@ -13,6 +18,7 @@ function Groups() {
   const [coaches, setCoaches] = useState<Coach[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [groupToDelete, setGroupToDelete] = useState<Group | null>(null);
+  const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
 
   const [name, setName] = useState("");
   const [coachId, setCoachId] = useState("");
@@ -33,6 +39,20 @@ function Groups() {
     }
   }
 
+  function resetForm() {
+    setName("");
+    setCoachId("");
+    setSelectedStudentIds([]);
+    setEditingGroupId(null);
+  }
+
+  function editGroup(group: Group) {
+    setEditingGroupId(group.id);
+    setName(group.name);
+    setCoachId(group.coachId);
+    setSelectedStudentIds(group.studentIds);
+  }
+
   function toggleStudent(studentId: string) {
     setSelectedStudentIds((current) =>
       current.includes(studentId)
@@ -41,17 +61,17 @@ function Groups() {
     );
   }
 
-  async function createGroup() {
+  async function saveGroup() {
     const coach = coaches.find((c) => c.id === coachId);
 
-    if (!name || !coach) {
+    if (!name.trim() || !coach) {
       toast.error("Preenche o nome do grupo e seleciona um treinador.");
       return;
     }
 
-    const newGroup: Group = {
-      id: crypto.randomUUID(),
-      name,
+    const group: Group = {
+      id: editingGroupId || crypto.randomUUID(),
+      name: name.trim(),
       coachId: coach.id,
       coachName: coach.name,
       studentIds: selectedStudentIds,
@@ -59,17 +79,19 @@ function Groups() {
     };
 
     try {
-      await addGroup(newGroup);
+      if (editingGroupId) {
+        await updateGroup(group);
+        toast.success("Grupo atualizado.");
+      } else {
+        await addGroup(group);
+        toast.success("Grupo criado com sucesso!");
+      }
+
       await loadData();
-
-      setName("");
-      setCoachId("");
-      setSelectedStudentIds([]);
-
-      toast.success("Grupo criado com sucesso!");
+      resetForm();
     } catch (error) {
       console.error(error);
-      toast.error("Erro ao criar grupo.");
+      toast.error(editingGroupId ? "Erro ao atualizar grupo." : "Erro ao criar grupo.");
     }
   }
 
@@ -80,6 +102,10 @@ function Groups() {
       await deleteGroup(groupToDelete.id);
       await loadData();
       setGroupToDelete(null);
+
+      if (editingGroupId === groupToDelete.id) {
+        resetForm();
+      }
 
       toast.success("Grupo eliminado com sucesso!");
     } catch (error) {
@@ -93,8 +119,10 @@ function Groups() {
       <h1 className="page-title">Grupos</h1>
 
       <p className="workflow-help">
-        Cria aqui o grupo com treinador e alunos. Depois vai a{" "}
-        <strong>Horários</strong> para definir o dia fixo de treino, carrinha e publicar.
+        Cria ou edita aqui o grupo com treinador e alunos. Depois vai a{" "}
+        <strong>Horários</strong> para definir o dia fixo de treino, carrinha e
+        publicar. Treinos já publicados mantêm a lista de alunos da altura em
+        que foram criados.
       </p>
 
       <div className="form-row">
@@ -114,9 +142,13 @@ function Groups() {
           ))}
         </select>
 
-        <button className="primary-btn" onClick={createGroup}>
-          Criar grupo
+        <button className="primary-btn" onClick={saveGroup}>
+          {editingGroupId ? "Guardar alterações" : "Criar grupo"}
         </button>
+
+        {editingGroupId && (
+          <button onClick={resetForm}>Cancelar edição</button>
+        )}
       </div>
 
       <h3>Alunos do grupo</h3>
@@ -145,6 +177,14 @@ function Groups() {
         </thead>
 
         <tbody>
+          {groups.length === 0 && (
+            <tr>
+              <td colSpan={4} className="muted">
+                Ainda não há grupos criados.
+              </td>
+            </tr>
+          )}
+
           {groups.map((group) => (
             <tr key={group.id}>
               <td className="data-table-primary" data-label="Grupo">
@@ -153,7 +193,10 @@ function Groups() {
               <td data-label="Treinador">{group.coachName}</td>
               <td data-label="Alunos">{group.studentIds.length}</td>
               <td data-label="Ações">
-                <ActionButtons onDelete={() => setGroupToDelete(group)} />
+                <ActionButtons
+                  onEdit={() => editGroup(group)}
+                  onDelete={() => setGroupToDelete(group)}
+                />
               </td>
             </tr>
           ))}
@@ -168,6 +211,11 @@ function Groups() {
             groupToDelete.name +
             "? Esta ação não pode ser desfeita."
           }
+          consequences={[
+            "O grupo deixa de aparecer na lista.",
+            "Os horários associados podem deixar de funcionar corretamente.",
+            "Treinos já publicados não são alterados automaticamente.",
+          ]}
           confirmText="Eliminar"
           cancelText="Cancelar"
           onConfirm={confirmDeleteGroup}

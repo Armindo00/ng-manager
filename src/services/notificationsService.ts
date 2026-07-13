@@ -3,6 +3,7 @@ import { getLessons } from "./lessonsService";
 import { getStudents } from "./studentsService";
 import { getPayments } from "./paymentsService";
 import { getEvaluations } from "./evaluationsService";
+import { getTodayDate, getCurrentMonthYear } from "../utils/dateUtils";
 
 export type Notification = {
   id: string;
@@ -71,7 +72,8 @@ export async function getNotifications(user: User): Promise<Notification[]> {
       });
     }
 
-    const today = new Date().toISOString().split("T")[0];
+    const today = getTodayDate();
+    const { month: currentMonth, year: currentYear } = getCurrentMonthYear();
     const todayLessons = coachLessons.filter(
       (lesson) => lesson.date === today && lesson.status !== "finished"
     ).length;
@@ -83,9 +85,6 @@ export async function getNotifications(user: User): Promise<Notification[]> {
       });
     }
 
-    const currentMonth = new Date().getMonth() + 1;
-    const currentYear = new Date().getFullYear();
-
     const evaluationsThisMonth = evaluations.filter(
       (evaluation) =>
         evaluation.month === currentMonth &&
@@ -93,7 +92,15 @@ export async function getNotifications(user: User): Promise<Notification[]> {
         evaluation.coachId === user.id
     );
 
-    const pendingEvaluations = students.filter(
+    const coachStudentIds = new Set(
+      coachLessons.flatMap((lesson) => lesson.bookedStudentIds)
+    );
+
+    const coachStudents = students.filter((student) =>
+      coachStudentIds.has(student.id)
+    );
+
+    const pendingEvaluations = coachStudents.filter(
       (student) =>
         !evaluationsThisMonth.some(
           (evaluation) => evaluation.studentId === student.id
@@ -114,7 +121,7 @@ export async function getNotifications(user: User): Promise<Notification[]> {
       getPayments(),
     ]);
 
-    const today = new Date().toISOString().split("T")[0];
+    const today = getTodayDate();
     const studentId = user.studentId;
 
     const pendingLessons = lessons.filter(

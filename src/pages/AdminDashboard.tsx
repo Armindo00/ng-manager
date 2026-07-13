@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
 import type { Coach, Lesson, MonthlyEvaluation, Student } from "../types";
 import { getStudents } from "../services/studentsService";
 import { getCoaches } from "../services/coachesService";
@@ -7,6 +8,7 @@ import { getEvaluations } from "../services/evaluationsService";
 import LessonsCalendar from "../components/LessonsCalendar";
 import Modal from "../components/Modal";
 import LessonDetailCard from "../components/LessonDetailCard";
+import { getCurrentMonthYear } from "../utils/dateUtils";
 
 type AdminSection =
   | "dashboard"
@@ -29,16 +31,34 @@ function AdminDashboard({ onChangeSection }: Props) {
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
   const [dayLessons, setDayLessons] = useState<Lesson[]>([]);
   const [selectedDate, setSelectedDate] = useState("");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadData();
   }, []);
 
   async function loadData() {
-    setStudents(await getStudents());
-    setCoaches(await getCoaches());
-    setLessons(await getLessons());
-    setEvaluations(await getEvaluations());
+    try {
+      setLoading(true);
+
+      const [studentsData, coachesData, lessonsData, evaluationsData] =
+        await Promise.all([
+          getStudents(),
+          getCoaches(),
+          getLessons(),
+          getEvaluations(),
+        ]);
+
+      setStudents(studentsData);
+      setCoaches(coachesData);
+      setLessons(lessonsData);
+      setEvaluations(evaluationsData);
+    } catch (error) {
+      console.error(error);
+      toast.error("Erro ao carregar dashboard.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   function handleSelectCalendarDay(dayLessonsList: Lesson[], date: string) {
@@ -56,8 +76,7 @@ function AdminDashboard({ onChangeSection }: Props) {
   const publishedLessons = lessons.filter((lesson) => lesson.status === "published").length;
   const finishedLessons = lessons.filter((lesson) => lesson.status === "finished").length;
 
-  const currentMonth = new Date().getMonth() + 1;
-  const currentYear = new Date().getFullYear();
+  const { month: currentMonth, year: currentYear } = getCurrentMonthYear();
 
   const evaluationsThisMonth = evaluations.filter(
     (evaluation) =>
@@ -85,6 +104,10 @@ function AdminDashboard({ onChangeSection }: Props) {
     <div className="dashboard-page">
       <h1 className="page-title">Dashboard</h1>
 
+      {loading ? (
+        <p className="muted">A carregar dashboard...</p>
+      ) : (
+        <>
       <div className="stats-grid">
         <div className="card stat-card">
           <span className="stat-label">👥 Total de alunos</span>
@@ -221,6 +244,8 @@ function AdminDashboard({ onChangeSection }: Props) {
         <Modal title="Ficha do treino" onClose={() => setSelectedLesson(null)}>
           <LessonDetailCard lesson={selectedLesson} students={students} />
         </Modal>
+      )}
+        </>
       )}
     </div>
   );

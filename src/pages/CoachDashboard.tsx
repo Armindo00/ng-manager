@@ -7,6 +7,7 @@ import { getEvaluations } from "../services/evaluationsService";
 import Modal from "../components/Modal";
 import LessonDetailCard from "../components/LessonDetailCard";
 import CoachStudentResponsesPanel from "../components/CoachStudentResponsesPanel";
+import { getTodayDate, getCurrentMonthYear } from "../utils/dateUtils";
 
 type Props = {
   user: User;
@@ -48,7 +49,7 @@ function CoachDashboard({ user }: Props) {
     }
   }
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = getTodayDate();
 
   const sortedLessons = [...lessons].sort((a, b) =>
     `${a.date} ${a.time || ""}`.localeCompare(
@@ -75,8 +76,7 @@ function CoachDashboard({ user }: Props) {
     (lesson) => lesson.status === "published"
   );
 
-  const currentMonth = new Date().getMonth() + 1;
-  const currentYear = new Date().getFullYear();
+  const { month: currentMonth, year: currentYear } = getCurrentMonthYear();
 
   const evaluatedStudentIds = evaluations
     .filter(

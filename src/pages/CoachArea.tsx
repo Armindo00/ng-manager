@@ -18,22 +18,38 @@ function CoachArea({ user }: Props) {
   const [students, setStudents] = useState<Student[]>([]);
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadData();
   }, []);
 
   async function loadData() {
-    const studentsData = await getStudents();
-    const lessonsData = await getLessons();
+    try {
+      setLoading(true);
 
-    const coachLessons = lessonsData
-      .filter((lesson) => lesson.coachId === user.id)
-      .sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`));
+      const [studentsData, lessonsData] = await Promise.all([
+        getStudents(),
+        getLessons(),
+      ]);
 
-    setStudents(studentsData);
-    setLessons(coachLessons);
-    setSelectedDate((current) => current ?? pickInitialCalendarDate(coachLessons));
+      const coachLessons = lessonsData
+        .filter((lesson) => lesson.coachId === user.id)
+        .sort((a, b) =>
+          `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`)
+        );
+
+      setStudents(studentsData);
+      setLessons(coachLessons);
+      setSelectedDate(
+        (current) => current ?? pickInitialCalendarDate(coachLessons)
+      );
+    } catch (error) {
+      console.error(error);
+      toast.error("Erro ao carregar treinos.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function finishLesson(lessonId: string) {
@@ -43,9 +59,14 @@ function CoachArea({ user }: Props) {
       return;
     }
 
-    await updateLesson({ ...lesson, status: "finished" });
-    await loadData();
-    toast.success("Treino finalizado.");
+    try {
+      await updateLesson({ ...lesson, status: "finished" });
+      await loadData();
+      toast.success("Treino finalizado.");
+    } catch (error) {
+      console.error(error);
+      toast.error("Erro ao finalizar treino.");
+    }
   }
 
   function handleSelectDay(_dayLessons: Lesson[], date: string) {
@@ -61,6 +82,10 @@ function CoachArea({ user }: Props) {
     <div>
       <h1 className="page-title">Os meus treinos</h1>
 
+      {loading ? (
+        <p className="muted">A carregar treinos...</p>
+      ) : (
+        <>
       <div className="workflow-help">
         <p>
           Usa o <strong>calendário</strong> para escolher o dia. Antes do treino envia
@@ -163,6 +188,8 @@ function CoachArea({ user }: Props) {
           )}
         </div>
       </div>
+        </>
+      )}
     </div>
   );
 }

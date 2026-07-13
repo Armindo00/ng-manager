@@ -1,8 +1,7 @@
 import type { Lesson } from "../types";
+import { getTodayDate } from "./dateUtils";
 
-export function getTodayDate() {
-  return new Date().toISOString().split("T")[0];
-}
+export { getTodayDate };
 
 export function canMarkAttendance(lesson: Lesson) {
   return lesson.date <= getTodayDate();
