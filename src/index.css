@@ -1688,6 +1688,180 @@ body::before {
 
 .coach-lesson-card {
   align-items: start;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.coach-lesson-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.coach-lesson-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.coach-lesson-section {
+  width: 100%;
+  padding-top: 8px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.coach-lesson-section h4 {
+  margin: 0 0 12px;
+}
+
+.coach-planned-pickups {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.coach-responses-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.coach-responses-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.coach-response-stat {
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  background: #f1f5f9;
+  color: #334155;
+}
+
+.coach-response-stat.confirmed {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.coach-response-stat.pickup {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.coach-response-stat.beach {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.coach-response-stat.pending {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.coach-material-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 13px;
+  color: #475569;
+}
+
+.coach-material-summary strong {
+  color: #0f172a;
+}
+
+.coach-responses-table-wrap {
+  overflow-x: auto;
+}
+
+.coach-responses-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.coach-responses-table th,
+.coach-responses-table td {
+  text-align: left;
+  padding: 10px 12px;
+  border-bottom: 1px solid #e2e8f0;
+  vertical-align: top;
+}
+
+.coach-responses-table th {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #64748b;
+  background: #f8fafc;
+}
+
+.coach-response-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.coach-response-badge.confirmed {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.coach-response-badge.declined {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.coach-response-badge.pending {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.coach-response-note {
+  display: block;
+  margin-top: 4px;
+  color: #64748b;
+}
+
+.coach-dashboard-lesson .coach-responses-panel {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #e2e8f0;
+}
+
+@media (max-width: 720px) {
+  .coach-responses-table thead {
+    display: none;
+  }
+
+  .coach-responses-table tr {
+    display: block;
+    margin-bottom: 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 8px;
+  }
+
+  .coach-responses-table td {
+    display: block;
+    border: none;
+    padding: 6px 8px;
+  }
+
+  .coach-responses-table td::before {
+    content: attr(data-label) ": ";
+    font-weight: 700;
+    color: #64748b;
+  }
 }
 
 .student-lesson-card {

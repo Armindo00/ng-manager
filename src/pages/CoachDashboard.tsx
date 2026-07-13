@@ -6,6 +6,7 @@ import { getLessons } from "../services/lessonsService";
 import { getEvaluations } from "../services/evaluationsService";
 import Modal from "../components/Modal";
 import LessonDetailCard from "../components/LessonDetailCard";
+import CoachStudentResponsesPanel from "../components/CoachStudentResponsesPanel";
 
 type Props = {
   user: User;
@@ -175,6 +176,12 @@ function CoachDashboard({ user }: Props) {
             <strong>{counts.pending}</strong>
           </div>
         </div>
+
+        <CoachStudentResponsesPanel
+          lesson={lesson}
+          students={students}
+          compact
+        />
       </article>
     );
   }

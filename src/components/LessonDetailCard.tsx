@@ -4,6 +4,7 @@ import type { Coach, CoachPickup, Lesson, Student } from "../types";
 import { updateLesson } from "../services/lessonsService";
 import { getCoaches } from "../services/coachesService";
 import PickupManager from "./PickupManager";
+import CoachStudentResponsesPanel from "./CoachStudentResponsesPanel";
 
 type Props = {
   lesson: Lesson;
@@ -243,6 +244,18 @@ function LessonDetailCard({ lesson, students, readOnlyVan = false }: Props) {
             />
           </label>
         </div>
+      </div>
+
+      <div className="lesson-section">
+        <h3>📋 Respostas dos alunos</h3>
+        <p className="muted">
+          Pickup, hora disponível e material pedido por cada aluno.
+        </p>
+
+        <CoachStudentResponsesPanel
+          lesson={currentLesson}
+          students={students}
+        />
       </div>
 
       <div className="lesson-section">
