@@ -3,6 +3,12 @@ import toast from "react-hot-toast";
 import type { CoachPickup, Lesson } from "../types";
 import { updateLesson } from "../services/lessonsService";
 import PickupManager from "./PickupManager";
+import {
+  canSendLessonPlan,
+  getPickupStudentsCount,
+  isLessonPlanComplete,
+  isLessonPlanSent,
+} from "../utils/lessonWorkflow";
 
 type Props = {
   lesson: Lesson;
@@ -15,7 +21,15 @@ function CoachLessonSetup({ lesson, onSaved }: Props) {
   const [pickups, setPickups] = useState<CoachPickup[]>(lesson.coachPickups || []);
   const [saving, setSaving] = useState(false);
 
-  async function savePlan() {
+  const pickupStudents = getPickupStudentsCount(lesson);
+  const planSent = isLessonPlanSent(lesson);
+
+  async function sendPlan() {
+    if (!canSendLessonPlan(lesson)) {
+      toast.error("Este treino já foi concluído.");
+      return;
+    }
+
     if (!beach.trim()) {
       toast.error("Indica a praia do treino.");
       return;
@@ -26,6 +40,15 @@ function CoachLessonSetup({ lesson, onSaved }: Props) {
       return;
     }
 
+    const validPickups = pickups.filter(
+      (pickup) => pickup.location.trim() && pickup.time.trim()
+    );
+
+    if (pickupStudents > 0 && validPickups.length === 0) {
+      toast.error("Define pelo menos um pickup para os alunos da carrinha.");
+      return;
+    }
+
     try {
       setSaving(true);
 
@@ -33,15 +56,15 @@ function CoachLessonSetup({ lesson, onSaved }: Props) {
         ...lesson,
         beach: beach.trim(),
         time,
-        coachPickups: pickups,
-        pickupTime: pickups[0]?.time || lesson.pickupTime || "",
+        coachPickups: validPickups,
+        pickupTime: validPickups[0]?.time || lesson.pickupTime || "",
       });
 
-      toast.success("Treino atualizado.");
+      toast.success("Plano enviado. Os alunos já podem ver praia, hora e pickups.");
       onSaved();
     } catch (error) {
       console.error(error);
-      toast.error("Erro ao guardar treino.");
+      toast.error("Erro ao enviar plano do treino.");
     } finally {
       setSaving(false);
     }
@@ -49,10 +72,28 @@ function CoachLessonSetup({ lesson, onSaved }: Props) {
 
   return (
     <div className="coach-lesson-setup">
-      <h4>Definir praia, hora e pickups</h4>
+      <div className="coach-plan-status">
+        {planSent ? (
+          <span className="coach-plan-badge sent">Plano enviado aos alunos</span>
+        ) : (
+          <span className="coach-plan-badge pending">Plano por enviar</span>
+        )}
+
+        {isLessonPlanComplete(lesson) && (
+          <span className="coach-plan-badge complete">Completo</span>
+        )}
+      </div>
+
       <p className="muted">
-        Usa as respostas dos alunos abaixo para planear os horários de pickup.
+        Envia <strong>antes do treino</strong> a praia, hora de chegada e pickups.
+        Os alunos veem estes dados na área deles.
       </p>
+
+      {pickupStudents > 0 && (
+        <p className="coach-plan-hint">
+          {pickupStudents} aluno(s) vão na carrinha — define os horários de pickup.
+        </p>
+      )}
 
       <div className="form-row">
         <input
@@ -71,8 +112,8 @@ function CoachLessonSetup({ lesson, onSaved }: Props) {
 
       <PickupManager pickups={pickups} onChange={setPickups} />
 
-      <button className="primary-btn" onClick={savePlan} disabled={saving}>
-        {saving ? "A guardar..." : "Guardar plano do treino"}
+      <button className="primary-btn" onClick={sendPlan} disabled={saving}>
+        {saving ? "A enviar..." : "Enviar plano aos alunos"}
       </button>
     </div>
   );

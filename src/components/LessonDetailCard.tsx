@@ -1,18 +1,31 @@
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import type { Coach, CoachPickup, Lesson, Student } from "../types";
-import { updateLesson } from "../services/lessonsService";
+import { updateLesson, getLessons } from "../services/lessonsService";
 import { getCoaches } from "../services/coachesService";
 import PickupManager from "./PickupManager";
 import CoachStudentResponsesPanel from "./CoachStudentResponsesPanel";
+import CoachLessonSetup from "./CoachLessonSetup";
+import CoachAttendancePanel from "./CoachAttendancePanel";
+import {
+  canFinishLesson,
+  canMarkAttendance,
+  canSendLessonPlan,
+} from "../utils/lessonWorkflow";
 
 type Props = {
   lesson: Lesson;
   students: Student[];
   readOnlyVan?: boolean;
+  coachMode?: boolean;
 };
 
-function LessonDetailCard({ lesson, students, readOnlyVan = false }: Props) {
+function LessonDetailCard({
+  lesson,
+  students,
+  readOnlyVan = false,
+  coachMode = false,
+}: Props) {
   const [currentLesson, setCurrentLesson] = useState<Lesson>(lesson);
   const [coachNotes, setCoachNotes] = useState(lesson.coachNotes || "");
   const [coaches, setCoaches] = useState<Coach[]>([]);
@@ -91,6 +104,11 @@ function LessonDetailCard({ lesson, students, readOnlyVan = false }: Props) {
   }
 
   function finishLesson() {
+    if (!canFinishLesson(currentLesson)) {
+      toast.error("Só podes concluir o treino no dia do treino ou depois.");
+      return;
+    }
+
     saveLessonChanges(
       { ...currentLesson, status: "finished" },
       "Treino concluído."
@@ -156,6 +174,15 @@ function LessonDetailCard({ lesson, students, readOnlyVan = false }: Props) {
     saveLessonChanges({ ...currentLesson, coachNotes }, "Notas guardadas.");
   }
 
+  async function refreshLesson() {
+    const lessons = await getLessons();
+    const updated = lessons.find((item) => item.id === currentLesson.id);
+
+    if (updated) {
+      setCurrentLesson(updated);
+    }
+  }
+
   return (
     <div className="lesson-detail-card">
       <div className="lesson-detail-hero">
@@ -173,16 +200,22 @@ function LessonDetailCard({ lesson, students, readOnlyVan = false }: Props) {
       </div>
 
       <div className="lesson-actions-bar">
-        {currentLesson.status === "draft" && (
+        {!coachMode && currentLesson.status === "draft" && (
           <button className="primary-btn" onClick={publishLesson}>
             📢 Publicar treino
           </button>
         )}
 
-        {currentLesson.status === "published" && (
+        {currentLesson.status === "published" && canFinishLesson(currentLesson) && (
           <button className="primary-btn" onClick={finishLesson}>
             ✅ Concluir treino
           </button>
+        )}
+
+        {currentLesson.status === "published" && !canFinishLesson(currentLesson) && (
+          <span className="muted">
+            Conclusão disponível no dia do treino ({currentLesson.date}).
+          </span>
         )}
 
         {currentLesson.status === "finished" && (
@@ -190,6 +223,37 @@ function LessonDetailCard({ lesson, students, readOnlyVan = false }: Props) {
         )}
       </div>
 
+      {coachMode ? (
+        <>
+          <div className="lesson-section">
+            <h3>📋 Respostas dos alunos</h3>
+            <CoachStudentResponsesPanel
+              lesson={currentLesson}
+              students={students}
+            />
+          </div>
+
+          {canSendLessonPlan(currentLesson) && (
+            <div className="lesson-section">
+              <h3>📢 Enviar plano (antes do treino)</h3>
+              <CoachLessonSetup
+                lesson={currentLesson}
+                onSaved={refreshLesson}
+              />
+            </div>
+          )}
+
+          <div className="lesson-section">
+            <h3>✅ Presenças</h3>
+            <CoachAttendancePanel
+              lesson={currentLesson}
+              students={students}
+              onSaved={refreshLesson}
+            />
+          </div>
+        </>
+      ) : (
+        <>
       <div className="lesson-section">
         <h3>✏️ Editar treino</h3>
 
@@ -336,34 +400,42 @@ function LessonDetailCard({ lesson, students, readOnlyVan = false }: Props) {
           </span>
         </div>
 
-        <div className="lesson-students-list">
-          {bookedStudents.map((student) => {
-            const isPresent = currentLesson.presentStudentIds.includes(student.id);
+        {canMarkAttendance(currentLesson) ? (
+          <div className="lesson-students-list">
+            {bookedStudents.map((student) => {
+              const isPresent = currentLesson.presentStudentIds.includes(student.id);
 
-            return (
-              <button
-                type="button"
-                className={
-                  isPresent
-                    ? "lesson-student-row present"
-                    : "lesson-student-row"
-                }
-                key={student.id}
-                onClick={() => togglePresence(student.id)}
-              >
-                <span>
-                  {student.name}
-                  <small className="student-response-status">
-                    {responseText(student.id)}
-                  </small>
-                </span>
+              return (
+                <button
+                  type="button"
+                  className={
+                    isPresent
+                      ? "lesson-student-row present"
+                      : "lesson-student-row"
+                  }
+                  key={student.id}
+                  onClick={() => togglePresence(student.id)}
+                >
+                  <span>
+                    {student.name}
+                    <small className="student-response-status">
+                      {responseText(student.id)}
+                    </small>
+                  </span>
 
-                <strong>{isPresent ? "✅ Presente" : "⬜ Ausente"}</strong>
-              </button>
-            );
-          })}
-        </div>
+                  <strong>{isPresent ? "✅ Presente" : "⬜ Ausente"}</strong>
+                </button>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="muted">
+            Presenças disponíveis no dia do treino ({currentLesson.date}).
+          </p>
+        )}
       </div>
+        </>
+      )}
 
       <div className="lesson-section">
         <h3>📝 Notas do treinador</h3>

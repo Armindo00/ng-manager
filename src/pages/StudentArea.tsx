@@ -4,6 +4,7 @@ import type { Lesson, LessonResponse, Student, User } from "../types";
 import { getLessons, updateLesson } from "../services/lessonsService";
 import { loadStudentView } from "../utils/studentView";
 import { formatStudentResponseSummary } from "../utils/lessonResponse";
+import { isLessonPlanSent } from "../utils/lessonWorkflow";
 import StudentLessonResponseModal from "../components/StudentLessonResponseModal";
 
 type Props = {
@@ -148,6 +149,27 @@ function StudentArea({ user }: Props) {
           <p>🕒 Chegada à praia: {lesson.time || "Por definir pelo treinador"}</p>
           <p>👨‍🏫 Treinador: {lesson.coachName}</p>
           <p>🚐 Carrinha: {lesson.van || "Por definir"}</p>
+
+          {isLessonPlanSent(lesson) ? (
+            <>
+              {(lesson.coachPickups || []).length > 0 && (
+                <div className="student-plan-pickups">
+                  <strong>Pickups do treinador:</strong>
+                  {(lesson.coachPickups || []).map((pickup) => (
+                    <p key={pickup.id}>
+                      {pickup.time} — {pickup.location}
+                    </p>
+                  ))}
+                </div>
+              )}
+            </>
+          ) : (
+            isConfirmed && (
+              <p className="student-plan-pending">
+                O treinador ainda não enviou o plano final (praia/hora/pickups).
+              </p>
+            )
+          )}
 
           {isConfirmed && <p className="student-status confirmed">✅ Vou</p>}
           {isDeclined && <p className="student-status declined">❌ Não vou</p>}

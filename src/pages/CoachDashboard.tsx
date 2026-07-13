@@ -304,6 +304,7 @@ function CoachDashboard({ user }: Props) {
             lesson={selectedLesson}
             students={students}
             readOnlyVan
+            coachMode
           />
         </Modal>
       )}
