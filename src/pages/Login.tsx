@@ -3,6 +3,7 @@ import type { User } from "../types";
 import { supabase } from "../services/supabase";
 import { getUserByEmail } from "../services/usersService";
 import AppVersion from "../components/AppVersion";
+import logo from "../assets/logo next.jpeg";
 
 type Props = {
   onLogin: (user: User) => void;
@@ -52,39 +53,59 @@ function Login({ onLogin }: Props) {
 
   return (
     <div className="login-page">
-      <div className="login-card">
-        <p className="login-kicker">NEXTGENERATION</p>
+      <div className="login-brand-panel">
+        <div className="login-brand-content">
+          <div className="login-brand-logo">
+            <img src={logo} alt="NextGeneration" />
+          </div>
 
-        <h1>NG Manager</h1>
-
-        <p className="login-subtitle">
-          Entrar com email e password.
-        </p>
-
-        <div className="login-actions">
-          <input
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-
-          <button
-            className="primary-btn"
-            onClick={login}
-            disabled={loading}
-          >
-            {loading ? "A entrar..." : "Entrar"}
-          </button>
+          <p className="login-kicker">NextGeneration Surf School</p>
+          <h1>NG Manager</h1>
+          <p className="login-brand-text">
+            Plataforma de gestão para alunos, treinadores e administração da
+            escola de surf.
+          </p>
         </div>
+      </div>
 
-        <AppVersion className="app-version login-version" />
+      <div className="login-form-panel">
+        <div className="login-card">
+          <h2>Entrar na conta</h2>
+          <p className="login-subtitle">
+            Usa o email e password que te foram atribuídos.
+          </p>
+
+          <div className="login-actions">
+            <label className="field-label">
+              Email
+              <input
+                placeholder="nome@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </label>
+
+            <label className="field-label">
+              Password
+              <input
+                type="password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </label>
+
+            <button
+              className="primary-btn login-submit-btn"
+              onClick={login}
+              disabled={loading}
+            >
+              {loading ? "A entrar..." : "Entrar"}
+            </button>
+          </div>
+
+          <AppVersion className="app-version login-version" />
+        </div>
       </div>
     </div>
   );

@@ -1,4 +1,21 @@
 import { useEffect, useState } from "react";
+import type { LucideIcon } from "lucide-react";
+import {
+  LayoutDashboard,
+  Users,
+  UserCircle,
+  UsersRound,
+  Repeat,
+  Calendar,
+  CreditCard,
+  CalendarDays,
+  Star,
+  Award,
+  CalendarRange,
+  LogOut,
+  Menu,
+  X,
+} from "lucide-react";
 import type { User } from "../types";
 import logo from "../assets/logo next.jpeg";
 import AppVersion from "./AppVersion";
@@ -9,6 +26,12 @@ type Props = {
   onChangeSection: (section: string) => void;
   onLogout: () => void;
 };
+
+function roleLabel(role: User["role"]) {
+  if (role === "admin") return "Administrador";
+  if (role === "coach") return "Treinador";
+  return "Aluno";
+}
 
 function Sidebar({ user, activeSection, onChangeSection, onLogout }: Props) {
   const [open, setOpen] = useState(false);
@@ -40,13 +63,15 @@ function Sidebar({ user, activeSection, onChangeSection, onLogout }: Props) {
     setOpen(false);
   }
 
-  function item(icon: string, label: string, section: string) {
+  function item(Icon: LucideIcon, label: string, section: string) {
     return (
       <button
         className={activeSection === section ? "nav-item active" : "nav-item"}
         onClick={() => changeSection(section)}
       >
-        <span className="nav-icon">{icon}</span>
+        <span className="nav-icon">
+          <Icon size={18} strokeWidth={2} />
+        </span>
         <span>{label}</span>
       </button>
     );
@@ -54,8 +79,12 @@ function Sidebar({ user, activeSection, onChangeSection, onLogout }: Props) {
 
   return (
     <>
-      <button className="mobile-menu-btn" onClick={() => setOpen(true)}>
-        ☰
+      <button
+        className="mobile-menu-btn"
+        onClick={() => setOpen(true)}
+        aria-label="Abrir menu"
+      >
+        <Menu size={22} />
       </button>
 
       {open && (
@@ -67,8 +96,12 @@ function Sidebar({ user, activeSection, onChangeSection, onLogout }: Props) {
       )}
 
       <aside className={open ? "sidebar mobile-open" : "sidebar"}>
-        <button className="close-menu-btn" onClick={() => setOpen(false)}>
-          ✕
+        <button
+          className="close-menu-btn"
+          onClick={() => setOpen(false)}
+          aria-label="Fechar menu"
+        >
+          <X size={20} />
         </button>
 
         <div>
@@ -84,38 +117,38 @@ function Sidebar({ user, activeSection, onChangeSection, onLogout }: Props) {
             <div>
               <h2 className="brand">NG Manager</h2>
               <p className="role-label">{user.name}</p>
-              <small className="user-role">{user.role.toUpperCase()}</small>
+              <small className="user-role">{roleLabel(user.role)}</small>
             </div>
           </div>
 
           {user.role === "admin" && (
             <nav className="sidebar-nav">
-              {item("📊", "Dashboard", "dashboard")}
-              {item("👥", "Alunos", "students")}
-              {item("🏄", "Treinadores", "coaches")}
-              {item("👨‍👩‍👧", "Grupos", "groups")}
-              {item("🔁", "Horários", "recurring")}
-              {item("🗓️", "Calendário", "lessons")}
-              {item("💳", "Pagamentos", "payments")}
+              {item(LayoutDashboard, "Dashboard", "dashboard")}
+              {item(Users, "Alunos", "students")}
+              {item(UserCircle, "Treinadores", "coaches")}
+              {item(UsersRound, "Grupos", "groups")}
+              {item(Repeat, "Horários", "recurring")}
+              {item(Calendar, "Calendário", "lessons")}
+              {item(CreditCard, "Pagamentos", "payments")}
             </nav>
           )}
 
           {user.role === "coach" && (
             <nav className="sidebar-nav">
-              {item("📊", "Dashboard", "dashboard")}
-              {item("📅", "Os meus treinos", "lessons")}
-              {item("⭐", "Avaliar alunos", "evaluations")}
+              {item(LayoutDashboard, "Dashboard", "dashboard")}
+              {item(CalendarDays, "Os meus treinos", "lessons")}
+              {item(Star, "Avaliar alunos", "evaluations")}
             </nav>
           )}
 
           {user.role === "student" && (
             <nav className="sidebar-nav">
-              {item("📊", "Dashboard", "dashboard")}
-              {item("📅", "Os meus treinos", "lessons")}
-              {item("📝", "As minhas avaliações", "evaluations")}
-              {item("🏅", "Skill Card", "skillcard")}
-              {item("📆", "Calendário", "calendar")}
-              {item("💳", "Pagamentos", "payments")}
+              {item(LayoutDashboard, "Dashboard", "dashboard")}
+              {item(CalendarDays, "Os meus treinos", "lessons")}
+              {item(Star, "As minhas avaliações", "evaluations")}
+              {item(Award, "Skill Card", "skillcard")}
+              {item(CalendarRange, "Calendário", "calendar")}
+              {item(CreditCard, "Pagamentos", "payments")}
             </nav>
           )}
         </div>
@@ -130,7 +163,8 @@ function Sidebar({ user, activeSection, onChangeSection, onLogout }: Props) {
               onLogout();
             }}
           >
-            🚪 Terminar sessão
+            <LogOut size={18} />
+            Terminar sessão
           </button>
         </div>
       </aside>
