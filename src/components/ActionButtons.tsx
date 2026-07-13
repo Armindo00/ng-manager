@@ -33,7 +33,7 @@ function ActionButtons({ onView, onEdit, onDelete }: Props) {
         <button
           className="icon-btn danger"
           onClick={onDelete}
-          title="Eliminar"
+          title="Eliminar registo (irreversível)"
         >
           <Trash2 size={18} />
         </button>

@@ -29,11 +29,20 @@ function StudentAccessButtons({
 
       {onToggleBlock && (
         <button
-          className={`icon-btn ${blocked ? "" : "danger"}`}
+          type="button"
+          className={`compact-btn ${blocked ? "" : "danger-btn"}`}
           onClick={onToggleBlock}
           title={blocked ? "Desbloquear acesso" : "Bloquear acesso"}
         >
-          {blocked ? <Unlock size={18} /> : <Lock size={18} />}
+          {blocked ? (
+            <>
+              <Unlock size={16} /> Desbloquear
+            </>
+          ) : (
+            <>
+              <Lock size={16} /> Bloquear
+            </>
+          )}
         </button>
       )}
     </div>

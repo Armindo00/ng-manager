@@ -8,15 +8,18 @@ import {
 import {
   createCoachWithAccess,
   createCoachAccess,
+  deleteCoachAccess,
   getCoachAccessMap,
   resetCoachPassword,
+  toggleCoachBlock,
   type CoachAccess,
 } from "../services/coachAuthService";
-import { getEmailValidationMessage, normalizeEmail } from "../utils/email";
 import ActionButtons from "../components/ActionButtons";
 import ConfirmDialog from "../components/ConfirmDialog";
 import Modal from "../components/Modal";
+import StudentAccessButtons from "../components/StudentAccessButtons";
 import StudentAccessModal from "../components/StudentAccessModal";
+import { getEmailValidationMessage, normalizeEmail } from "../utils/email";
 
 function Coaches() {
   const [coaches, setCoaches] = useState<Coach[]>([]);
@@ -179,10 +182,53 @@ function Coaches() {
     }
   }
 
+  async function handleToggleBlock(coach: Coach) {
+    const access = accessMap.get(coach.id);
+
+    if (!access) {
+      toast.error("Este treinador ainda não tem acesso criado.");
+      return;
+    }
+
+    try {
+      const result = await toggleCoachBlock(coach.id);
+      await loadCoaches();
+
+      toast.success(
+        result.blocked
+          ? `${coach.name} foi bloqueado.`
+          : `${coach.name} foi desbloqueado.`
+      );
+    } catch (error) {
+      console.error(error);
+      toast.error(
+        error instanceof Error ? error.message : "Erro ao atualizar acesso."
+      );
+    }
+  }
+
+  function getAccessStatus(coachId: string) {
+    const access = accessMap.get(coachId);
+
+    if (!access) {
+      return { label: "Sem acesso", className: "access-status missing" };
+    }
+
+    if (access.blocked) {
+      return { label: "Bloqueado", className: "access-status blocked" };
+    }
+
+    return { label: "Ativo", className: "access-status active" };
+  }
+
   async function confirmDeleteCoach() {
     if (!coachToDelete) return;
 
     try {
+      if (accessMap.has(coachToDelete.id)) {
+        await deleteCoachAccess(coachToDelete.id);
+      }
+
       await deleteCoach(coachToDelete.id);
       await loadCoaches();
       setCoachToDelete(null);
@@ -196,6 +242,12 @@ function Coaches() {
   return (
     <div className="card section-card">
       <h1 className="page-title">Treinadores</h1>
+
+      <p className="muted workflow-help">
+        Para saídas ou desistências, usa <strong>Bloquear</strong> — o registo do
+        treinador mantém-se. <strong>Eliminar</strong> só para registos criados por
+        engano.
+      </p>
 
       <div className="form-row">
         <input
@@ -237,6 +289,7 @@ function Coaches() {
           <tbody>
             {coaches.map((coach) => {
               const access = accessMap.get(coach.id);
+              const accessStatus = getAccessStatus(coach.id);
 
               return (
                 <tr key={coach.id}>
@@ -251,12 +304,8 @@ function Coaches() {
                   </td>
                   <td data-label="Telefone">{coach.phone}</td>
                   <td data-label="Acesso">
-                    <span
-                      className={
-                        access ? "status-badge status-active" : "status-badge status-none"
-                      }
-                    >
-                      {access ? "Ativo" : "Sem acesso"}
+                    <span className={accessStatus.className}>
+                      {accessStatus.label}
                     </span>
                   </td>
                   <td data-label="Ações">
@@ -264,12 +313,14 @@ function Coaches() {
                       <ActionButtons onDelete={() => setCoachToDelete(coach)} />
 
                       {access ? (
-                        <button
-                          className="compact-btn"
-                          onClick={() => handleResetPassword(coach)}
-                        >
-                          🔑 Reset password
-                        </button>
+                        <>
+                          <StudentAccessButtons
+                            hasAccess
+                            blocked={access.blocked}
+                            onResetPassword={() => handleResetPassword(coach)}
+                            onToggleBlock={() => handleToggleBlock(coach)}
+                          />
+                        </>
                       ) : (
                         <button
                           className="compact-btn"
@@ -320,13 +371,16 @@ function Coaches() {
 
       {coachToDelete && (
         <ConfirmDialog
-          title="⚠️ Eliminar treinador"
-          message={
-            "Tens a certeza que pretendes eliminar " +
-            coachToDelete.name +
-            "? Esta ação não pode ser desfeita."
-          }
-          confirmText="Eliminar"
+          title="Eliminar treinador"
+          message={`Tens a certeza que pretendes eliminar o registo de ${coachToDelete.name}?`}
+          consequences={[
+            "O registo do treinador é apagado permanentemente da base de dados.",
+            "O acesso à app é removido, se existir.",
+            "Treinos, grupos e avaliações associados podem ficar inconsistentes.",
+            "Esta ação não pode ser desfeita.",
+          ]}
+          recommendation="Se o treinador saiu da escola, usa Bloquear em vez de eliminar — o registo e o histórico mantêm-se."
+          confirmText="Eliminar registo"
           cancelText="Cancelar"
           onConfirm={confirmDeleteCoach}
           onCancel={() => setCoachToDelete(null)}

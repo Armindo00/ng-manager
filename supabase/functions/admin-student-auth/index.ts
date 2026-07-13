@@ -16,6 +16,7 @@ type Action =
   | "create-coach"
   | "create-coach-access"
   | "reset-coach-password"
+  | "toggle-coach-block"
   | "delete-coach-access"
   | "complete-password-change";
 
@@ -39,6 +40,7 @@ const STUDENT_ACTIONS = new Set<Action>([
 const COACH_ACCESS_ACTIONS = new Set<Action>([
   "create-coach-access",
   "reset-coach-password",
+  "toggle-coach-block",
   "delete-coach-access",
 ]);
 
@@ -158,7 +160,7 @@ async function findStudentAccess(adminClient: ReturnType<typeof createClient>, s
 async function findCoachAccess(adminClient: ReturnType<typeof createClient>, coachId: string) {
   const { data, error } = await adminClient
     .from("app_users")
-    .select("id, email")
+    .select("id, email, blocked")
     .eq("id", coachId)
     .eq("role", "coach")
     .maybeSingle();
@@ -169,6 +171,7 @@ async function findCoachAccess(adminClient: ReturnType<typeof createClient>, coa
   return {
     id: data.id,
     email: data.email,
+    blocked: data.blocked ?? false,
   };
 }
 
@@ -493,6 +496,37 @@ Deno.serve(async (req) => {
         hasAccess: true,
         email: access.email,
         password,
+      });
+    }
+
+    if (body.action === "toggle-coach-block") {
+      const access = await findCoachAccess(adminClient, body.coachId!);
+
+      if (!access) {
+        return jsonResponse({ error: "Este treinador ainda não tem acesso criado." }, 404);
+      }
+
+      const shouldBlock = !(access.blocked ?? false);
+
+      const { error } = await adminClient.auth.admin.updateUserById(access.id, {
+        ban_duration: shouldBlock ? "876000h" : "none",
+      });
+
+      if (error) {
+        return jsonResponse({ error: error.message }, 400);
+      }
+
+      await adminClient
+        .from("app_users")
+        .update({ blocked: shouldBlock })
+        .eq("id", access.id)
+        .then(() => undefined)
+        .catch(() => undefined);
+
+      return jsonResponse({
+        hasAccess: true,
+        blocked: shouldBlock,
+        email: access.email,
       });
     }
 

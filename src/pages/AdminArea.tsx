@@ -367,6 +367,12 @@ function AdminArea() {
           />
         </div>
 
+        <p className="muted workflow-help">
+          Para desistências ou saídas, usa <strong>Bloquear</strong> — o registo e
+          histórico mantêm-se. <strong>Eliminar</strong> só para registos criados por
+          engano.
+        </p>
+
         {loading && <p className="muted">A carregar alunos...</p>}
 
         {!loading && (
@@ -465,13 +471,16 @@ function AdminArea() {
 
       {studentToDelete && (
         <ConfirmDialog
-          title="⚠️ Eliminar aluno"
-          message={
-            "Tens a certeza que pretendes eliminar " +
-            studentToDelete.name +
-            "? Esta ação não pode ser desfeita."
-          }
-          confirmText="Eliminar"
+          title="Eliminar aluno"
+          message={`Tens a certeza que pretendes eliminar o registo de ${studentToDelete.name}?`}
+          consequences={[
+            "O registo do aluno é apagado permanentemente da base de dados.",
+            "O acesso à app é removido, se existir.",
+            "O histórico em treinos e avaliações pode deixar de estar associado a este aluno.",
+            "Esta ação não pode ser desfeita.",
+          ]}
+          recommendation="Se o aluno desistiu ou saiu, usa Bloquear em vez de eliminar — o registo e o histórico mantêm-se."
+          confirmText="Eliminar registo"
           cancelText="Cancelar"
           onConfirm={confirmDeleteStudent}
           onCancel={() => setStudentToDelete(null)}

@@ -5,10 +5,12 @@ export type CoachAccess = {
   coachId: string;
   appUserId: string;
   email: string;
+  blocked: boolean;
 };
 
 export type CoachAuthResult = {
   hasAccess: boolean;
+  blocked?: boolean;
   coachId?: string;
   email?: string;
   password?: string;
@@ -19,6 +21,7 @@ type Action =
   | "create-coach"
   | "create-coach-access"
   | "reset-coach-password"
+  | "toggle-coach-block"
   | "delete-coach-access";
 
 function formatInvokeError(error: unknown, data: unknown) {
@@ -86,20 +89,40 @@ async function invokeCoachAuth(
 }
 
 export async function getCoachAccessMap() {
-  const { data, error } = await supabase
+  let rows:
+    | Array<{
+        id: string;
+        email: string;
+        blocked?: boolean;
+      }>
+    | null = null;
+
+  const withBlocked = await supabase
     .from("app_users")
-    .select("id, email")
+    .select("id, email, blocked")
     .eq("role", "coach");
 
-  if (error) throw error;
+  if (withBlocked.error?.message?.includes("blocked")) {
+    const withoutBlocked = await supabase
+      .from("app_users")
+      .select("id, email")
+      .eq("role", "coach");
+
+    if (withoutBlocked.error) throw withoutBlocked.error;
+    rows = withoutBlocked.data;
+  } else {
+    if (withBlocked.error) throw withBlocked.error;
+    rows = withBlocked.data;
+  }
 
   const map = new Map<string, CoachAccess>();
 
-  for (const row of data || []) {
+  for (const row of rows || []) {
     map.set(row.id, {
       coachId: row.id,
       appUserId: row.id,
       email: row.email,
+      blocked: row.blocked ?? false,
     });
   }
 
@@ -120,6 +143,10 @@ export async function createCoachAccess(coachId: string, email: string) {
 
 export async function resetCoachPassword(coachId: string) {
   return invokeCoachAuth("reset-coach-password", { coachId });
+}
+
+export async function toggleCoachBlock(coachId: string) {
+  return invokeCoachAuth("toggle-coach-block", { coachId });
 }
 
 export async function deleteCoachAccess(coachId: string) {
