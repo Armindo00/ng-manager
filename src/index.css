@@ -1900,6 +1900,54 @@ textarea:focus {
   color: #991b1b;
 }
 
+.van-alert {
+  margin: 16px 0;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+}
+
+.van-alert-danger {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #991b1b;
+}
+
+.van-active-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.van-task-status {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.van-task-status-overdue {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.van-task-status-due_soon {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.van-task-status-pending {
+  background: #e0f2fe;
+  color: #075985;
+}
+
+.van-task-status-completed {
+  background: #dcfce7;
+  color: #166534;
+}
+
 .coach-lesson-setup {
   margin: 16px 0;
   padding: 16px;
