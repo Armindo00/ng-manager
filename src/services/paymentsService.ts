@@ -1,3 +1,4 @@
+import { getCurrentMonthYear } from "../utils/dateUtils";
 import { supabase } from "./supabase";
 
 export type PaymentStatus = "pending" | "paid" | "cancelled";
@@ -88,9 +89,7 @@ export async function deletePayment(id: string) {
 }
 
 export async function syncStudentPaidStatus(studentId: string) {
-  const now = new Date();
-  const month = now.getMonth() + 1;
-  const year = now.getFullYear();
+  const { month, year } = getCurrentMonthYear();
 
   const { data, error } = await supabase
     .from("payments")

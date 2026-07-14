@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { User } from "../types";
+import { formatTodayLabel } from "../utils/dateUtils";
 import NotificationBell from "./NotificationBell";
 import {
   getNotifications,
@@ -19,11 +20,7 @@ function roleLabel(role: User["role"]) {
 function Topbar({ user }: Props) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
 
-  const today = new Date().toLocaleDateString("pt-PT", {
-    weekday: "long",
-    day: "2-digit",
-    month: "long",
-  });
+  const today = formatTodayLabel();
 
   useEffect(() => {
     loadNotifications();

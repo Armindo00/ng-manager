@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import type { Lesson, LessonResponse, Student, User } from "../types";
-import { getLessons, updateLesson } from "../services/lessonsService";
+import { getLessons, updateLessonResponse } from "../services/lessonsService";
 import { declineLessonWithCompensation } from "../services/compensationsService";
 import { loadStudentView } from "../utils/studentView";
 import LessonsCalendar from "../components/LessonsCalendar";
@@ -81,18 +81,9 @@ function StudentCalendar({ user }: Props) {
   }
 
   async function saveLessonResponse(lesson: Lesson, response: LessonResponse) {
-    const filteredResponses = (lesson.responses || []).filter(
-      (item) => item.studentId !== studentId
-    );
-
-    const updatedLesson: Lesson = {
-      ...lesson,
-      responses: [...filteredResponses, response],
-    };
-
     try {
       setSavingResponse(true);
-      await updateLesson(updatedLesson);
+      await updateLessonResponse(lesson.id, response);
       await loadData();
       setSelectedLesson(null);
 

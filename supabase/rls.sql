@@ -21,7 +21,7 @@ STABLE
 SECURITY DEFINER
 SET search_path = public
 AS $$
-  SELECT auth.jwt() ->> 'email';
+  SELECT lower(auth.jwt() ->> 'email');
 $$;
 
 CREATE OR REPLACE FUNCTION public.is_admin()
@@ -34,7 +34,7 @@ AS $$
   SELECT EXISTS (
     SELECT 1
     FROM app_users
-    WHERE email = public.auth_email()
+    WHERE lower(email) = public.auth_email()
       AND role = 'admin'
   );
 $$;
@@ -49,7 +49,7 @@ AS $$
   SELECT EXISTS (
     SELECT 1
     FROM app_users
-    WHERE email = public.auth_email()
+    WHERE lower(email) = public.auth_email()
       AND role = 'coach'
   );
 $$;
@@ -64,7 +64,7 @@ AS $$
   SELECT EXISTS (
     SELECT 1
     FROM app_users
-    WHERE email = public.auth_email()
+    WHERE lower(email) = public.auth_email()
       AND role = 'student'
   );
 $$;
@@ -78,7 +78,7 @@ SET search_path = public
 AS $$
   SELECT id::text
   FROM app_users
-  WHERE email = public.auth_email()
+  WHERE lower(email) = public.auth_email()
   LIMIT 1;
 $$;
 
@@ -91,7 +91,7 @@ SET search_path = public
 AS $$
   SELECT student_id::text
   FROM app_users
-  WHERE email = public.auth_email()
+  WHERE lower(email) = public.auth_email()
     AND role = 'student'
   LIMIT 1;
 $$;
@@ -189,7 +189,7 @@ FOR SELECT
 TO authenticated
 USING (
   public.is_admin()
-  OR email = public.auth_email()
+  OR lower(email) = public.auth_email()
 );
 
 CREATE POLICY "app_users_admin_write"
@@ -318,26 +318,7 @@ USING (
   AND lessons.coach_id::text = public.current_app_user_id()
 );
 
-CREATE POLICY "lessons_student_update"
-ON lessons
-FOR UPDATE
-TO authenticated
-USING (
-  public.is_student()
-  AND lessons.status = 'published'
-  AND public.student_booked_in_lesson(
-    lessons.booked_student_ids,
-    public.current_student_id()
-  )
-)
-WITH CHECK (
-  public.is_student()
-  AND lessons.status = 'published'
-  AND public.student_booked_in_lesson(
-    lessons.booked_student_ids,
-    public.current_student_id()
-  )
-);
+-- Alunos respondem via RPC update_lesson_response (lesson-rpcs.sql)
 
 CREATE POLICY "evaluations_select"
 ON evaluations
@@ -369,6 +350,7 @@ TO authenticated
 WITH CHECK (
   public.is_coach()
   AND evaluations.coach_id::text = public.current_app_user_id()
+  AND public.coach_can_access_student(evaluations.student_id::text)
 );
 
 CREATE POLICY "evaluations_coach_update"
@@ -378,10 +360,12 @@ TO authenticated
 USING (
   public.is_coach()
   AND evaluations.coach_id::text = public.current_app_user_id()
+  AND public.coach_can_access_student(evaluations.student_id::text)
 )
 WITH CHECK (
   public.is_coach()
   AND evaluations.coach_id::text = public.current_app_user_id()
+  AND public.coach_can_access_student(evaluations.student_id::text)
 );
 
 CREATE POLICY "evaluations_coach_delete"
@@ -391,6 +375,7 @@ TO authenticated
 USING (
   public.is_coach()
   AND evaluations.coach_id::text = public.current_app_user_id()
+  AND public.coach_can_access_student(evaluations.student_id::text)
 );
 
 CREATE POLICY "payments_select"

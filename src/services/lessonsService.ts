@@ -1,5 +1,5 @@
 import { supabase } from "./supabase";
-import type { Lesson } from "../types";
+import type { Lesson, LessonResponse } from "../types";
 
 type DbLesson = {
   id: string;
@@ -84,6 +84,18 @@ export async function updateLesson(lesson: Lesson) {
     .from("lessons")
     .update(toDb(lesson))
     .eq("id", lesson.id);
+
+  if (error) throw error;
+}
+
+export async function updateLessonResponse(
+  lessonId: string,
+  response: LessonResponse
+) {
+  const { error } = await supabase.rpc("update_lesson_response", {
+    p_lesson_id: lessonId,
+    p_response: response,
+  });
 
   if (error) throw error;
 }

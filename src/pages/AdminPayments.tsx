@@ -12,6 +12,7 @@ import {
   type PaymentStatus,
 } from "../services/paymentsService";
 import ConfirmDialog from "../components/ConfirmDialog";
+import { getCurrentMonthYear, getTodayDate } from "../utils/dateUtils";
 import ActionButtons from "../components/ActionButtons";
 
 function AdminPayments() {
@@ -20,8 +21,9 @@ function AdminPayments() {
   const [paymentToDelete, setPaymentToDelete] = useState<Payment | null>(null);
 
   const [studentId, setStudentId] = useState("");
-  const [month, setMonth] = useState(String(new Date().getMonth() + 1));
-  const [year, setYear] = useState(String(new Date().getFullYear()));
+  const initialPeriod = getCurrentMonthYear();
+  const [month, setMonth] = useState(String(initialPeriod.month));
+  const [year, setYear] = useState(String(initialPeriod.year));
   const [amount, setAmount] = useState("");
   const [status, setStatus] = useState<PaymentStatus>("pending");
   const [paymentMethod, setPaymentMethod] = useState("");
@@ -55,8 +57,7 @@ function AdminPayments() {
         year: Number(year),
         amount: Number(amount),
         status,
-        paymentDate:
-          status === "paid" ? new Date().toISOString().split("T")[0] : null,
+        paymentDate: status === "paid" ? getTodayDate() : null,
         paymentMethod: paymentMethod || null,
         notes: notes || null,
       };
@@ -68,8 +69,9 @@ function AdminPayments() {
       toast.success("Pagamento criado com sucesso!");
 
       setStudentId("");
-      setMonth(String(new Date().getMonth() + 1));
-      setYear(String(new Date().getFullYear()));
+      const period = getCurrentMonthYear();
+      setMonth(String(period.month));
+      setYear(String(period.year));
       setAmount("");
       setStatus("pending");
       setPaymentMethod("");
@@ -85,7 +87,7 @@ function AdminPayments() {
       await updatePayment({
         ...payment,
         status: "paid",
-        paymentDate: new Date().toISOString().split("T")[0],
+        paymentDate: getTodayDate(),
       });
 
       await syncStudentPaidStatus(payment.studentId);

@@ -1,5 +1,11 @@
 import { useMemo, useState } from "react";
 import type { Lesson } from "../types";
+import {
+  buildMonthDate,
+  formatMonthName,
+  getLisbonMonthParts,
+  getTodayDate,
+} from "../utils/dateUtils";
 import { getLessonDotClass } from "../utils/calendarUtils";
 
 type Props = {
@@ -17,21 +23,16 @@ function LessonsCalendar({
   title = "Calendário de treinos",
   studentId,
 }: Props) {
-  const [viewDate, setViewDate] = useState(() => new Date());
+  const initialMonth = getLisbonMonthParts();
+  const [viewYear, setViewYear] = useState(initialMonth.year);
+  const [viewMonth, setViewMonth] = useState(initialMonth.month);
 
-  const year = viewDate.getFullYear();
-  const month = viewDate.getMonth();
-
-  const monthName = viewDate.toLocaleDateString("pt-PT", {
-    month: "long",
-    year: "numeric",
-  });
+  const monthName = formatMonthName(viewYear, viewMonth);
 
   const { cells, todayDay } = useMemo(() => {
-    const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
-    const startOffset = (firstDay.getDay() + 6) % 7;
-    const daysInMonth = lastDay.getDate();
+    const firstDay = new Date(Date.UTC(viewYear, viewMonth - 1, 1, 12));
+    const startOffset = (firstDay.getUTCDay() + 6) % 7;
+    const daysInMonth = new Date(Date.UTC(viewYear, viewMonth, 0, 12)).getUTCDate();
     const monthCells: Array<number | null> = [];
 
     for (let i = 0; i < startOffset; i++) {
@@ -42,20 +43,18 @@ function LessonsCalendar({
       monthCells.push(day);
     }
 
-    const isCurrentMonth =
-      year === new Date().getFullYear() && month === new Date().getMonth();
+    const today = getTodayDate();
+    const [todayYear, todayMonth, todayDate] = today.split("-").map(Number);
+    const isCurrentMonth = viewYear === todayYear && viewMonth === todayMonth;
 
     return {
       cells: monthCells,
-      todayDay: isCurrentMonth ? new Date().getDate() : null,
+      todayDay: isCurrentMonth ? todayDate : null,
     };
-  }, [year, month]);
+  }, [viewYear, viewMonth]);
 
   function getDateForDay(day: number) {
-    return `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(
-      2,
-      "0"
-    )}`;
+    return buildMonthDate(viewYear, viewMonth, day);
   }
 
   function lessonsForDay(day: number) {
@@ -66,15 +65,29 @@ function LessonsCalendar({
   }
 
   function goToPreviousMonth() {
-    setViewDate(new Date(year, month - 1, 1));
+    if (viewMonth === 1) {
+      setViewMonth(12);
+      setViewYear((current) => current - 1);
+      return;
+    }
+
+    setViewMonth((current) => current - 1);
   }
 
   function goToNextMonth() {
-    setViewDate(new Date(year, month + 1, 1));
+    if (viewMonth === 12) {
+      setViewMonth(1);
+      setViewYear((current) => current + 1);
+      return;
+    }
+
+    setViewMonth((current) => current + 1);
   }
 
   function goToCurrentMonth() {
-    setViewDate(new Date());
+    const current = getLisbonMonthParts();
+    setViewYear(current.year);
+    setViewMonth(current.month);
   }
 
   return (

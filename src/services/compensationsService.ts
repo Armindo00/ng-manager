@@ -1,6 +1,6 @@
 import { supabase } from "./supabase";
 import type { CompensationStatus, LessonCompensation } from "../types/compensation";
-import { getLessons, updateLesson } from "./lessonsService";
+import { getLessons, updateLesson, updateLessonResponse } from "./lessonsService";
 import type { Lesson, LessonResponse } from "../types";
 
 type DbCompensation = {
@@ -44,10 +44,6 @@ export async function declineLessonWithCompensation(
   studentId: string,
   reason: string
 ) {
-  const filteredResponses = (lesson.responses || []).filter(
-    (item) => item.studentId !== studentId
-  );
-
   const response: LessonResponse = {
     studentId,
     status: "declined",
@@ -67,10 +63,7 @@ export async function declineLessonWithCompensation(
     declineReason: reason.trim(),
   };
 
-  await updateLesson({
-    ...lesson,
-    responses: [...filteredResponses, response],
-  });
+  await updateLessonResponse(lesson.id, response);
 
   await createCompensation({
     studentId,

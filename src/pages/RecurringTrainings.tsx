@@ -162,7 +162,7 @@ function RecurringTrainings() {
     try {
       setPublishingId(training.id);
 
-      const result = await publishTrainingSchedule(training, group, lessons);
+      const result = await publishTrainingSchedule(training.id);
 
       await loadData();
 
@@ -188,11 +188,7 @@ function RecurringTrainings() {
     try {
       setPublishingId("all");
 
-      const result = await publishAllTrainingSchedules(
-        trainings,
-        groups,
-        lessons
-      );
+      const result = await publishAllTrainingSchedules();
 
       await loadData();
 

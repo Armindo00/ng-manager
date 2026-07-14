@@ -1,12 +1,13 @@
 {
   "name": "nextgeneration",
   "private": true,
-  "version": "1.0.40",
+  "version": "1.0.42",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "node scripts/bump-version.mjs && node scripts/generate-icons.mjs && tsc -b && vite build",
     "db:apply-rls": "node scripts/apply-rls.mjs",
+    "db:apply": "node scripts/apply-db.mjs",
     "lint": "eslint .",
     "preview": "vite preview"
   },
