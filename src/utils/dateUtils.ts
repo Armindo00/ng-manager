@@ -26,3 +26,11 @@ export function isDateInMonthYear(date: string, month: number, year: number) {
   const [dateYear, dateMonth] = date.split("-").map(Number);
   return dateYear === year && dateMonth === month;
 }
+
+export function formatMonthYear(month: number, year: number) {
+  return new Date(year, month - 1, 1).toLocaleDateString("pt-PT", {
+    month: "long",
+    year: "numeric",
+    timeZone: TIMEZONE,
+  });
+}

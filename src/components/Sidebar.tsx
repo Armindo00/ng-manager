@@ -135,6 +135,7 @@ function Sidebar({ user, activeSection, onChangeSection, onLogout }: Props) {
               {item(Package, "Inventário", "inventory")}
               {item(Truck, "Carrinhas", "vans")}
               {item(CalendarClock, "Compensações", "compensations")}
+              {item(Star, "Avaliações", "evaluations")}
               {item(CreditCard, "Pagamentos", "payments")}
             </nav>
           )}
