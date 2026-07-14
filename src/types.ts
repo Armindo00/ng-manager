@@ -7,6 +7,7 @@ export type User = {
   role: Role;
   studentId?: string;
   mustChangePassword?: boolean;
+  blocked?: boolean;
 };
 
 export type Student = {

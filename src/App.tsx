@@ -27,7 +27,11 @@ import Evaluations from "./pages/Evaluations";
 import Topbar from "./components/Topbar";
 
 import { supabase } from "./services/supabase";
-import { getUserByEmail, requiresPasswordChange } from "./services/usersService";
+import {
+  getUserByEmail,
+  isUserBlocked,
+  requiresPasswordChange,
+} from "./services/usersService";
 import ChangePassword from "./pages/ChangePassword";
 
 type AdminSection =
@@ -74,6 +78,14 @@ function App() {
       if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
         try {
           const appUser = await getUserByEmail(session.user.email);
+
+          if (isUserBlocked(appUser)) {
+            await supabase.auth.signOut();
+            setCurrentUser(null);
+            toast.error("Conta bloqueada. Contacta a escola.");
+            return;
+          }
+
           setCurrentUser(appUser);
         } catch (error) {
           console.error(error);
@@ -99,6 +111,14 @@ function App() {
 
     try {
       const appUser = await getUserByEmail(data.user.email);
+
+      if (isUserBlocked(appUser)) {
+        await supabase.auth.signOut();
+        setCurrentUser(null);
+        toast.error("Conta bloqueada. Contacta a escola.");
+        return;
+      }
+
       setCurrentUser(appUser);
     } catch (sessionError) {
       console.error(sessionError);

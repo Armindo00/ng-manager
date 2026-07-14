@@ -8,6 +8,7 @@ type DbUser = {
   role: "student" | "coach" | "admin";
   student_id: string | null;
   must_change_password?: boolean | null;
+  blocked?: boolean | null;
 };
 
 function fromDb(user: DbUser): User {
@@ -18,7 +19,12 @@ function fromDb(user: DbUser): User {
     role: user.role,
     studentId: user.student_id || undefined,
     mustChangePassword: user.must_change_password ?? false,
+    blocked: user.blocked ?? false,
   };
+}
+
+export function isUserBlocked(user: User) {
+  return Boolean(user.blocked);
 }
 
 export function requiresPasswordChange(user: User) {

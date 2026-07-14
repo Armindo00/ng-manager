@@ -2,7 +2,7 @@ import { useState } from "react";
 import toast from "react-hot-toast";
 import type { User } from "../types";
 import { supabase } from "../services/supabase";
-import { getUserByEmail } from "../services/usersService";
+import { getUserByEmail, isUserBlocked } from "../services/usersService";
 import AppVersion from "../components/AppVersion";
 import logo from "../assets/logo next.jpeg";
 
@@ -38,6 +38,13 @@ function Login({ onLogin }: Props) {
 
       try {
         const appUser = await getUserByEmail(data.user.email);
+
+        if (isUserBlocked(appUser)) {
+          await supabase.auth.signOut();
+          toast.error("Conta bloqueada. Contacta a escola.");
+          return;
+        }
+
         onLogin(appUser);
       } catch (loginError) {
         console.error(loginError);
