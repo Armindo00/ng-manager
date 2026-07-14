@@ -14,18 +14,26 @@ import {
   toggleCoachBlock,
   type CoachAccess,
 } from "../services/coachAuthService";
-import ActionButtons from "../components/ActionButtons";
 import ConfirmDialog from "../components/ConfirmDialog";
 import Modal from "../components/Modal";
 import StudentAccessButtons from "../components/StudentAccessButtons";
 import StudentAccessModal from "../components/StudentAccessModal";
+import {
+  DetailPanel,
+  DetailPanelEmpty,
+  MasterDetailLayout,
+  SelectionList,
+  SelectionListItem,
+} from "../components/MasterDetailLayout";
 import { getEmailValidationMessage, normalizeEmail } from "../utils/email";
 
 function Coaches() {
   const [coaches, setCoaches] = useState<Coach[]>([]);
   const [accessMap, setAccessMap] = useState<Map<string, CoachAccess>>(new Map());
+  const [selectedCoachId, setSelectedCoachId] = useState<string | null>(null);
   const [coachToDelete, setCoachToDelete] = useState<Coach | null>(null);
   const [loading, setLoading] = useState(true);
+  const [creatingNew, setCreatingNew] = useState(false);
   const [coachForAccess, setCoachForAccess] = useState<Coach | null>(null);
   const [accessEmail, setAccessEmail] = useState("");
   const [accessModal, setAccessModal] = useState<{
@@ -52,12 +60,34 @@ function Coaches() {
       ]);
       setCoaches(coachesData);
       setAccessMap(accessData);
+      setSelectedCoachId((current) => {
+        if (current && coachesData.some((coach) => coach.id === current)) {
+          return current;
+        }
+        return coachesData[0]?.id ?? null;
+      });
     } catch (error) {
       console.error(error);
       toast.error("Erro ao carregar treinadores.");
     } finally {
       setLoading(false);
     }
+  }
+
+  const selectedCoach =
+    coaches.find((coach) => coach.id === selectedCoachId) ?? null;
+
+  function clearCreateForm() {
+    setName("");
+    setPhone("");
+    setEmail("");
+    setCreatingNew(false);
+  }
+
+  function startCreateCoach() {
+    clearCreateForm();
+    setSelectedCoachId(null);
+    setCreatingNew(true);
   }
 
   async function createCoach() {
@@ -92,9 +122,7 @@ function Coaches() {
       }
 
       await loadCoaches();
-      setName("");
-      setPhone("");
-      setEmail("");
+      clearCreateForm();
       toast.success("Treinador criado com sucesso!");
     } catch (error) {
       console.error(error);
@@ -230,6 +258,9 @@ function Coaches() {
       }
 
       await deleteCoach(coachToDelete.id);
+      if (selectedCoachId === coachToDelete.id) {
+        setSelectedCoachId(null);
+      }
       await loadCoaches();
       setCoachToDelete(null);
       toast.success("Treinador eliminado com sucesso!");
@@ -240,102 +271,129 @@ function Coaches() {
   }
 
   return (
-    <div className="card section-card">
+    <div>
       <h1 className="page-title">Treinadores</h1>
 
       <p className="muted workflow-help">
-        Para saídas ou desistências, usa <strong>Bloquear</strong> — o registo do
-        treinador mantém-se. <strong>Eliminar</strong> só para registos criados por
-        engano.
+        Seleciona um treinador na lista para gerir o acesso. Para saídas, usa{" "}
+        <strong>Bloquear</strong> em vez de eliminar.
       </p>
-
-      <div className="form-row">
-        <input
-          placeholder="Nome do treinador"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-        />
-
-        <input
-          placeholder="Telefone"
-          value={phone}
-          onChange={(e) => setPhone(e.target.value)}
-        />
-
-        <input
-          placeholder="Email de acesso"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
-
-        <button className="primary-btn" onClick={createCoach}>
-          Criar treinador
-        </button>
-      </div>
 
       {loading ? (
         <p>A carregar...</p>
       ) : (
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Nome</th>
-              <th>Telefone</th>
-              <th>Acesso</th>
-              <th>Ações</th>
-            </tr>
-          </thead>
+        <MasterDetailLayout
+          showDetail={creatingNew || Boolean(selectedCoach)}
+          list={
+            <SelectionList
+              title="Treinadores"
+              toolbar={
+                <button className="primary-btn compact-btn" onClick={startCreateCoach}>
+                  Novo treinador
+                </button>
+              }
+              empty={<p className="muted">Ainda não há treinadores.</p>}
+            >
+              {coaches.map((coach) => {
+                const access = accessMap.get(coach.id);
+                const accessStatus = getAccessStatus(coach.id);
 
-          <tbody>
-            {coaches.map((coach) => {
-              const access = accessMap.get(coach.id);
-              const accessStatus = getAccessStatus(coach.id);
-
-              return (
-                <tr key={coach.id}>
-                  <td className="data-table-primary" data-label="Nome">
-                    {coach.name}
-                    {access && (
-                      <>
-                        <br />
-                        <small>{access.email}</small>
-                      </>
+                return (
+                  <SelectionListItem
+                    key={coach.id}
+                    active={coach.id === selectedCoachId && !creatingNew}
+                    onClick={() => {
+                      setSelectedCoachId(coach.id);
+                      setCreatingNew(false);
+                    }}
+                    title={coach.name}
+                    subtitle={access?.email || coach.phone}
+                    meta={coach.phone}
+                    badge={
+                      <span className={accessStatus.className}>
+                        {accessStatus.label}
+                      </span>
+                    }
+                  />
+                );
+              })}
+            </SelectionList>
+          }
+          detail={
+            creatingNew ? (
+              <DetailPanel title="Novo treinador">
+                <div className="form-row">
+                  <input
+                    placeholder="Nome do treinador"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                  />
+                  <input
+                    placeholder="Telefone"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                  />
+                  <input
+                    placeholder="Email de acesso"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
+                  <button className="primary-btn" onClick={createCoach}>
+                    Criar treinador
+                  </button>
+                  <button onClick={clearCreateForm}>Cancelar</button>
+                </div>
+              </DetailPanel>
+            ) : selectedCoach ? (
+              <DetailPanel
+                title={selectedCoach.name}
+                actions={
+                  <div className="student-row-actions">
+                    <button
+                      className="compact-btn danger-btn"
+                      onClick={() => setCoachToDelete(selectedCoach)}
+                    >
+                      Eliminar
+                    </button>
+                    {accessMap.get(selectedCoach.id) ? (
+                      <StudentAccessButtons
+                        hasAccess
+                        blocked={accessMap.get(selectedCoach.id)!.blocked}
+                        onResetPassword={() => handleResetPassword(selectedCoach)}
+                        onToggleBlock={() => handleToggleBlock(selectedCoach)}
+                      />
+                    ) : (
+                      <button
+                        className="compact-btn"
+                        onClick={() => openCreateAccessModal(selectedCoach)}
+                      >
+                        Criar acesso
+                      </button>
                     )}
-                  </td>
-                  <td data-label="Telefone">{coach.phone}</td>
-                  <td data-label="Acesso">
-                    <span className={accessStatus.className}>
-                      {accessStatus.label}
-                    </span>
-                  </td>
-                  <td data-label="Ações">
-                    <div className="student-row-actions">
-                      <ActionButtons onDelete={() => setCoachToDelete(coach)} />
-
-                      {access ? (
-                        <>
-                          <StudentAccessButtons
-                            hasAccess
-                            blocked={access.blocked}
-                            onResetPassword={() => handleResetPassword(coach)}
-                            onToggleBlock={() => handleToggleBlock(coach)}
-                          />
-                        </>
-                      ) : (
-                        <button
-                          className="compact-btn"
-                          onClick={() => openCreateAccessModal(coach)}
-                        >
-                          Criar acesso
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+                  </div>
+                }
+              >
+                <p>
+                  <strong>Telefone:</strong> {selectedCoach.phone}
+                </p>
+                {accessMap.get(selectedCoach.id) && (
+                  <p>
+                    <strong>Email de acesso:</strong>{" "}
+                    {accessMap.get(selectedCoach.id)!.email}
+                  </p>
+                )}
+                <p>
+                  <strong>Estado:</strong>{" "}
+                  <span className={getAccessStatus(selectedCoach.id).className}>
+                    {getAccessStatus(selectedCoach.id).label}
+                  </span>
+                </p>
+              </DetailPanel>
+            ) : (
+              <DetailPanelEmpty message="Seleciona um treinador ou cria um novo." />
+            )
+          }
+        />
       )}
 
       {coachForAccess && (

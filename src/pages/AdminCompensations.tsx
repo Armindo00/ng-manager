@@ -1,11 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
-import Modal from "../components/Modal";
 import type { Lesson, Student } from "../types";
 import type { LessonCompensation } from "../types/compensation";
-import {
-  COMPENSATION_STATUS_LABELS,
-} from "../types/compensation";
+import { COMPENSATION_STATUS_LABELS } from "../types/compensation";
 import { getStudents } from "../services/studentsService";
 import { getLessons } from "../services/lessonsService";
 import {
@@ -16,6 +13,13 @@ import {
   updateCompensationStatus,
 } from "../services/compensationsService";
 import { getTodayDate } from "../utils/vanTasks";
+import {
+  DetailPanel,
+  DetailPanelEmpty,
+  MasterDetailLayout,
+  SelectionList,
+  SelectionListItem,
+} from "../components/MasterDetailLayout";
 
 function formatDateLabel(date: string | null) {
   if (!date) return "—";
@@ -34,7 +38,7 @@ function AdminCompensations() {
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<"active" | "all">("active");
-  const [scheduling, setScheduling] = useState<LessonCompensation | null>(null);
+  const [selectedCompensationId, setSelectedCompensationId] = useState<string | null>(null);
   const [selectedLessonId, setSelectedLessonId] = useState("");
   const [adminNotesDraft, setAdminNotesDraft] = useState("");
   const [saving, setSaving] = useState(false);
@@ -55,6 +59,12 @@ function AdminCompensations() {
       setCompensations(compensationsData);
       setStudents(studentsData);
       setLessons(lessonsData);
+      setSelectedCompensationId((current) => {
+        if (current && compensationsData.some((item) => item.id === current)) {
+          return current;
+        }
+        return compensationsData[0]?.id ?? null;
+      });
     } catch (error) {
       console.error(error);
       toast.error(
@@ -79,6 +89,18 @@ function AdminCompensations() {
     );
   }, [compensations, statusFilter]);
 
+  const selectedCompensation =
+    visibleCompensations.find((item) => item.id === selectedCompensationId) ??
+    compensations.find((item) => item.id === selectedCompensationId) ??
+    null;
+
+  useEffect(() => {
+    if (selectedCompensation) {
+      setAdminNotesDraft(selectedCompensation.adminNotes);
+      setSelectedLessonId(selectedCompensation.compensationLessonId || "");
+    }
+  }, [selectedCompensation?.id]);
+
   const stats = useMemo(() => {
     return {
       pending: compensations.filter((item) => item.status === "pending").length,
@@ -99,12 +121,6 @@ function AdminCompensations() {
     if (!lesson) return "Treino removido";
 
     return `${formatDateLabel(lesson.date)} · ${lesson.groupName || "Treino"} · ${lesson.coachName}`;
-  }
-
-  function openScheduleModal(compensation: LessonCompensation) {
-    setScheduling(compensation);
-    setSelectedLessonId("");
-    setAdminNotesDraft(compensation.adminNotes);
   }
 
   function getScheduleOptions(compensation: LessonCompensation) {
@@ -147,8 +163,8 @@ function AdminCompensations() {
     }
   }
 
-  async function handleSchedule() {
-    if (!scheduling || !selectedLessonId) {
+  async function handleSchedule(compensation: LessonCompensation) {
+    if (!selectedLessonId) {
       toast.error("Seleciona o treino de compensação.");
       return;
     }
@@ -162,10 +178,9 @@ function AdminCompensations() {
     try {
       setSaving(true);
       await scheduleCompensation(
-        { ...scheduling, adminNotes: adminNotesDraft.trim() },
+        { ...compensation, adminNotes: adminNotesDraft.trim() },
         lesson
       );
-      setScheduling(null);
       await loadData();
       toast.success("Aluno colocado no treino de compensação.");
     } catch (error) {
@@ -190,11 +205,11 @@ function AdminCompensations() {
     }
   }
 
-  async function saveAdminNotes(compensation: LessonCompensation, notes: string) {
+  async function saveAdminNotes(compensation: LessonCompensation) {
     try {
       await saveCompensation({
         ...compensation,
-        adminNotes: notes.trim(),
+        adminNotes: adminNotesDraft.trim(),
       });
       await loadData();
       toast.success("Notas guardadas.");
@@ -212,14 +227,129 @@ function AdminCompensations() {
     );
   }
 
+  function renderCompensationDetail(compensation: LessonCompensation) {
+    const scheduleOptions = getScheduleOptions(compensation);
+
+    return (
+      <>
+        <p>
+          <strong>Atleta:</strong> {getStudentName(compensation.studentId)}
+        </p>
+        <p>
+          <strong>Treino perdido:</strong>{" "}
+          {getLessonLabel(compensation.missedLessonId)}
+        </p>
+        <p>
+          <strong>Justificação:</strong> {compensation.reason}
+        </p>
+        <p>
+          <strong>Estado:</strong> {renderStatus(compensation)}
+        </p>
+        <p>
+          <strong>Compensação:</strong>{" "}
+          {getLessonLabel(compensation.compensationLessonId)}
+        </p>
+
+        <label className="field-label" htmlFor="compensation-admin-notes">
+          Notas internas
+        </label>
+        <textarea
+          id="compensation-admin-notes"
+          rows={3}
+          value={adminNotesDraft}
+          onChange={(e) => setAdminNotesDraft(e.target.value)}
+          placeholder="Ex: Compensar no grupo do sábado de manhã"
+        />
+
+        <div className="student-response-actions" style={{ marginTop: 12 }}>
+          <button
+            disabled={saving}
+            onClick={() => saveAdminNotes(compensation)}
+          >
+            Guardar notas
+          </button>
+        </div>
+
+        {(compensation.status === "approved" ||
+          compensation.status === "pending") && (
+          <div className="compensation-schedule-form" style={{ marginTop: 20 }}>
+            <label className="field-label" htmlFor="compensation-lesson">
+              Treino de compensação
+            </label>
+            <select
+              id="compensation-lesson"
+              value={selectedLessonId}
+              onChange={(e) => setSelectedLessonId(e.target.value)}
+            >
+              <option value="">Selecionar treino publicado</option>
+              {scheduleOptions.map((lesson) => (
+                <option key={lesson.id} value={lesson.id}>
+                  {formatDateLabel(lesson.date)} · {lesson.time || "—"} ·{" "}
+                  {lesson.groupName || "Treino"} · {lesson.coachName}
+                </option>
+              ))}
+            </select>
+
+            {scheduleOptions.length === 0 && (
+              <p className="muted workflow-help">
+                Não há treinos publicados futuros disponíveis para este atleta.
+              </p>
+            )}
+          </div>
+        )}
+
+        <div className="student-response-actions" style={{ marginTop: 16 }}>
+          {compensation.status === "pending" && (
+            <>
+              <button
+                className="compact-btn"
+                disabled={saving}
+                onClick={() => handleApprove(compensation)}
+              >
+                Aprovar
+              </button>
+              <button
+                className="compact-btn danger-btn"
+                disabled={saving}
+                onClick={() => handleReject(compensation)}
+              >
+                Rejeitar
+              </button>
+            </>
+          )}
+
+          {(compensation.status === "approved" ||
+            compensation.status === "pending") && (
+            <button
+              className="primary-btn"
+              disabled={saving || !selectedLessonId}
+              onClick={() => handleSchedule(compensation)}
+            >
+              {saving ? "A guardar..." : "Colocar no treino"}
+            </button>
+          )}
+
+          {compensation.status === "scheduled" && (
+            <button
+              className="compact-btn"
+              disabled={saving}
+              onClick={() => handleComplete(compensation)}
+            >
+              Concluir
+            </button>
+          )}
+        </div>
+      </>
+    );
+  }
+
   return (
     <div>
       <h1 className="page-title">Compensações</h1>
 
       <p className="muted workflow-help">
-        Quando um atleta não vai ao treino com justificação, o pedido aparece
-        aqui. Valida a justificação e coloca o atleta num treino futuro para
-        compensar a ausência.
+        Seleciona um pedido na lista para validar a justificação e agendar a
+        compensação.
       </p>
 
       {loading ? (
@@ -252,184 +382,49 @@ function AdminCompensations() {
             </div>
           </div>
 
-          <div className="card section-card">
-            <div className="table-header">
-              <h2>Lista de compensações</h2>
-              <select
-                value={statusFilter}
-                onChange={(e) =>
-                  setStatusFilter(e.target.value as "active" | "all")
+          <MasterDetailLayout
+            showDetail={Boolean(selectedCompensation)}
+            list={
+              <SelectionList
+                title="Lista de compensações"
+                toolbar={
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => {
+                      setStatusFilter(e.target.value as "active" | "all");
+                      setSelectedCompensationId(null);
+                    }}
+                  >
+                    <option value="active">Em aberto</option>
+                    <option value="all">Todas</option>
+                  </select>
                 }
+                empty={<p className="muted">Sem compensações para mostrar.</p>}
               >
-                <option value="active">Em aberto</option>
-                <option value="all">Todas</option>
-              </select>
-            </div>
-
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Atleta</th>
-                  <th>Treino perdido</th>
-                  <th>Justificação</th>
-                  <th>Estado</th>
-                  <th>Compensação</th>
-                  <th>Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {visibleCompensations.length === 0 && (
-                  <tr>
-                    <td colSpan={6} className="muted">
-                      Sem compensações para mostrar.
-                    </td>
-                  </tr>
-                )}
-
                 {visibleCompensations.map((compensation) => (
-                  <tr key={compensation.id}>
-                    <td className="data-table-primary" data-label="Atleta">
-                      <strong>{getStudentName(compensation.studentId)}</strong>
-                    </td>
-                    <td data-label="Treino perdido">
-                      {getLessonLabel(compensation.missedLessonId)}
-                    </td>
-                    <td data-label="Justificação">
-                      <strong>{compensation.reason}</strong>
-                      {compensation.adminNotes && (
-                        <>
-                          <br />
-                          <small className="muted">
-                            Notas admin: {compensation.adminNotes}
-                          </small>
-                        </>
-                      )}
-                    </td>
-                    <td data-label="Estado">{renderStatus(compensation)}</td>
-                    <td data-label="Compensação">
-                      {getLessonLabel(compensation.compensationLessonId)}
-                    </td>
-                    <td data-label="Ações">
-                      <div className="student-row-actions">
-                        {compensation.status === "pending" && (
-                          <>
-                            <button
-                              className="compact-btn"
-                              disabled={saving}
-                              onClick={() => handleApprove(compensation)}
-                            >
-                              Aprovar
-                            </button>
-                            <button
-                              className="compact-btn danger-btn"
-                              disabled={saving}
-                              onClick={() => handleReject(compensation)}
-                            >
-                              Rejeitar
-                            </button>
-                          </>
-                        )}
-
-                        {(compensation.status === "approved" ||
-                          compensation.status === "pending") && (
-                          <button
-                            className="compact-btn primary-btn"
-                            disabled={saving}
-                            onClick={() => openScheduleModal(compensation)}
-                          >
-                            Agendar
-                          </button>
-                        )}
-
-                        {compensation.status === "scheduled" && (
-                          <button
-                            className="compact-btn"
-                            disabled={saving}
-                            onClick={() => handleComplete(compensation)}
-                          >
-                            Concluir
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
+                  <SelectionListItem
+                    key={compensation.id}
+                    active={compensation.id === selectedCompensationId}
+                    onClick={() => setSelectedCompensationId(compensation.id)}
+                    title={getStudentName(compensation.studentId)}
+                    subtitle={compensation.reason}
+                    meta={getLessonLabel(compensation.missedLessonId)}
+                    badge={renderStatus(compensation)}
+                  />
                 ))}
-              </tbody>
-            </table>
-          </div>
+              </SelectionList>
+            }
+            detail={
+              selectedCompensation ? (
+                <DetailPanel title="Detalhe da compensação">
+                  {renderCompensationDetail(selectedCompensation)}
+                </DetailPanel>
+              ) : (
+                <DetailPanelEmpty message="Seleciona uma compensação da lista." />
+              )
+            }
+          />
         </>
-      )}
-
-      {scheduling && (
-        <Modal
-          title={`Agendar compensação · ${getStudentName(scheduling.studentId)}`}
-          onClose={() => setScheduling(null)}
-        >
-          <div className="compensation-schedule-form">
-            <p className="muted">
-              Treino perdido: {getLessonLabel(scheduling.missedLessonId)}
-            </p>
-            <p>
-              <strong>Justificação:</strong> {scheduling.reason}
-            </p>
-
-            <label className="field-label" htmlFor="compensation-lesson">
-              Treino de compensação
-            </label>
-            <select
-              id="compensation-lesson"
-              value={selectedLessonId}
-              onChange={(e) => setSelectedLessonId(e.target.value)}
-            >
-              <option value="">Selecionar treino publicado</option>
-              {getScheduleOptions(scheduling).map((lesson) => (
-                <option key={lesson.id} value={lesson.id}>
-                  {formatDateLabel(lesson.date)} · {lesson.time || "—"} ·{" "}
-                  {lesson.groupName || "Treino"} · {lesson.coachName}
-                </option>
-              ))}
-            </select>
-
-            {getScheduleOptions(scheduling).length === 0 && (
-              <p className="muted workflow-help">
-                Não há treinos publicados futuros disponíveis para este atleta.
-                Publica um treino no calendário primeiro.
-              </p>
-            )}
-
-            <label className="field-label" htmlFor="compensation-admin-notes">
-              Notas internas (opcional)
-            </label>
-            <textarea
-              id="compensation-admin-notes"
-              rows={3}
-              value={adminNotesDraft}
-              onChange={(e) => setAdminNotesDraft(e.target.value)}
-              placeholder="Ex: Compensar no grupo do sábado de manhã"
-            />
-
-            <div className="student-response-actions">
-              <button
-                className="primary-btn"
-                disabled={saving || !selectedLessonId}
-                onClick={handleSchedule}
-              >
-                {saving ? "A guardar..." : "Colocar no treino"}
-              </button>
-              <button
-                disabled={saving}
-                onClick={() =>
-                  saveAdminNotes(scheduling, adminNotesDraft)
-                }
-              >
-                Guardar notas
-              </button>
-              <button disabled={saving} onClick={() => setScheduling(null)}>
-                Cancelar
-              </button>
-            </div>
-          </div>
-        </Modal>
       )}
     </div>
   );

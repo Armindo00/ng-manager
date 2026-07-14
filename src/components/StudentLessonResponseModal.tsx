@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import toast from "react-hot-toast";
 import type { Lesson, LessonResponse, MaterialRequest, Student } from "../types";
 import { formatStudentResponseSummary } from "../utils/lessonResponse";
@@ -20,16 +20,40 @@ type Props = {
   student: Student;
   existingResponse?: LessonResponse;
   saving?: boolean;
+  inline?: boolean;
   onClose: () => void;
   onSubmit: (response: LessonResponse) => void;
   onDecline: (reason: string) => void;
 };
+
+function ResponseShell({
+  inline,
+  title,
+  onClose,
+  children,
+}: {
+  inline?: boolean;
+  title: string;
+  onClose: () => void;
+  children: ReactNode;
+}) {
+  if (inline) {
+    return <div className="student-response-inline">{children}</div>;
+  }
+
+  return (
+    <Modal title={title} onClose={onClose}>
+      {children}
+    </Modal>
+  );
+}
 
 function StudentLessonResponseModal({
   lesson,
   student,
   existingResponse,
   saving = false,
+  inline = false,
   onClose,
   onSubmit,
   onDecline,
@@ -111,12 +135,11 @@ function StudentLessonResponseModal({
     onDecline(declineReason.trim());
   }
 
+  const modalTitle = `${lesson.groupName || "Treino"}${lesson.time ? ` · ${lesson.time}` : ""}`;
+
   if (declineMode || isDeclined) {
     return (
-      <Modal
-        title={`${lesson.groupName || "Treino"}${lesson.time ? ` · ${lesson.time}` : ""}`}
-        onClose={onClose}
-      >
+      <ResponseShell inline={inline} title={modalTitle} onClose={onClose}>
         <div className="student-response-form">
           <div className="student-lesson-detail-block">
             <p className="muted student-lesson-detail-date">{lesson.date}</p>
@@ -171,15 +194,12 @@ function StudentLessonResponseModal({
             </button>
           </div>
         </div>
-      </Modal>
+      </ResponseShell>
     );
   }
 
   return (
-    <Modal
-      title={`${lesson.groupName || "Treino"}${lesson.time ? ` · ${lesson.time}` : ""}`}
-      onClose={onClose}
-    >
+    <ResponseShell inline={inline} title={modalTitle} onClose={onClose}>
       <div className="student-response-form">
         <div className="student-lesson-detail-block">
           <p className="muted student-lesson-detail-date">{lesson.date}</p>
@@ -404,7 +424,7 @@ function StudentLessonResponseModal({
           </button>
         </div>
       </div>
-    </Modal>
+    </ResponseShell>
   );
 }
 

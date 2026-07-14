@@ -18,12 +18,17 @@ import {
   updateStudentAccessEmail,
   type StudentAccess,
 } from "../services/studentAuthService";
-import Modal from "../components/Modal";
 import ConfirmDialog from "../components/ConfirmDialog";
 import StudentProfileTabs from "../components/StudentProfileTabs";
-import ActionButtons from "../components/ActionButtons";
 import StudentAccessButtons from "../components/StudentAccessButtons";
 import StudentAccessModal from "../components/StudentAccessModal";
+import {
+  DetailPanel,
+  DetailPanelEmpty,
+  MasterDetailLayout,
+  SelectionList,
+  SelectionListItem,
+} from "../components/MasterDetailLayout";
 import { getEmailValidationMessage, normalizeEmail } from "../utils/email";
 
 type AccessModalState = {
@@ -44,6 +49,7 @@ function AdminArea() {
   const [studentToDelete, setStudentToDelete] = useState<Student | null>(null);
   const [accessModal, setAccessModal] = useState<AccessModalState | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [creatingNew, setCreatingNew] = useState(false);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
 
@@ -105,6 +111,19 @@ function AdminArea() {
     setMainCoach("");
     setNotes("");
     setEditingId(null);
+    setCreatingNew(false);
+  }
+
+  function openStudent(student: Student) {
+    setSelectedStudent(student);
+    setCreatingNew(false);
+    setEditingId(null);
+  }
+
+  function startCreateStudent() {
+    clearForm();
+    setSelectedStudent(null);
+    setCreatingNew(true);
   }
 
   function getAccessStatus(studentId: string) {
@@ -203,6 +222,8 @@ function AdminArea() {
   }
 
   function editStudent(student: Student) {
+    setSelectedStudent(student);
+    setCreatingNew(false);
     setEditingId(student.id);
     setName(student.name);
     setPhone(student.phone);
@@ -325,13 +346,12 @@ function AdminArea() {
     }
   }
 
-  return (
-    <div>
-      <h1 className="page-title">Alunos</h1>
+  const showForm = creatingNew || Boolean(editingId);
+  const detailStudent = selectedStudent;
 
-      <div className="card section-card">
-        <h2>{editingId ? "Editar aluno" : "Novo aluno"}</h2>
-
+  function renderStudentForm() {
+    return (
+      <>
         <p className="muted">
           Ao criar um aluno, a aplicação usa o email como utilizador e gera
           automaticamente uma password de acesso.
@@ -351,112 +371,122 @@ function AdminArea() {
             {editingId ? "Guardar alterações" : "Criar aluno"}
           </button>
 
-          {editingId && <button onClick={clearForm}>Cancelar</button>}
+          {(editingId || creatingNew) && (
+            <button
+              onClick={() => {
+                clearForm();
+                if (detailStudent) openStudent(detailStudent);
+              }}
+            >
+              Cancelar
+            </button>
+          )}
         </div>
-      </div>
+      </>
+    );
+  }
 
-      <div className="card section-card">
-        <div className="table-header">
-          <h2>Lista de alunos</h2>
+  return (
+    <div>
+      <h1 className="page-title">Alunos</h1>
 
-          <input
-            className="search-input"
-            placeholder="🔍 Pesquisar aluno..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
+      <p className="muted workflow-help">
+        Seleciona um aluno na lista para ver a ficha. Para desistências ou saídas,
+        usa <strong>Bloquear</strong> — o registo e histórico mantêm-se.
+      </p>
 
-        <p className="muted workflow-help">
-          Para desistências ou saídas, usa <strong>Bloquear</strong> — o registo e
-          histórico mantêm-se. <strong>Eliminar</strong> só para registos criados por
-          engano.
-        </p>
+      {loading && <p className="muted">A carregar alunos...</p>}
 
-        {loading && <p className="muted">A carregar alunos...</p>}
-
-        {!loading && (
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Nome</th>
-                <th>Telefone</th>
-                <th>Nível</th>
-                <th>Plano</th>
-                <th>Acesso</th>
-                <th>Pickup</th>
-                <th>Treinador</th>
-                <th>Ações</th>
-              </tr>
-            </thead>
-
-            <tbody>
+      {!loading && (
+        <MasterDetailLayout
+          showDetail={showForm || Boolean(detailStudent)}
+          list={
+            <SelectionList
+              title="Lista de alunos"
+              toolbar={
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  <input
+                    className="search-input"
+                    placeholder="🔍 Pesquisar..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                  />
+                  <button className="primary-btn compact-btn" onClick={startCreateStudent}>
+                    Novo aluno
+                  </button>
+                </div>
+              }
+              empty={<p className="muted">Nenhum aluno encontrado.</p>}
+            >
               {filteredStudents.map((student) => {
-                const access = accessMap.get(student.id);
                 const accessStatus = getAccessStatus(student.id);
 
                 return (
-                  <tr key={student.id}>
-                    <td className="data-table-primary" data-label="Nome">
-                      <strong>{student.name}</strong>
-                      <br />
-                      <small>{student.email}</small>
-                    </td>
-                    <td data-label="Telefone">{student.phone}</td>
-                    <td data-label="Nível">{student.level}</td>
-                    <td data-label="Plano">{student.monthlyLimit} treinos</td>
-                    <td data-label="Acesso">
+                  <SelectionListItem
+                    key={student.id}
+                    active={detailStudent?.id === student.id && !showForm}
+                    onClick={() => openStudent(student)}
+                    title={student.name}
+                    subtitle={student.email}
+                    meta={`${student.level} · ${student.monthlyLimit} treinos/mês`}
+                    badge={
                       <span className={accessStatus.className}>
                         {accessStatus.label}
                       </span>
-                    </td>
-                    <td data-label="Pickup">{student.pickup}</td>
-                    <td data-label="Treinador">{student.mainCoach}</td>
-                    <td data-label="Ações">
-                      <div className="student-row-actions">
-                        <ActionButtons
-                          onView={() => setSelectedStudent(student)}
-                          onEdit={() => editStudent(student)}
-                          onDelete={() => setStudentToDelete(student)}
-                        />
-
-                        {access ? (
-                          <StudentAccessButtons
-                            hasAccess
-                            blocked={access.blocked}
-                            onResetPassword={() => handleResetPassword(student)}
-                            onToggleBlock={() => handleToggleBlock(student)}
-                          />
-                        ) : (
-                          <button
-                            className="compact-btn"
-                            onClick={() => handleCreateMissingAccess(student)}
-                          >
-                            Criar acesso
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
+                    }
+                  />
                 );
               })}
-            </tbody>
-          </table>
-        )}
-
-        {!loading && filteredStudents.length === 0 && (
-          <p className="muted">Nenhum aluno encontrado.</p>
-        )}
-      </div>
-
-      {selectedStudent && (
-        <Modal title="Ficha do aluno" onClose={() => setSelectedStudent(null)}>
-          <StudentProfileTabs
-            student={selectedStudent}
-            lessons={lessons}
-            evaluations={evaluations}
-          />
-        </Modal>
+            </SelectionList>
+          }
+          detail={
+            showForm ? (
+              <DetailPanel title={editingId ? "Editar aluno" : "Novo aluno"}>
+                {renderStudentForm()}
+              </DetailPanel>
+            ) : detailStudent ? (
+              <DetailPanel
+                title={detailStudent.name}
+                actions={
+                  <div className="student-row-actions">
+                    <button className="compact-btn" onClick={() => editStudent(detailStudent)}>
+                      Editar
+                    </button>
+                    <button
+                      className="compact-btn danger-btn"
+                      onClick={() => setStudentToDelete(detailStudent)}
+                    >
+                      Eliminar
+                    </button>
+                    {accessMap.get(detailStudent.id) ? (
+                      <StudentAccessButtons
+                        hasAccess
+                        blocked={accessMap.get(detailStudent.id)!.blocked}
+                        onResetPassword={() => handleResetPassword(detailStudent)}
+                        onToggleBlock={() => handleToggleBlock(detailStudent)}
+                      />
+                    ) : (
+                      <button
+                        className="compact-btn"
+                        onClick={() => handleCreateMissingAccess(detailStudent)}
+                      >
+                        Criar acesso
+                      </button>
+                    )}
+                  </div>
+                }
+              >
+                <StudentProfileTabs
+                  student={detailStudent}
+                  lessons={lessons}
+                  evaluations={evaluations}
+                />
+              </DetailPanel>
+            ) : (
+              <DetailPanelEmpty message="Seleciona um aluno ou cria um novo." />
+            )
+          }
+        />
       )}
 
       {accessModal && (

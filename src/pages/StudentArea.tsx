@@ -11,6 +11,12 @@ import {
 } from "../utils/calendarUtils";
 import StudentLessonResponseModal from "../components/StudentLessonResponseModal";
 import LessonsCalendar from "../components/LessonsCalendar";
+import {
+  DetailPanel,
+  DetailPanelEmpty,
+  SelectionList,
+  SelectionListItem,
+} from "../components/MasterDetailLayout";
 
 type Props = {
   user: User;
@@ -81,8 +87,9 @@ function StudentArea({ user }: Props) {
     return lesson.responses?.find((response) => response.studentId === studentId);
   }
 
-  function handleSelectDay(_dayLessons: Lesson[], date: string) {
+  function handleSelectDay(dayLessons: Lesson[], date: string) {
     setSelectedDate(date);
+    setSelectedLesson(dayLessons[0] ?? null);
   }
 
   const selectedDayLessons = selectedDate
@@ -156,7 +163,7 @@ function StudentArea({ user }: Props) {
         </div>
       </div>
 
-      <div className="lessons-calendar-layout">
+      <div className="lessons-calendar-layout lessons-calendar-layout-triple">
         <LessonsCalendar
           lessons={lessons}
           selectedDate={selectedDate}
@@ -165,58 +172,58 @@ function StudentArea({ user }: Props) {
           studentId={studentId}
         />
 
-        <div className="calendar-day-panel card section-card">
-          {selectedDate ? (
-            <>
-              <h2>{formatCalendarDayLabel(selectedDate)}</h2>
+        <SelectionList
+          title={selectedDate ? formatCalendarDayLabel(selectedDate) : "Treinos do dia"}
+          empty={
+            selectedDate ? (
+              <p className="muted">Sem treinos neste dia.</p>
+            ) : (
+              <p className="muted">Seleciona um dia no calendário.</p>
+            )
+          }
+        >
+          {selectedDayLessons.map((lesson) => {
+            const response = getResponse(lesson);
+            const status = getResponseStatusLabel(response);
 
-              {selectedDayLessons.length === 0 && (
-                <p className="muted">Sem treinos neste dia.</p>
-              )}
+            return (
+              <SelectionListItem
+                key={lesson.id}
+                active={selectedLesson?.id === lesson.id}
+                onClick={() => setSelectedLesson(lesson)}
+                title={`${lesson.groupName || "Treino"}${lesson.time ? ` · ${lesson.time}` : ""}`}
+                subtitle={lesson.beach || "Praia por definir"}
+                meta={`👨‍🏫 ${lesson.coachName}`}
+                badge={
+                  <span className={`coach-response-badge ${status.className}`}>
+                    {status.label}
+                  </span>
+                }
+              />
+            );
+          })}
+        </SelectionList>
 
-              <div className="calendar-day-lessons-list">
-                {selectedDayLessons.map((lesson) => {
-                  const response = getResponse(lesson);
-                  const status = getResponseStatusLabel(response);
-
-                  return (
-                    <button
-                      type="button"
-                      className="calendar-day-lesson-row"
-                      key={lesson.id}
-                      onClick={() => setSelectedLesson(lesson)}
-                    >
-                      <strong>
-                        {lesson.groupName || "Treino"}
-                        {lesson.time ? ` · ${lesson.time}` : ""}
-                      </strong>
-                      <span>{lesson.beach || "Praia por definir"}</span>
-                      <span>👨‍🏫 {lesson.coachName}</span>
-                      <span className={`coach-response-badge ${status.className}`}>
-                        {status.label}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </>
-          ) : (
-            <p className="muted">Seleciona um dia no calendário.</p>
-          )}
-        </div>
+        {selectedLesson ? (
+          <DetailPanel
+            title="Resposta ao treino"
+            onBack={() => setSelectedLesson(null)}
+          >
+            <StudentLessonResponseModal
+              inline
+              lesson={selectedLesson}
+              student={student}
+              existingResponse={getResponse(selectedLesson)}
+              saving={savingResponse}
+              onClose={() => setSelectedLesson(null)}
+              onSubmit={(response) => saveLessonResponse(selectedLesson, response)}
+              onDecline={(reason) => declineLesson(selectedLesson, reason)}
+            />
+          </DetailPanel>
+        ) : (
+          <DetailPanelEmpty message="Seleciona um treino da lista." />
+        )}
       </div>
-
-      {selectedLesson && (
-        <StudentLessonResponseModal
-          lesson={selectedLesson}
-          student={student}
-          existingResponse={getResponse(selectedLesson)}
-          saving={savingResponse}
-          onClose={() => setSelectedLesson(null)}
-          onSubmit={(response) => saveLessonResponse(selectedLesson, response)}
-          onDecline={(reason) => declineLesson(selectedLesson, reason)}
-        />
-      )}
     </div>
   );
 }

@@ -10,15 +10,22 @@ import {
   updateGroup,
   deleteGroup,
 } from "../services/groupsService";
-import ActionButtons from "../components/ActionButtons";
 import ConfirmDialog from "../components/ConfirmDialog";
+import {
+  DetailPanel,
+  DetailPanelEmpty,
+  MasterDetailLayout,
+  SelectionList,
+  SelectionListItem,
+} from "../components/MasterDetailLayout";
 
 function Groups() {
   const [students, setStudents] = useState<Student[]>([]);
   const [coaches, setCoaches] = useState<Coach[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
+  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
+  const [creatingNew, setCreatingNew] = useState(false);
   const [groupToDelete, setGroupToDelete] = useState<Group | null>(null);
-  const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
 
   const [name, setName] = useState("");
   const [coachId, setCoachId] = useState("");
@@ -30,24 +37,45 @@ function Groups() {
 
   async function loadData() {
     try {
-      setStudents(await getStudents());
-      setCoaches(await getCoaches());
-      setGroups(await getGroups());
+      const [studentsData, coachesData, groupsData] = await Promise.all([
+        getStudents(),
+        getCoaches(),
+        getGroups(),
+      ]);
+      setStudents(studentsData);
+      setCoaches(coachesData);
+      setGroups(groupsData);
+      setSelectedGroupId((current) => {
+        if (current && groupsData.some((group) => group.id === current)) {
+          return current;
+        }
+        return groupsData[0]?.id ?? null;
+      });
     } catch (error) {
       console.error(error);
       toast.error("Erro ao carregar grupos.");
     }
   }
 
+  const selectedGroup =
+    groups.find((group) => group.id === selectedGroupId) ?? null;
+
   function resetForm() {
     setName("");
     setCoachId("");
     setSelectedStudentIds([]);
-    setEditingGroupId(null);
+    setCreatingNew(false);
   }
 
-  function editGroup(group: Group) {
-    setEditingGroupId(group.id);
+  function startCreateGroup() {
+    resetForm();
+    setSelectedGroupId(null);
+    setCreatingNew(true);
+  }
+
+  function openGroup(group: Group) {
+    setSelectedGroupId(group.id);
+    setCreatingNew(false);
     setName(group.name);
     setCoachId(group.coachId);
     setSelectedStudentIds(group.studentIds);
@@ -70,7 +98,7 @@ function Groups() {
     }
 
     const group: Group = {
-      id: editingGroupId || crypto.randomUUID(),
+      id: creatingNew ? crypto.randomUUID() : selectedGroupId || crypto.randomUUID(),
       name: name.trim(),
       coachId: coach.id,
       coachName: coach.name,
@@ -79,19 +107,20 @@ function Groups() {
     };
 
     try {
-      if (editingGroupId) {
-        await updateGroup(group);
-        toast.success("Grupo atualizado.");
-      } else {
+      if (creatingNew) {
         await addGroup(group);
         toast.success("Grupo criado com sucesso!");
+      } else if (selectedGroupId) {
+        await updateGroup(group);
+        toast.success("Grupo atualizado.");
       }
 
       await loadData();
-      resetForm();
+      setSelectedGroupId(group.id);
+      setCreatingNew(false);
     } catch (error) {
       console.error(error);
-      toast.error(editingGroupId ? "Erro ao atualizar grupo." : "Erro ao criar grupo.");
+      toast.error(creatingNew ? "Erro ao criar grupo." : "Erro ao atualizar grupo.");
     }
   }
 
@@ -100,13 +129,12 @@ function Groups() {
 
     try {
       await deleteGroup(groupToDelete.id);
-      await loadData();
-      setGroupToDelete(null);
-
-      if (editingGroupId === groupToDelete.id) {
+      if (selectedGroupId === groupToDelete.id) {
+        setSelectedGroupId(null);
         resetForm();
       }
-
+      await loadData();
+      setGroupToDelete(null);
       toast.success("Grupo eliminado com sucesso!");
     } catch (error) {
       console.error(error);
@@ -114,94 +142,99 @@ function Groups() {
     }
   }
 
+  function renderGroupForm() {
+    return (
+      <>
+        <div className="form-row">
+          <input
+            placeholder="Nome do grupo"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+
+          <select value={coachId} onChange={(e) => setCoachId(e.target.value)}>
+            <option value="">Selecionar treinador</option>
+            {coaches.map((coach) => (
+              <option key={coach.id} value={coach.id}>
+                {coach.name}
+              </option>
+            ))}
+          </select>
+
+          <button className="primary-btn" onClick={saveGroup}>
+            {creatingNew ? "Criar grupo" : "Guardar alterações"}
+          </button>
+
+          {!creatingNew && selectedGroup && (
+            <button
+              className="compact-btn danger-btn"
+              onClick={() => setGroupToDelete(selectedGroup)}
+            >
+              Eliminar
+            </button>
+          )}
+
+          {creatingNew && <button onClick={resetForm}>Cancelar</button>}
+        </div>
+
+        <h3>Alunos do grupo</h3>
+        {students.map((student) => (
+          <label className="check-row" key={student.id}>
+            <input
+              type="checkbox"
+              checked={selectedStudentIds.includes(student.id)}
+              onChange={() => toggleStudent(student.id)}
+            />
+            {student.name}
+          </label>
+        ))}
+      </>
+    );
+  }
+
   return (
-    <div className="card section-card">
+    <div>
       <h1 className="page-title">Grupos</h1>
 
       <p className="workflow-help">
-        Cria ou edita aqui o grupo com treinador e alunos. Depois vai a{" "}
-        <strong>Horários</strong> para definir o dia fixo de treino, carrinha e
-        publicar. Treinos já publicados mantêm a lista de alunos da altura em
-        que foram criados.
+        Seleciona um grupo para editar treinador e alunos. Depois vai a{" "}
+        <strong>Horários</strong> para definir o dia fixo e publicar treinos.
       </p>
 
-      <div className="form-row">
-        <input
-          placeholder="Nome do grupo"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-        />
-
-        <select value={coachId} onChange={(e) => setCoachId(e.target.value)}>
-          <option value="">Selecionar treinador</option>
-
-          {coaches.map((coach) => (
-            <option key={coach.id} value={coach.id}>
-              {coach.name}
-            </option>
-          ))}
-        </select>
-
-        <button className="primary-btn" onClick={saveGroup}>
-          {editingGroupId ? "Guardar alterações" : "Criar grupo"}
-        </button>
-
-        {editingGroupId && (
-          <button onClick={resetForm}>Cancelar edição</button>
-        )}
-      </div>
-
-      <h3>Alunos do grupo</h3>
-
-      {students.map((student) => (
-        <label className="check-row" key={student.id}>
-          <input
-            type="checkbox"
-            checked={selectedStudentIds.includes(student.id)}
-            onChange={() => toggleStudent(student.id)}
-          />
-          {student.name}
-        </label>
-      ))}
-
-      <h3 style={{ marginTop: 24 }}>Grupos criados</h3>
-
-      <table className="data-table">
-        <thead>
-          <tr>
-            <th>Grupo</th>
-            <th>Treinador</th>
-            <th>Alunos</th>
-            <th>Ações</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          {groups.length === 0 && (
-            <tr>
-              <td colSpan={4} className="muted">
-                Ainda não há grupos criados.
-              </td>
-            </tr>
-          )}
-
-          {groups.map((group) => (
-            <tr key={group.id}>
-              <td className="data-table-primary" data-label="Grupo">
-                {group.name}
-              </td>
-              <td data-label="Treinador">{group.coachName}</td>
-              <td data-label="Alunos">{group.studentIds.length}</td>
-              <td data-label="Ações">
-                <ActionButtons
-                  onEdit={() => editGroup(group)}
-                  onDelete={() => setGroupToDelete(group)}
-                />
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <MasterDetailLayout
+        showDetail={creatingNew || Boolean(selectedGroup)}
+        list={
+          <SelectionList
+            title="Grupos criados"
+            toolbar={
+              <button className="primary-btn compact-btn" onClick={startCreateGroup}>
+                Novo grupo
+              </button>
+            }
+            empty={<p className="muted">Ainda não há grupos criados.</p>}
+          >
+            {groups.map((group) => (
+              <SelectionListItem
+                key={group.id}
+                active={group.id === selectedGroupId && !creatingNew}
+                onClick={() => openGroup(group)}
+                title={group.name}
+                subtitle={group.coachName}
+                meta={`${group.studentIds.length} aluno(s)`}
+              />
+            ))}
+          </SelectionList>
+        }
+        detail={
+          creatingNew ? (
+            <DetailPanel title="Novo grupo">{renderGroupForm()}</DetailPanel>
+          ) : selectedGroup ? (
+            <DetailPanel title={selectedGroup.name}>{renderGroupForm()}</DetailPanel>
+          ) : (
+            <DetailPanelEmpty message="Seleciona um grupo ou cria um novo." />
+          )
+        }
+      />
 
       {groupToDelete && (
         <ConfirmDialog
