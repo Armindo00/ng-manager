@@ -10,6 +10,7 @@ import {
   updateGroup,
   deleteGroup,
 } from "../services/groupsService";
+import FormField from "../components/FormField";
 import ConfirmDialog from "../components/ConfirmDialog";
 import {
   DetailPanel,
@@ -145,22 +146,27 @@ function Groups() {
   function renderGroupForm() {
     return (
       <>
-        <div className="form-row">
-          <input
-            placeholder="Nome do grupo"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
+        <div className="form-fields-grid">
+          <FormField label="Nome do grupo">
+            <input
+              placeholder="Ex: Grupo sábado manhã"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+          </FormField>
 
-          <select value={coachId} onChange={(e) => setCoachId(e.target.value)}>
-            <option value="">Selecionar treinador</option>
-            {coaches.map((coach) => (
-              <option key={coach.id} value={coach.id}>
-                {coach.name}
-              </option>
-            ))}
-          </select>
-
+          <FormField label="Treinador">
+            <select value={coachId} onChange={(e) => setCoachId(e.target.value)}>
+              <option value="">Selecionar treinador</option>
+              {coaches.map((coach) => (
+                <option key={coach.id} value={coach.id}>
+                  {coach.name}
+                </option>
+              ))}
+            </select>
+          </FormField>
+        </div>
+        <div className="form-fields-actions">
           <button className="primary-btn" onClick={saveGroup}>
             {creatingNew ? "Criar grupo" : "Guardar alterações"}
           </button>

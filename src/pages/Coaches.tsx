@@ -14,6 +14,7 @@ import {
   toggleCoachBlock,
   type CoachAccess,
 } from "../services/coachAuthService";
+import FormField from "../components/FormField";
 import ConfirmDialog from "../components/ConfirmDialog";
 import Modal from "../components/Modal";
 import StudentAccessButtons from "../components/StudentAccessButtons";
@@ -322,22 +323,32 @@ function Coaches() {
           detail={
             creatingNew ? (
               <DetailPanel title="Novo treinador">
-                <div className="form-row">
-                  <input
-                    placeholder="Nome do treinador"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                  />
-                  <input
-                    placeholder="Telefone"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                  />
-                  <input
-                    placeholder="Email de acesso"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                  />
+                <div className="form-fields-grid">
+                  <FormField label="Nome do treinador">
+                    <input
+                      placeholder="Ex: João Silva"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                    />
+                  </FormField>
+                  <FormField label="Telefone">
+                    <input
+                      type="tel"
+                      placeholder="Ex: 912345678"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                    />
+                  </FormField>
+                  <FormField label="Email de acesso">
+                    <input
+                      type="email"
+                      placeholder="nome@email.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                    />
+                  </FormField>
+                </div>
+                <div className="form-fields-actions">
                   <button className="primary-btn" onClick={createCoach}>
                     Criar treinador
                   </button>
@@ -404,12 +415,17 @@ function Coaches() {
             setAccessEmail("");
           }}
         >
-          <div className="form-row">
-            <input
-              placeholder="Email de acesso"
-              value={accessEmail}
-              onChange={(e) => setAccessEmail(e.target.value)}
-            />
+          <div className="form-fields-grid">
+            <FormField label="Email de acesso">
+              <input
+                type="email"
+                placeholder="nome@email.com"
+                value={accessEmail}
+                onChange={(e) => setAccessEmail(e.target.value)}
+              />
+            </FormField>
+          </div>
+          <div className="form-fields-actions">
             <button className="primary-btn" onClick={confirmCreateAccess}>
               Criar acesso
             </button>

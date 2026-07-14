@@ -692,6 +692,37 @@ textarea:focus {
   align-items: center;
 }
 
+.form-fields-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  align-items: end;
+}
+
+.form-fields-grid .field-label,
+.form-fields-grid .field-label input,
+.form-fields-grid .field-label select,
+.form-fields-grid .field-label textarea {
+  width: 100%;
+}
+
+.form-fields-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.pickup-row {
+  margin-bottom: 8px;
+  align-items: end;
+}
+
+.pickup-row-actions {
+  margin-top: 0;
+  align-self: end;
+}
+
 .data-table {
   width: 100%;
   border-collapse: collapse;
@@ -1146,12 +1177,34 @@ textarea:focus {
     align-items: stretch;
   }
 
-  input,
+  .form-fields-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .form-fields-actions {
+    flex-direction: column;
+  }
+
+  .form-fields-actions button {
+    width: 100%;
+  }
+
+  input:not([type="checkbox"]):not([type="radio"]),
   select,
   textarea,
   button {
     width: 100%;
     margin: 4px 0;
+  }
+
+  .van-active-toggle {
+    width: 100%;
+    justify-content: flex-start;
+    padding: 8px 0;
+  }
+
+  .van-quick-task-btn {
+    width: 100%;
   }
 
   .data-table {
@@ -2056,6 +2109,38 @@ textarea:focus {
   align-items: center;
   gap: 8px;
   font-weight: 600;
+  flex-shrink: 0;
+}
+
+.van-active-toggle-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+}
+
+.van-active-toggle input[type="checkbox"] {
+  width: auto;
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.van-date-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.van-quick-task-btn {
+  width: auto;
+  margin: 0;
+  white-space: nowrap;
+}
+
+.van-task-form-highlight {
+  border: 2px solid #38bdf8;
+  box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.15);
 }
 
 .van-task-status {

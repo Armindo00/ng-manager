@@ -13,6 +13,7 @@ import {
   updateCompensationStatus,
 } from "../services/compensationsService";
 import { getTodayDate } from "../utils/vanTasks";
+import FormField from "../components/FormField";
 import {
   DetailPanel,
   DetailPanelEmpty,
@@ -250,16 +251,15 @@ function AdminCompensations() {
           {getLessonLabel(compensation.compensationLessonId)}
         </p>
 
-        <label className="field-label" htmlFor="compensation-admin-notes">
-          Notas internas
-        </label>
-        <textarea
-          id="compensation-admin-notes"
-          rows={3}
-          value={adminNotesDraft}
-          onChange={(e) => setAdminNotesDraft(e.target.value)}
-          placeholder="Ex: Compensar no grupo do sábado de manhã"
-        />
+        <FormField label="Notas internas" htmlFor="compensation-admin-notes">
+          <textarea
+            id="compensation-admin-notes"
+            rows={3}
+            value={adminNotesDraft}
+            onChange={(e) => setAdminNotesDraft(e.target.value)}
+            placeholder="Ex: Compensar no grupo do sábado de manhã"
+          />
+        </FormField>
 
         <div className="student-response-actions" style={{ marginTop: 12 }}>
           <button
@@ -273,22 +273,21 @@ function AdminCompensations() {
         {(compensation.status === "approved" ||
           compensation.status === "pending") && (
           <div className="compensation-schedule-form" style={{ marginTop: 20 }}>
-            <label className="field-label" htmlFor="compensation-lesson">
-              Treino de compensação
-            </label>
-            <select
-              id="compensation-lesson"
-              value={selectedLessonId}
-              onChange={(e) => setSelectedLessonId(e.target.value)}
-            >
-              <option value="">Selecionar treino publicado</option>
-              {scheduleOptions.map((lesson) => (
-                <option key={lesson.id} value={lesson.id}>
-                  {formatDateLabel(lesson.date)} · {lesson.time || "—"} ·{" "}
-                  {lesson.groupName || "Treino"} · {lesson.coachName}
-                </option>
-              ))}
-            </select>
+            <FormField label="Treino de compensação" htmlFor="compensation-lesson">
+              <select
+                id="compensation-lesson"
+                value={selectedLessonId}
+                onChange={(e) => setSelectedLessonId(e.target.value)}
+              >
+                <option value="">Selecionar treino publicado</option>
+                {scheduleOptions.map((lesson) => (
+                  <option key={lesson.id} value={lesson.id}>
+                    {formatDateLabel(lesson.date)} · {lesson.time || "—"} ·{" "}
+                    {lesson.groupName || "Treino"} · {lesson.coachName}
+                  </option>
+                ))}
+              </select>
+            </FormField>
 
             {scheduleOptions.length === 0 && (
               <p className="muted workflow-help">
@@ -388,16 +387,18 @@ function AdminCompensations() {
               <SelectionList
                 title="Lista de compensações"
                 toolbar={
-                  <select
-                    value={statusFilter}
-                    onChange={(e) => {
-                      setStatusFilter(e.target.value as "active" | "all");
-                      setSelectedCompensationId(null);
-                    }}
-                  >
-                    <option value="active">Em aberto</option>
-                    <option value="all">Todas</option>
-                  </select>
+                  <FormField label="Filtrar">
+                    <select
+                      value={statusFilter}
+                      onChange={(e) => {
+                        setStatusFilter(e.target.value as "active" | "all");
+                        setSelectedCompensationId(null);
+                      }}
+                    >
+                      <option value="active">Em aberto</option>
+                      <option value="all">Todas</option>
+                    </select>
+                  </FormField>
                 }
                 empty={<p className="muted">Sem compensações para mostrar.</p>}
               >

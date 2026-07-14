@@ -375,11 +375,14 @@ function LessonDetailCard({
         </div>
 
         <div className="lesson-add-student">
-          <input
-            placeholder="Pesquisar aluno para adicionar..."
-            value={studentSearch}
-            onChange={(e) => setStudentSearch(e.target.value)}
-          />
+          <label className="field-label">
+            Adicionar aluno
+            <input
+              placeholder="Pesquisar por nome..."
+              value={studentSearch}
+              onChange={(e) => setStudentSearch(e.target.value)}
+            />
+          </label>
 
           {studentSearch && (
             <div className="lesson-add-results">
@@ -449,12 +452,15 @@ function LessonDetailCard({
       <div className="lesson-section">
         <h3>📝 Notas do treinador</h3>
 
-        <textarea
-          rows={5}
-          placeholder="Escreve notas sobre este treino..."
-          value={coachNotes}
-          onChange={(e) => setCoachNotes(e.target.value)}
-        />
+        <label className="field-label">
+          Notas sobre o treino
+          <textarea
+            rows={5}
+            placeholder="Escreve notas sobre este treino..."
+            value={coachNotes}
+            onChange={(e) => setCoachNotes(e.target.value)}
+          />
+        </label>
 
         <button className="primary-btn" onClick={saveNotes}>
           Guardar notas

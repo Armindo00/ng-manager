@@ -87,6 +87,7 @@ function Login({ onLogin }: Props) {
             <label className="field-label">
               Email
               <input
+                type="email"
                 placeholder="nome@email.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}

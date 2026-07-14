@@ -2,6 +2,7 @@ import { useState } from "react";
 import toast from "react-hot-toast";
 import type { CoachPickup, Lesson } from "../types";
 import { updateLesson } from "../services/lessonsService";
+import FormField from "./FormField";
 import PickupManager from "./PickupManager";
 import {
   canSendLessonPlan,
@@ -95,19 +96,22 @@ function CoachLessonSetup({ lesson, onSaved }: Props) {
         </p>
       )}
 
-      <div className="form-row">
-        <input
-          placeholder="Praia"
-          value={beach}
-          onChange={(e) => setBeach(e.target.value)}
-        />
+      <div className="form-fields-grid">
+        <FormField label="Praia">
+          <input
+            placeholder="Ex: Praia da Vila"
+            value={beach}
+            onChange={(e) => setBeach(e.target.value)}
+          />
+        </FormField>
 
-        <input
-          type="time"
-          value={time}
-          onChange={(e) => setTime(e.target.value)}
-          title="Hora de chegada à praia"
-        />
+        <FormField label="Hora de chegada à praia">
+          <input
+            type="time"
+            value={time}
+            onChange={(e) => setTime(e.target.value)}
+          />
+        </FormField>
       </div>
 
       <PickupManager pickups={pickups} onChange={setPickups} />

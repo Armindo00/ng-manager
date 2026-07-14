@@ -383,8 +383,12 @@ function StudentLessonResponseModal({
             </label>
           </div>
 
+          <label className="student-response-label" htmlFor="material-other">
+            Outro material (opcional)
+          </label>
           <input
-            placeholder="Outro material (opcional)"
+            id="material-other"
+            placeholder="Ex: Capa de chuva"
             value={material.other}
             onChange={(e) =>
               setMaterial((current) => ({ ...current, other: e.target.value }))

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
+import FormField from "../components/FormField";
 import ActionButtons from "../components/ActionButtons";
 import ConfirmDialog from "../components/ConfirmDialog";
 import type {
@@ -290,48 +291,55 @@ function AdminInventory() {
           <div className="card section-card inventory-section">
             <h2>Pranchas por tamanho e estado</h2>
 
-            <div className="form-row inventory-form-row">
-              <input
-                list="board-sizes"
-                placeholder="Tamanho (ex: 6'0)"
-                value={boardDraft.size}
-                onChange={(e) =>
-                  setBoardDraft((current) => ({ ...current, size: e.target.value }))
-                }
-              />
+            <div className="form-fields-grid inventory-form-row">
+              <FormField label="Tamanho">
+                <input
+                  list="board-sizes"
+                  placeholder="Ex: 6'0"
+                  value={boardDraft.size}
+                  onChange={(e) =>
+                    setBoardDraft((current) => ({ ...current, size: e.target.value }))
+                  }
+                />
+              </FormField>
               <datalist id="board-sizes">
                 {BOARD_SIZE_SUGGESTIONS.map((size) => (
                   <option key={size} value={size} />
                 ))}
               </datalist>
 
-              <select
-                value={boardDraft.condition}
-                onChange={(e) =>
-                  setBoardDraft((current) => ({
-                    ...current,
-                    condition: e.target.value as InventoryCondition | "",
-                  }))
-                }
-              >
-                <option value="good">Bom</option>
-                <option value="fair">Razoável</option>
-                <option value="bad">Mau</option>
-              </select>
+              <FormField label="Estado">
+                <select
+                  value={boardDraft.condition}
+                  onChange={(e) =>
+                    setBoardDraft((current) => ({
+                      ...current,
+                      condition: e.target.value as InventoryCondition | "",
+                    }))
+                  }
+                >
+                  <option value="good">Bom</option>
+                  <option value="fair">Razoável</option>
+                  <option value="bad">Mau</option>
+                </select>
+              </FormField>
 
-              <input
-                type="number"
-                min={1}
-                placeholder="Quantidade"
-                value={boardDraft.quantity}
-                onChange={(e) =>
-                  setBoardDraft((current) => ({
-                    ...current,
-                    quantity: e.target.value,
-                  }))
-                }
-              />
-
+              <FormField label="Quantidade">
+                <input
+                  type="number"
+                  min={1}
+                  placeholder="Ex: 3"
+                  value={boardDraft.quantity}
+                  onChange={(e) =>
+                    setBoardDraft((current) => ({
+                      ...current,
+                      quantity: e.target.value,
+                    }))
+                  }
+                />
+              </FormField>
+            </div>
+            <div className="form-fields-actions">
               <button className="primary-btn" onClick={addBoard}>
                 Adicionar
               </button>
@@ -371,34 +379,39 @@ function AdminInventory() {
           <div className="card section-card inventory-section">
             <h2>Fatos de surf por tamanho</h2>
 
-            <div className="form-row inventory-form-row">
-              <input
-                list="wetsuit-sizes"
-                placeholder="Tamanho (ex: M)"
-                value={wetsuitDraft.size}
-                onChange={(e) =>
-                  setWetsuitDraft((current) => ({ ...current, size: e.target.value }))
-                }
-              />
+            <div className="form-fields-grid inventory-form-row">
+              <FormField label="Tamanho">
+                <input
+                  list="wetsuit-sizes"
+                  placeholder="Ex: M"
+                  value={wetsuitDraft.size}
+                  onChange={(e) =>
+                    setWetsuitDraft((current) => ({ ...current, size: e.target.value }))
+                  }
+                />
+              </FormField>
               <datalist id="wetsuit-sizes">
                 {WETSUIT_SIZE_SUGGESTIONS.map((size) => (
                   <option key={size} value={size} />
                 ))}
               </datalist>
 
-              <input
-                type="number"
-                min={1}
-                placeholder="Quantidade"
-                value={wetsuitDraft.quantity}
-                onChange={(e) =>
-                  setWetsuitDraft((current) => ({
-                    ...current,
-                    quantity: e.target.value,
-                  }))
-                }
-              />
-
+              <FormField label="Quantidade">
+                <input
+                  type="number"
+                  min={1}
+                  placeholder="Ex: 5"
+                  value={wetsuitDraft.quantity}
+                  onChange={(e) =>
+                    setWetsuitDraft((current) => ({
+                      ...current,
+                      quantity: e.target.value,
+                    }))
+                  }
+                />
+              </FormField>
+            </div>
+            <div className="form-fields-actions">
               <button className="primary-btn" onClick={addWetsuit}>
                 Adicionar
               </button>

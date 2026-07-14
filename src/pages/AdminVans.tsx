@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import ActionButtons from "../components/ActionButtons";
+import FormField from "../components/FormField";
 import ConfirmDialog from "../components/ConfirmDialog";
 import type { Van, VanTask, VanTaskType } from "../types/van";
 import {
@@ -23,6 +24,7 @@ import {
   getVanTaskStatus,
   sortVanTasks,
 } from "../utils/vanTasks";
+import { formatVanCapacity } from "../utils/vanCapacity";
 
 const emptyVan = (): Van => ({
   id: "",
@@ -55,6 +57,8 @@ function AdminVans() {
   const [taskFilter, setTaskFilter] = useState<"open" | "all">("open");
   const [vanToDelete, setVanToDelete] = useState<Van | null>(null);
   const [taskToDelete, setTaskToDelete] = useState<VanTask | null>(null);
+  const [taskFormHighlight, setTaskFormHighlight] = useState(false);
+  const taskFormRef = useRef<HTMLDivElement>(null);
 
   const [taskDraft, setTaskDraft] = useState({
     vanId: "",
@@ -123,8 +127,27 @@ function AdminVans() {
   }
 
   function editVan(van: Van) {
-    setVanForm(van);
+    setVanForm({
+      ...van,
+      capacity: formatVanCapacity(van.capacity),
+    });
     setEditingVanId(van.id);
+  }
+
+  function startVanTask(van: Van, taskType: "inspection" | "revision") {
+    setTaskDraft({
+      vanId: van.id,
+      title: taskType === "inspection" ? "Inspeção periódica" : "Revisão",
+      taskType,
+      dueDate: "",
+      notes: "",
+    });
+    setTaskFormHighlight(true);
+    taskFormRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function clearTaskFormHighlight() {
+    setTaskFormHighlight(false);
   }
 
   async function saveVanForm() {
@@ -141,8 +164,8 @@ function AdminVans() {
       brand: vanForm.brand.trim(),
       model: vanForm.model.trim(),
       year: vanForm.year.trim(),
-      capacity: vanForm.capacity.trim(),
-      notes: vanForm.notes.trim(),
+      capacity: formatVanCapacity(vanForm.capacity),
+      notes: "",
     };
 
     try {
@@ -182,6 +205,7 @@ function AdminVans() {
         notes: "",
       }));
       await loadData();
+      setTaskFormHighlight(false);
       toast.success("Tarefa adicionada.");
     } catch (error) {
       console.error(error);
@@ -291,72 +315,86 @@ function AdminVans() {
           <div className="card section-card">
             <h2>{editingVanId ? "Editar carrinha" : "Nova carrinha"}</h2>
 
-            <div className="form-row">
-              <input
-                placeholder="Nome (ex: Carrinha azul)"
-                value={vanForm.name}
-                onChange={(e) =>
-                  setVanForm((current) => ({ ...current, name: e.target.value }))
-                }
-              />
-              <input
-                placeholder="Matrícula"
-                value={vanForm.plate}
-                onChange={(e) =>
-                  setVanForm((current) => ({ ...current, plate: e.target.value }))
-                }
-              />
-              <input
-                placeholder="Marca"
-                value={vanForm.brand}
-                onChange={(e) =>
-                  setVanForm((current) => ({ ...current, brand: e.target.value }))
-                }
-              />
-              <input
-                placeholder="Modelo"
-                value={vanForm.model}
-                onChange={(e) =>
-                  setVanForm((current) => ({ ...current, model: e.target.value }))
-                }
-              />
-              <input
-                placeholder="Ano"
-                value={vanForm.year}
-                onChange={(e) =>
-                  setVanForm((current) => ({ ...current, year: e.target.value }))
-                }
-              />
-              <input
-                placeholder="Lotação"
-                value={vanForm.capacity}
-                onChange={(e) =>
-                  setVanForm((current) => ({
-                    ...current,
-                    capacity: e.target.value,
-                  }))
-                }
-              />
-              <input
-                placeholder="Notas"
-                value={vanForm.notes}
-                onChange={(e) =>
-                  setVanForm((current) => ({ ...current, notes: e.target.value }))
-                }
-              />
-              <label className="van-active-toggle">
+            <div className="form-fields-grid">
+              <FormField label="Nome da carrinha">
                 <input
-                  type="checkbox"
-                  checked={vanForm.active}
+                  placeholder="Ex: Carrinha azul"
+                  value={vanForm.name}
+                  onChange={(e) =>
+                    setVanForm((current) => ({ ...current, name: e.target.value }))
+                  }
+                />
+              </FormField>
+              <FormField label="Matrícula">
+                <input
+                  placeholder="AA-00-BB"
+                  value={vanForm.plate}
+                  onChange={(e) =>
+                    setVanForm((current) => ({ ...current, plate: e.target.value }))
+                  }
+                />
+              </FormField>
+              <FormField label="Marca">
+                <input
+                  placeholder="Ex: Opel"
+                  value={vanForm.brand}
+                  onChange={(e) =>
+                    setVanForm((current) => ({ ...current, brand: e.target.value }))
+                  }
+                />
+              </FormField>
+              <FormField label="Modelo">
+                <input
+                  placeholder="Ex: Vivaro"
+                  value={vanForm.model}
+                  onChange={(e) =>
+                    setVanForm((current) => ({ ...current, model: e.target.value }))
+                  }
+                />
+              </FormField>
+              <FormField label="Ano">
+                <input
+                  type="number"
+                  min={1990}
+                  max={2100}
+                  placeholder="Ex: 2020"
+                  value={vanForm.year}
+                  onChange={(e) =>
+                    setVanForm((current) => ({ ...current, year: e.target.value }))
+                  }
+                />
+              </FormField>
+              <FormField label="Lotação">
+                <input
+                  inputMode="numeric"
+                  placeholder="Ex: 9"
+                  value={vanForm.capacity}
                   onChange={(e) =>
                     setVanForm((current) => ({
                       ...current,
-                      active: e.target.checked,
+                      capacity: formatVanCapacity(e.target.value),
                     }))
                   }
                 />
-                Ativa
+              </FormField>
+              <label className="van-active-toggle field-label">
+                <span>Estado</span>
+                <span className="van-active-toggle-control">
+                  <input
+                    type="checkbox"
+                    checked={vanForm.active}
+                    onChange={(e) =>
+                      setVanForm((current) => ({
+                        ...current,
+                        active: e.target.checked,
+                      }))
+                    }
+                  />
+                  Ativa
+                </span>
               </label>
+            </div>
+            <div className="form-fields-actions">
               <button className="primary-btn" onClick={saveVanForm}>
                 {editingVanId ? "Guardar alterações" : "Registar carrinha"}
               </button>
@@ -402,11 +440,14 @@ function AdminVans() {
                             <small className="muted">Inativa</small>
                           </>
                         )}
-                        {(van.brand || van.model) && (
+                        {(van.brand || van.model || van.capacity) && (
                           <>
                             <br />
                             <small>
-                              {[van.brand, van.model, van.year]
+                              {[
+                                [van.brand, van.model, van.year].filter(Boolean).join(" · "),
+                                formatVanCapacity(van.capacity),
+                              ]
                                 .filter(Boolean)
                                 .join(" · ")}
                             </small>
@@ -415,10 +456,28 @@ function AdminVans() {
                       </td>
                       <td data-label="Matrícula">{van.plate}</td>
                       <td data-label="Próx. inspeção">
-                        {formatDateLabel(nextInspection)}
+                        <div className="van-date-cell">
+                          <span>{formatDateLabel(nextInspection)}</span>
+                          <button
+                            type="button"
+                            className="compact-btn van-quick-task-btn"
+                            onClick={() => startVanTask(van, "inspection")}
+                          >
+                            + Inspeção
+                          </button>
+                        </div>
                       </td>
                       <td data-label="Próx. revisão">
-                        {formatDateLabel(nextRevision)}
+                        <div className="van-date-cell">
+                          <span>{formatDateLabel(nextRevision)}</span>
+                          <button
+                            type="button"
+                            className="compact-btn van-quick-task-btn"
+                            onClick={() => startVanTask(van, "revision")}
+                          >
+                            + Revisão
+                          </button>
+                        </div>
                       </td>
                       <td data-label="Tarefas">{openCount} em aberto</td>
                       <td data-label="Ações">
@@ -434,64 +493,88 @@ function AdminVans() {
             </table>
           </div>
 
-          <div className="card section-card">
+          <div
+            ref={taskFormRef}
+            className={`card section-card${taskFormHighlight ? " van-task-form-highlight" : ""}`}
+          >
             <h2>Nova tarefa / responsabilidade</h2>
+            {taskFormHighlight && taskDraft.vanId && (
+              <p className="muted workflow-help">
+                Preenche a <strong>data limite</strong> e clica em{" "}
+                <strong>Adicionar tarefa</strong>. Carrinha:{" "}
+                <strong>{getVanName(taskDraft.vanId)}</strong> · Tipo:{" "}
+                <strong>{VAN_TASK_TYPE_LABELS[taskDraft.taskType]}</strong>
+              </p>
+            )}
 
-            <div className="form-row">
-              <select
-                value={taskDraft.vanId}
-                onChange={(e) =>
-                  setTaskDraft((current) => ({ ...current, vanId: e.target.value }))
-                }
-              >
-                <option value="">Selecionar carrinha</option>
-                {vans.map((van) => (
-                  <option key={van.id} value={van.id}>
-                    {van.name} ({van.plate})
-                  </option>
-                ))}
-              </select>
+            <div className="form-fields-grid">
+              <FormField label="Carrinha">
+                <select
+                  value={taskDraft.vanId}
+                  onChange={(e) => {
+                    clearTaskFormHighlight();
+                    setTaskDraft((current) => ({ ...current, vanId: e.target.value }));
+                  }}
+                >
+                  <option value="">Selecionar carrinha</option>
+                  {vans.map((van) => (
+                    <option key={van.id} value={van.id}>
+                      {van.name} ({van.plate})
+                    </option>
+                  ))}
+                </select>
+              </FormField>
 
-              <select
-                value={taskDraft.taskType}
-                onChange={(e) =>
-                  setTaskDraft((current) => ({
-                    ...current,
-                    taskType: e.target.value as VanTaskType,
-                  }))
-                }
-              >
-                {Object.entries(VAN_TASK_TYPE_LABELS).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
+              <FormField label="Tipo de tarefa">
+                <select
+                  value={taskDraft.taskType}
+                  onChange={(e) => {
+                    clearTaskFormHighlight();
+                    setTaskDraft((current) => ({
+                      ...current,
+                      taskType: e.target.value as VanTaskType,
+                    }));
+                  }}
+                >
+                  {Object.entries(VAN_TASK_TYPE_LABELS).map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </FormField>
 
-              <input
-                placeholder="Descrição (ex: Inspeção periódica)"
-                value={taskDraft.title}
-                onChange={(e) =>
-                  setTaskDraft((current) => ({ ...current, title: e.target.value }))
-                }
-              />
+              <FormField label="Descrição">
+                <input
+                  placeholder="Ex: Inspeção periódica"
+                  value={taskDraft.title}
+                  onChange={(e) =>
+                    setTaskDraft((current) => ({ ...current, title: e.target.value }))
+                  }
+                />
+              </FormField>
 
-              <input
-                type="date"
-                value={taskDraft.dueDate}
-                onChange={(e) =>
-                  setTaskDraft((current) => ({ ...current, dueDate: e.target.value }))
-                }
-              />
+              <FormField label="Data limite">
+                <input
+                  type="date"
+                  value={taskDraft.dueDate}
+                  onChange={(e) =>
+                    setTaskDraft((current) => ({ ...current, dueDate: e.target.value }))
+                  }
+                />
+              </FormField>
 
-              <input
-                placeholder="Notas (opcional)"
-                value={taskDraft.notes}
-                onChange={(e) =>
-                  setTaskDraft((current) => ({ ...current, notes: e.target.value }))
-                }
-              />
-
+              <FormField label="Notas (opcional)">
+                <input
+                  placeholder="Detalhes extra"
+                  value={taskDraft.notes}
+                  onChange={(e) =>
+                    setTaskDraft((current) => ({ ...current, notes: e.target.value }))
+                  }
+                />
+              </FormField>
+            </div>
+            <div className="form-fields-actions">
               <button className="primary-btn" onClick={addTask}>
                 Adicionar tarefa
               </button>

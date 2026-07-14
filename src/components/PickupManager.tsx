@@ -1,5 +1,7 @@
 import type { CoachPickup } from "../types";
 
+import FormField from "./FormField";
+
 type Props = {
   pickups: CoachPickup[];
   onChange: (pickups: CoachPickup[]) => void;
@@ -39,22 +41,28 @@ function PickupManager({ pickups, onChange }: Props) {
       <h4>Pickups</h4>
 
       {pickups.map((pickup, index) => (
-        <div className="form-row" key={pickup.id}>
-          <input
-            placeholder={"Pickup " + (index + 1)}
-            value={pickup.location}
-            onChange={(e) => updatePickup(index, "location", e.target.value)}
-          />
+        <div className="form-fields-grid pickup-row" key={pickup.id}>
+          <FormField label={`Local do pickup ${index + 1}`}>
+            <input
+              placeholder="Ex: Centro da vila"
+              value={pickup.location}
+              onChange={(e) => updatePickup(index, "location", e.target.value)}
+            />
+          </FormField>
 
-          <input
-            type="time"
-            value={pickup.time}
-            onChange={(e) => updatePickup(index, "time", e.target.value)}
-          />
+          <FormField label="Hora">
+            <input
+              type="time"
+              value={pickup.time}
+              onChange={(e) => updatePickup(index, "time", e.target.value)}
+            />
+          </FormField>
 
-          <button className="danger-btn" onClick={() => removePickup(pickup.id)}>
-            Remover
-          </button>
+          <div className="form-fields-actions pickup-row-actions">
+            <button className="danger-btn" onClick={() => removePickup(pickup.id)}>
+              Remover
+            </button>
+          </div>
         </div>
       ))}
 

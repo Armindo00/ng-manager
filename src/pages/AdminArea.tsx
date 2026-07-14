@@ -18,6 +18,7 @@ import {
   updateStudentAccessEmail,
   type StudentAccess,
 } from "../services/studentAuthService";
+import FormField from "../components/FormField";
 import ConfirmDialog from "../components/ConfirmDialog";
 import StudentProfileTabs from "../components/StudentProfileTabs";
 import StudentAccessButtons from "../components/StudentAccessButtons";
@@ -357,16 +358,70 @@ function AdminArea() {
           automaticamente uma password de acesso.
         </p>
 
-        <div className="form-row">
-          <input placeholder="Nome" value={name} onChange={(e) => setName(e.target.value)} />
-          <input placeholder="Telefone" value={phone} onChange={(e) => setPhone(e.target.value)} />
-          <input placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
-          <input placeholder="Nível" value={level} onChange={(e) => setLevel(e.target.value)} />
-          <input type="number" placeholder="Treinos por mês" value={monthlyLimit} onChange={(e) => setMonthlyLimit(e.target.value)} />
-          <input placeholder="Pickup habitual" value={pickup} onChange={(e) => setPickup(e.target.value)} />
-          <input placeholder="Treinador principal" value={mainCoach} onChange={(e) => setMainCoach(e.target.value)} />
-          <input placeholder="Observações" value={notes} onChange={(e) => setNotes(e.target.value)} />
-
+        <div className="form-fields-grid">
+          <FormField label="Nome">
+            <input
+              placeholder="Nome completo"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+          </FormField>
+          <FormField label="Telefone">
+            <input
+              type="tel"
+              placeholder="Ex: 912345678"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+            />
+          </FormField>
+          <FormField label="Email">
+            <input
+              type="email"
+              placeholder="nome@email.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </FormField>
+          <FormField label="Nível">
+            <input
+              placeholder="Ex: Iniciante, Intermédio"
+              value={level}
+              onChange={(e) => setLevel(e.target.value)}
+            />
+          </FormField>
+          <FormField label="Treinos por mês">
+            <input
+              type="number"
+              min={0}
+              max={31}
+              placeholder="Ex: 8"
+              value={monthlyLimit}
+              onChange={(e) => setMonthlyLimit(e.target.value)}
+            />
+          </FormField>
+          <FormField label="Pickup habitual">
+            <input
+              placeholder="Ex: Centro da vila"
+              value={pickup}
+              onChange={(e) => setPickup(e.target.value)}
+            />
+          </FormField>
+          <FormField label="Treinador principal">
+            <input
+              placeholder="Nome do treinador"
+              value={mainCoach}
+              onChange={(e) => setMainCoach(e.target.value)}
+            />
+          </FormField>
+          <FormField label="Observações (opcional)">
+            <input
+              placeholder="Notas sobre o aluno"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+            />
+          </FormField>
+        </div>
+        <div className="form-fields-actions">
           <button className="primary-btn" onClick={saveStudent}>
             {editingId ? "Guardar alterações" : "Criar aluno"}
           </button>

@@ -8,6 +8,7 @@ import {
   addEvaluation,
   updateEvaluation,
 } from "../services/evaluationsService";
+import FormField from "../components/FormField";
 import { getCurrentMonthYear, isDateInMonthYear } from "../utils/dateUtils";
 
 type Props = {
@@ -211,79 +212,90 @@ function Evaluations({ user }: Props) {
           </p>
         ) : (
           <>
-            <select
-              value={selectedStudent}
-              onChange={(e) => selectStudent(e.target.value)}
-            >
-              <option value="">Selecionar aluno</option>
+            <FormField label="Aluno">
+              <select
+                value={selectedStudent}
+                onChange={(e) => selectStudent(e.target.value)}
+              >
+                <option value="">Selecionar aluno</option>
 
-              {coachStudents.map((student) => (
-                <option key={student.id} value={student.id}>
-                  {hasEvaluationThisMonth(student.id) ? "✅ " : "⬜ "}
-                  {student.name}
-                </option>
-              ))}
-            </select>
+                {coachStudents.map((student) => (
+                  <option key={student.id} value={student.id}>
+                    {hasEvaluationThisMonth(student.id) ? "✅ " : "⬜ "}
+                    {student.name}
+                  </option>
+                ))}
+              </select>
+            </FormField>
 
             {selectedStudent && (
-              <>
-                <h3>Empenho</h3>
+              <div className="form-fields-grid" style={{ marginTop: 16 }}>
+                <FormField label="Empenho">
+                  <div style={{ display: "flex", gap: 10, fontSize: 32 }}>
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <span
+                        key={star}
+                        style={{
+                          cursor: "pointer",
+                          color: star <= effort ? "#f5b301" : "#d1d5db",
+                        }}
+                        onClick={() => setEffort(star)}
+                      >
+                        ★
+                      </span>
+                    ))}
+                  </div>
+                  <p style={{ margin: "4px 0 0" }}>{effort} de 5 estrelas</p>
+                </FormField>
 
-                <div style={{ display: "flex", gap: 10, fontSize: 32 }}>
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <span
-                      key={star}
-                      style={{
-                        cursor: "pointer",
-                        color: star <= effort ? "#f5b301" : "#d1d5db",
-                      }}
-                      onClick={() => setEffort(star)}
-                    >
-                      ★
-                    </span>
-                  ))}
-                </div>
+                <FormField label="Presença este mês">
+                  <strong>{getAttendance(selectedStudent)}%</strong>
+                </FormField>
 
-                <p>{effort} de 5 estrelas</p>
+                <FormField label="Objetivo técnico">
+                  <input
+                    placeholder="Ex: Melhorar o bottom turn"
+                    value={technicalGoal}
+                    onChange={(e) => setTechnicalGoal(e.target.value)}
+                  />
+                </FormField>
 
-                <h3>Presença este mês</h3>
-                <strong>{getAttendance(selectedStudent)}%</strong>
+                <FormField label="Resultado">
+                  <select
+                    value={goalResult}
+                    onChange={(e) =>
+                      setGoalResult(
+                        e.target.value as "completed" | "progress" | "continue"
+                      )
+                    }
+                  >
+                    <option value="completed">Cumprido</option>
+                    <option value="progress">Em progresso</option>
+                    <option value="continue">Continuar</option>
+                  </select>
+                </FormField>
 
-                <h3>Objetivo técnico</h3>
-                <input
-                  placeholder="Ex: Melhorar o bottom turn"
-                  value={technicalGoal}
-                  onChange={(e) => setTechnicalGoal(e.target.value)}
-                />
+                <FormField label="Comentário">
+                  <textarea
+                    rows={5}
+                    placeholder="Observações sobre o aluno"
+                    value={coachComment}
+                    onChange={(e) => setCoachComment(e.target.value)}
+                  />
+                </FormField>
 
-                <h3>Resultado</h3>
-                <select
-                  value={goalResult}
-                  onChange={(e) =>
-                    setGoalResult(
-                      e.target.value as "completed" | "progress" | "continue"
-                    )
-                  }
-                >
-                  <option value="completed">Cumprido</option>
-                  <option value="progress">Em progresso</option>
-                  <option value="continue">Continuar</option>
-                </select>
+                <FormField label="Objetivo do próximo mês">
+                  <input
+                    placeholder="Ex: Trabalhar leitura da onda"
+                    value={nextGoal}
+                    onChange={(e) => setNextGoal(e.target.value)}
+                  />
+                </FormField>
+              </div>
+            )}
 
-                <h3>Comentário</h3>
-                <textarea
-                  rows={5}
-                  value={coachComment}
-                  onChange={(e) => setCoachComment(e.target.value)}
-                />
-
-                <h3>Objetivo do próximo mês</h3>
-                <input
-                  placeholder="Ex: Trabalhar leitura da onda"
-                  value={nextGoal}
-                  onChange={(e) => setNextGoal(e.target.value)}
-                />
-
+            {selectedStudent && (
+              <div className="form-fields-actions" style={{ marginTop: 16 }}>
                 <button
                   className="primary-btn"
                   onClick={saveEvaluation}
@@ -291,7 +303,7 @@ function Evaluations({ user }: Props) {
                 >
                   {saving ? "A guardar..." : "Guardar avaliação"}
                 </button>
-              </>
+              </div>
             )}
           </>
         )}

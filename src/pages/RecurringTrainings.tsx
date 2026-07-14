@@ -17,6 +17,7 @@ import {
 import type { Group } from "../types/group";
 import type { WeekDay } from "../types/recurringTraining";
 import ConfirmDialog from "../components/ConfirmDialog";
+import FormField from "../components/FormField";
 import {
   DetailPanel,
   DetailPanelEmpty,
@@ -283,40 +284,48 @@ function RecurringTrainings() {
           detail={
             creatingNew ? (
               <DetailPanel title="Novo horário">
-                <div className="form-row">
-                  <select value={groupId} onChange={(e) => setGroupId(e.target.value)}>
-                    <option value="">Selecionar grupo</option>
-                    {groups.map((group) => (
-                      <option key={group.id} value={group.id}>
-                        {group.name}
-                      </option>
-                    ))}
-                  </select>
+                <div className="form-fields-grid">
+                  <FormField label="Grupo">
+                    <select value={groupId} onChange={(e) => setGroupId(e.target.value)}>
+                      <option value="">Selecionar grupo</option>
+                      {groups.map((group) => (
+                        <option key={group.id} value={group.id}>
+                          {group.name}
+                        </option>
+                      ))}
+                    </select>
+                  </FormField>
 
-                  <select
-                    value={weekDay}
-                    onChange={(e) => setWeekDay(e.target.value as WeekDay)}
-                  >
-                    {weekDays.map((day) => (
-                      <option key={day} value={day}>
-                        {day}
-                      </option>
-                    ))}
-                  </select>
+                  <FormField label="Dia da semana">
+                    <select
+                      value={weekDay}
+                      onChange={(e) => setWeekDay(e.target.value as WeekDay)}
+                    >
+                      {weekDays.map((day) => (
+                        <option key={day} value={day}>
+                          {day}
+                        </option>
+                      ))}
+                    </select>
+                  </FormField>
 
-                  <input
-                    placeholder="Carrinha"
-                    value={van}
-                    onChange={(e) => setVan(e.target.value)}
-                  />
+                  <FormField label="Carrinha">
+                    <input
+                      placeholder="Ex: Carrinha azul"
+                      value={van}
+                      onChange={(e) => setVan(e.target.value)}
+                    />
+                  </FormField>
 
-                  <input
-                    type="date"
-                    value={repeatUntil}
-                    onChange={(e) => setRepeatUntil(e.target.value)}
-                    title="Treina até"
-                  />
-
+                  <FormField label="Treina até">
+                    <input
+                      type="date"
+                      value={repeatUntil}
+                      onChange={(e) => setRepeatUntil(e.target.value)}
+                    />
+                  </FormField>
+                </div>
+                <div className="form-fields-actions">
                   <button className="primary-btn" onClick={createSchedule}>
                     Guardar horário
                   </button>

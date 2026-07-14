@@ -47,7 +47,7 @@ function vanToDb(van: Van) {
     model: van.model || null,
     year: van.year || null,
     capacity: van.capacity || null,
-    notes: van.notes || null,
+    notes: van.notes?.trim() || "",
     active: van.active,
   };
 }
@@ -74,7 +74,7 @@ function taskToDb(task: VanTask) {
     due_date: task.dueDate,
     completed: task.completed,
     completed_at: task.completedAt,
-    notes: task.notes || null,
+    notes: task.notes?.trim() || "",
   };
 }
 

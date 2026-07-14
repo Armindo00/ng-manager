@@ -11,6 +11,7 @@ import {
   type Payment,
   type PaymentStatus,
 } from "../services/paymentsService";
+import FormField from "../components/FormField";
 import ConfirmDialog from "../components/ConfirmDialog";
 import { getCurrentMonthYear, getTodayDate } from "../utils/dateUtils";
 import ActionButtons from "../components/ActionButtons";
@@ -131,29 +132,76 @@ function AdminPayments() {
       <div className="card section-card">
         <h2>Novo pagamento</h2>
 
-        <div className="form-row">
-          <select value={studentId} onChange={(e) => setStudentId(e.target.value)}>
-            <option value="">Selecionar aluno</option>
-            {students.map((student) => (
-              <option key={student.id} value={student.id}>
-                {student.name}
-              </option>
-            ))}
-          </select>
+        <div className="form-fields-grid">
+          <FormField label="Aluno">
+            <select value={studentId} onChange={(e) => setStudentId(e.target.value)}>
+              <option value="">Selecionar aluno</option>
+              {students.map((student) => (
+                <option key={student.id} value={student.id}>
+                  {student.name}
+                </option>
+              ))}
+            </select>
+          </FormField>
 
-          <input type="number" placeholder="Mês" value={month} onChange={(e) => setMonth(e.target.value)} />
-          <input type="number" placeholder="Ano" value={year} onChange={(e) => setYear(e.target.value)} />
-          <input type="number" placeholder="Valor" value={amount} onChange={(e) => setAmount(e.target.value)} />
+          <FormField label="Mês">
+            <input
+              type="number"
+              min={1}
+              max={12}
+              placeholder="1–12"
+              value={month}
+              onChange={(e) => setMonth(e.target.value)}
+            />
+          </FormField>
 
-          <select value={status} onChange={(e) => setStatus(e.target.value as PaymentStatus)}>
-            <option value="pending">Pendente</option>
-            <option value="paid">Pago</option>
-            <option value="cancelled">Cancelado</option>
-          </select>
+          <FormField label="Ano">
+            <input
+              type="number"
+              min={2020}
+              max={2100}
+              placeholder="Ex: 2026"
+              value={year}
+              onChange={(e) => setYear(e.target.value)}
+            />
+          </FormField>
 
-          <input placeholder="Método" value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} />
-          <input placeholder="Notas" value={notes} onChange={(e) => setNotes(e.target.value)} />
+          <FormField label="Valor (€)">
+            <input
+              type="number"
+              min={0}
+              step={0.01}
+              placeholder="Ex: 80"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+            />
+          </FormField>
 
+          <FormField label="Estado">
+            <select value={status} onChange={(e) => setStatus(e.target.value as PaymentStatus)}>
+              <option value="pending">Pendente</option>
+              <option value="paid">Pago</option>
+              <option value="cancelled">Cancelado</option>
+            </select>
+          </FormField>
+
+          <FormField label="Método de pagamento">
+            <input
+              placeholder="Ex: MB Way, transferência"
+              value={paymentMethod}
+              onChange={(e) => setPaymentMethod(e.target.value)}
+            />
+          </FormField>
+
+          <FormField label="Notas (opcional)">
+            <input
+              placeholder="Detalhes extra"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+            />
+          </FormField>
+        </div>
+        <div className="form-fields-actions">
           <button className="primary-btn" onClick={createPayment}>
             Criar pagamento
           </button>
