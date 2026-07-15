@@ -33,6 +33,12 @@ function LessonDetailCard({
   const [coaches, setCoaches] = useState<Coach[]>([]);
   const [studentSearch, setStudentSearch] = useState("");
 
+  useEffect(() => {
+    setCurrentLesson(lesson);
+    setCoachNotes(lesson.coachNotes || "");
+    setStudentSearch("");
+  }, [lesson]);
+
   const bookedStudents = students.filter((student) =>
     currentLesson.bookedStudentIds.includes(student.id)
   );
