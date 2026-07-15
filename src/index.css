@@ -3,7 +3,7 @@
 }
 
 html {
-  overflow-x: clip;
+  overflow-x: hidden;
   overscroll-behavior-x: none;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
@@ -17,7 +17,7 @@ body,
 }
 
 #root {
-  overflow-x: clip;
+  overflow-x: hidden;
   width: 100%;
 }
 
@@ -26,13 +26,10 @@ body {
   font-family: Inter, Arial, sans-serif;
   background: #f4f7fb;
   color: #0f172a;
+  overflow-x: hidden;
   overscroll-behavior-x: none;
+  touch-action: pan-y;
   width: 100%;
-}
-
-html.menu-scroll-lock,
-html.menu-scroll-lock body {
-  overflow: hidden;
 }
 
 button {
@@ -72,13 +69,13 @@ textarea:focus {
   min-height: 100vh;
   width: 100%;
   max-width: 100%;
-  overflow-x: clip;
+  overflow-x: hidden;
 }
 
 .main-content {
   flex: 1;
   padding: 32px;
-  overflow-x: clip;
+  overflow-x: hidden;
   max-width: 100%;
   min-width: 0;
 }
@@ -127,11 +124,6 @@ textarea:focus {
   justify-content: space-between;
   border-right: 1px solid rgba(255, 255, 255, 0.08);
   flex-shrink: 0;
-  position: sticky;
-  top: 0;
-  align-self: flex-start;
-  max-height: 100dvh;
-  overflow-y: auto;
 }
 
 .sidebar-header {
@@ -252,8 +244,7 @@ textarea:focus {
 
 .mobile-menu-btn,
 .mobile-menu-backdrop,
-.close-menu-btn,
-.mobile-top-bar {
+.close-menu-btn {
   display: none;
 }
 
@@ -970,13 +961,16 @@ textarea:focus {
 /* MOBILE */
 
 @media (max-width: 768px) {
-  :root {
-    --mobile-topbar-height: calc(env(safe-area-inset-top, 0px) + 76px);
-  }
-
   .app-layout::before {
-    content: none;
-    display: none;
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 86px;
+    background: #f4f7fb;
+    z-index: 1900;
+    pointer-events: none;
   }
 
   .app-layout {
@@ -985,28 +979,14 @@ textarea:focus {
 
   .main-content {
     width: 100%;
-    padding: calc(var(--mobile-topbar-height) + 16px) 16px 24px;
-  }
-
-  .mobile-top-bar {
-    display: flex;
-    align-items: flex-end;
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: var(--mobile-topbar-height);
-    padding: env(safe-area-inset-top, 0px) 18px 12px;
-    background: #f4f7fb;
-    z-index: 3000;
-    box-sizing: border-box;
+    padding: 150px 16px 24px;
   }
 
   .mobile-menu-btn {
     display: flex;
-    position: relative;
-    top: auto;
-    left: auto;
+    position: fixed;
+    top: 20px;
+    left: 16px;
     width: 48px;
     height: 48px;
     border-radius: 16px;
@@ -1015,9 +995,8 @@ textarea:focus {
     font-size: 24px;
     align-items: center;
     justify-content: center;
-    z-index: 1;
+    z-index: 3000;
     box-shadow: 0 10px 24px rgba(15, 23, 42, 0.2);
-    flex-shrink: 0;
   }
 
   .mobile-menu-backdrop {
@@ -1026,46 +1005,31 @@ textarea:focus {
     inset: 0;
     background: rgba(15, 23, 42, 0.58);
     z-index: 2400;
-    pointer-events: auto;
-    backdrop-filter: blur(6px);
   }
 
   .sidebar {
     position: fixed;
     top: 0;
-    bottom: 0;
     left: 0;
     transform: translateX(-100%);
     width: 82vw;
     max-width: 320px;
-    height: auto;
-    max-height: none;
+    height: 100dvh;
     z-index: 2600;
-    padding: 0;
-    overflow: hidden;
+    padding: 28px 20px;
+    overflow-y: auto;
     justify-content: flex-start;
     transition: transform 0.25s ease;
-    box-shadow: 22px 0 60px rgba(15, 23, 42, 0.35);
-    touch-action: pan-y;
   }
 
   .sidebar.mobile-open {
     transform: translateX(0);
   }
 
-  .sidebar-body {
-    flex: 1;
-    min-height: 0;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-    touch-action: pan-y;
-    padding: calc(env(safe-area-inset-top, 0px) + 58px) 20px 16px;
-  }
-
   .close-menu-btn {
     display: flex;
     position: absolute;
-    top: calc(env(safe-area-inset-top, 0px) + 12px);
+    top: 18px;
     right: 18px;
     width: 42px;
     height: 42px;
@@ -1075,11 +1039,10 @@ textarea:focus {
     align-items: center;
     justify-content: center;
     font-size: 22px;
-    z-index: 2;
   }
 
   .sidebar-header {
-    margin-top: 0;
+    margin-top: 58px;
     margin-bottom: 30px;
   }
 
@@ -1094,9 +1057,7 @@ textarea:focus {
   }
 
   .sidebar-footer {
-    margin-top: 0;
-    flex-shrink: 0;
-    padding: 16px 20px calc(env(safe-area-inset-bottom, 0px) + 20px);
+    margin-top: 28px;
   }
 
   .logout-btn {
@@ -1131,7 +1092,7 @@ textarea:focus {
 
   .notification-panel {
     position: fixed;
-    top: calc(var(--mobile-topbar-height, 92px) + 8px);
+    top: 92px;
     left: 16px;
     right: 16px;
     width: auto;
@@ -1443,6 +1404,19 @@ textarea:focus {
 /* ===== POLISH FINAL MOBILE ===== */
 
 @media (max-width: 768px) {
+  .app-layout::before {
+    height: 120px;
+  }
+
+  .mobile-menu-btn {
+    top: calc(env(safe-area-inset-top) + 18px) !important;
+    left: 18px !important;
+  }
+
+  .main-content {
+    padding-top: 150px !important;
+  }
+
   .dashboard-row .section-card h2,
   .calendar-card h2 {
     text-align: left;
@@ -1498,10 +1472,40 @@ textarea:focus {
     aspect-ratio: 1;
     min-height: 0;
   }
+
+  .mobile-menu-backdrop {
+    backdrop-filter: blur(6px);
+  }
+
+  .sidebar {
+    box-shadow: 22px 0 60px rgba(15, 23, 42, 0.35);
+  }
 }
 /* ===== FIX FINAL: TOPO + SEÇÕES CENTRADAS ===== */
 
 @media (max-width: 768px) {
+  .app-layout::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: calc(env(safe-area-inset-top) + 118px);
+    background: #f4f7fb;
+    z-index: 2500;
+    pointer-events: none;
+  }
+
+  .mobile-menu-btn {
+    top: calc(env(safe-area-inset-top) + 18px) !important;
+    left: 18px !important;
+    z-index: 3000 !important;
+  }
+
+  .main-content {
+    padding-top: calc(env(safe-area-inset-top) + 145px) !important;
+  }
+
   .dashboard-row {
     align-items: center !important;
   }
@@ -1553,6 +1557,17 @@ textarea:focus {
     font-size: 14px !important;
     border-radius: 16px !important;
   }
+}
+.app-layout::before {
+  pointer-events: none !important;
+}
+
+.mobile-menu-backdrop {
+  pointer-events: none;
+}
+
+.sidebar.mobile-open + .mobile-menu-backdrop {
+  pointer-events: auto;
 }
 .lesson-preview-button {
   width: 100%;

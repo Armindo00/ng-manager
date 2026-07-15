@@ -40,13 +40,26 @@ function Sidebar({ user, activeSection, onChangeSection, onLogout }: Props) {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    document.documentElement.classList.toggle("menu-scroll-lock", open);
-    return () => document.documentElement.classList.remove("menu-scroll-lock");
-  }, [open]);
+    const scrollY = window.scrollY;
 
-  function closeMenu() {
-    setOpen(false);
-  }
+    if (open) {
+      document.body.style.position = "fixed";
+      document.body.style.top = "-" + scrollY + "px";
+      document.body.style.width = "100%";
+    }
+
+    return () => {
+      const top = document.body.style.top;
+
+      document.body.style.position = "";
+      document.body.style.top = "";
+      document.body.style.width = "";
+
+      if (top) {
+        window.scrollTo(0, parseInt(top || "0", 10) * -1);
+      }
+    };
+  }, [open]);
 
   function changeSection(section: string) {
     onChangeSection(section);
@@ -69,34 +82,32 @@ function Sidebar({ user, activeSection, onChangeSection, onLogout }: Props) {
 
   return (
     <>
-      <header className="mobile-top-bar">
-        <button
-          className="mobile-menu-btn"
-          onClick={() => setOpen(true)}
-          aria-label="Abrir menu"
-        >
-          <Menu size={22} />
-        </button>
-      </header>
+      <button
+        className="mobile-menu-btn"
+        onClick={() => setOpen(true)}
+        aria-label="Abrir menu"
+      >
+        <Menu size={22} />
+      </button>
 
       {open && (
         <div
           className="mobile-menu-backdrop"
-          onClick={closeMenu}
-          aria-hidden="true"
+          onClick={() => setOpen(false)}
+          onTouchMove={(event) => event.preventDefault()}
         />
       )}
 
       <aside className={open ? "sidebar mobile-open" : "sidebar"}>
         <button
           className="close-menu-btn"
-          onClick={closeMenu}
+          onClick={() => setOpen(false)}
           aria-label="Fechar menu"
         >
           <X size={20} />
         </button>
 
-        <div className="sidebar-body">
+        <div>
           <div className="sidebar-header">
             <div className="logo-circle">
               <img
@@ -155,7 +166,7 @@ function Sidebar({ user, activeSection, onChangeSection, onLogout }: Props) {
           <button
             className="logout-btn"
             onClick={() => {
-              closeMenu();
+              setOpen(false);
               onLogout();
             }}
           >
