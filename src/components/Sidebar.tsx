@@ -40,41 +40,13 @@ function Sidebar({ user, activeSection, onChangeSection, onLogout }: Props) {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    document.body.style.position = "";
-    document.body.style.top = "";
-    document.body.style.width = "";
-    document.body.style.overflow = "";
-    window.scrollTo(0, 0);
-
-    const frame = requestAnimationFrame(() => {
-      window.dispatchEvent(new Event("resize"));
-    });
-
-    return () => cancelAnimationFrame(frame);
-  }, []);
-
-  useEffect(() => {
-    if (!open) return;
-
-    const scrollY = window.scrollY;
-
-    document.body.style.position = "fixed";
-    document.body.style.top = `-${scrollY}px`;
-    document.body.style.width = "100%";
-    document.body.style.overflow = "hidden";
-
-    return () => {
-      const top = document.body.style.top;
-
-      document.body.style.position = "";
-      document.body.style.top = "";
-      document.body.style.width = "";
-      document.body.style.overflow = "";
-
-      const restoreY = Math.abs(parseInt(top || "0", 10));
-      window.scrollTo(0, restoreY);
-    };
+    document.documentElement.classList.toggle("menu-scroll-lock", open);
+    return () => document.documentElement.classList.remove("menu-scroll-lock");
   }, [open]);
+
+  function closeMenu() {
+    setOpen(false);
+  }
 
   function changeSection(section: string) {
     onChangeSection(section);
@@ -97,32 +69,34 @@ function Sidebar({ user, activeSection, onChangeSection, onLogout }: Props) {
 
   return (
     <>
-      <button
-        className="mobile-menu-btn"
-        onClick={() => setOpen(true)}
-        aria-label="Abrir menu"
-      >
-        <Menu size={22} />
-      </button>
+      <header className="mobile-top-bar">
+        <button
+          className="mobile-menu-btn"
+          onClick={() => setOpen(true)}
+          aria-label="Abrir menu"
+        >
+          <Menu size={22} />
+        </button>
+      </header>
 
       {open && (
         <div
           className="mobile-menu-backdrop"
-          onClick={() => setOpen(false)}
-          onTouchMove={(event) => event.preventDefault()}
+          onClick={closeMenu}
+          aria-hidden="true"
         />
       )}
 
       <aside className={open ? "sidebar mobile-open" : "sidebar"}>
         <button
           className="close-menu-btn"
-          onClick={() => setOpen(false)}
+          onClick={closeMenu}
           aria-label="Fechar menu"
         >
           <X size={20} />
         </button>
 
-        <div>
+        <div className="sidebar-body">
           <div className="sidebar-header">
             <div className="logo-circle">
               <img
@@ -181,7 +155,7 @@ function Sidebar({ user, activeSection, onChangeSection, onLogout }: Props) {
           <button
             className="logout-btn"
             onClick={() => {
-              setOpen(false);
+              closeMenu();
               onLogout();
             }}
           >
