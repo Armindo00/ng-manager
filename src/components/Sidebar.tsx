@@ -40,13 +40,28 @@ function Sidebar({ user, activeSection, onChangeSection, onLogout }: Props) {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
+    document.body.style.position = "";
+    document.body.style.top = "";
+    document.body.style.width = "";
+    document.body.style.overflow = "";
+    window.scrollTo(0, 0);
+
+    const frame = requestAnimationFrame(() => {
+      window.dispatchEvent(new Event("resize"));
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+
     const scrollY = window.scrollY;
 
-    if (open) {
-      document.body.style.position = "fixed";
-      document.body.style.top = "-" + scrollY + "px";
-      document.body.style.width = "100%";
-    }
+    document.body.style.position = "fixed";
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.width = "100%";
+    document.body.style.overflow = "hidden";
 
     return () => {
       const top = document.body.style.top;
@@ -54,10 +69,10 @@ function Sidebar({ user, activeSection, onChangeSection, onLogout }: Props) {
       document.body.style.position = "";
       document.body.style.top = "";
       document.body.style.width = "";
+      document.body.style.overflow = "";
 
-      if (top) {
-        window.scrollTo(0, parseInt(top || "0", 10) * -1);
-      }
+      const restoreY = Math.abs(parseInt(top || "0", 10));
+      window.scrollTo(0, restoreY);
     };
   }, [open]);
 

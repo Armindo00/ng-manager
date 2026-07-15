@@ -67,6 +67,12 @@ function App() {
     useState<AdminSection>("dashboard");
 
   useEffect(() => {
+    if (!currentUser) return;
+
+    window.scrollTo(0, 0);
+  }, [currentUser]);
+
+  useEffect(() => {
     restoreSession();
 
     const {

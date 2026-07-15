@@ -3,7 +3,7 @@
 }
 
 html {
-  overflow-x: hidden;
+  overflow-x: clip;
   overscroll-behavior-x: none;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
@@ -17,7 +17,7 @@ body,
 }
 
 #root {
-  overflow-x: hidden;
+  overflow-x: clip;
   width: 100%;
 }
 
@@ -26,7 +26,6 @@ body {
   font-family: Inter, Arial, sans-serif;
   background: #f4f7fb;
   color: #0f172a;
-  overflow-x: hidden;
   overscroll-behavior-x: none;
   touch-action: pan-y;
   width: 100%;
@@ -69,13 +68,13 @@ textarea:focus {
   min-height: 100vh;
   width: 100%;
   max-width: 100%;
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 .main-content {
   flex: 1;
   padding: 32px;
-  overflow-x: hidden;
+  overflow-x: clip;
   max-width: 100%;
   min-width: 0;
 }
@@ -124,6 +123,11 @@ textarea:focus {
   justify-content: space-between;
   border-right: 1px solid rgba(255, 255, 255, 0.08);
   flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  align-self: flex-start;
+  max-height: 100dvh;
+  overflow-y: auto;
 }
 
 .sidebar-header {
@@ -1010,16 +1014,19 @@ textarea:focus {
   .sidebar {
     position: fixed;
     top: 0;
+    bottom: 0;
     left: 0;
     transform: translateX(-100%);
     width: 82vw;
     max-width: 320px;
-    height: 100dvh;
+    height: auto;
+    max-height: none;
     z-index: 2600;
-    padding: 28px 20px;
+    padding: calc(env(safe-area-inset-top, 0px) + 28px) 20px 28px;
     overflow-y: auto;
     justify-content: flex-start;
     transition: transform 0.25s ease;
+    -webkit-overflow-scrolling: touch;
   }
 
   .sidebar.mobile-open {
