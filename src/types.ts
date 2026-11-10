@@ -79,6 +79,9 @@ export type Lesson = {
   coachId: string;
   coachName: string;
 
+  /** Segundo treinador da sessão (opcional). */
+  secondaryCoachName?: string;
+
   van: string;
 
   pickupTime: string;

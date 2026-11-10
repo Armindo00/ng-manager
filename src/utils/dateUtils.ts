@@ -92,6 +92,30 @@ export function getWeekdayLabel(date: string) {
   return map[weekday] ?? "Domingo";
 }
 
+export type WeekdayKey =
+  | "segunda"
+  | "terca"
+  | "quarta"
+  | "quinta"
+  | "sexta"
+  | "sabado"
+  | "domingo";
+
+export function getWeekdayKey(date: string = getTodayDate()): WeekdayKey {
+  const label = getWeekdayLabel(date);
+  const map: Record<string, WeekdayKey> = {
+    Domingo: "domingo",
+    Segunda: "segunda",
+    Terça: "terca",
+    Quarta: "quarta",
+    Quinta: "quinta",
+    Sexta: "sexta",
+    Sábado: "sabado",
+  };
+
+  return map[label] ?? "domingo";
+}
+
 export function getScheduleDates(
   weekDay: string,
   repeatUntil: string,

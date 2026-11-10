@@ -143,7 +143,7 @@ function Sidebar({ user, activeSection, onChangeSection, onLogout }: Props) {
           {user.role === "admin" && !adminInManagement && (
             <nav className="sidebar-nav">
               {item(LayoutDashboard, "Hoje", "my-dashboard")}
-              {item(CalendarDays, "Todos os treinos", "my-lessons")}
+              {item(CalendarDays, "Todos os grupos", "my-lessons")}
               {item(Shield, "Admin", "dashboard")}
             </nav>
           )}
@@ -177,7 +177,7 @@ function Sidebar({ user, activeSection, onChangeSection, onLogout }: Props) {
           {user.role === "coach" && (
             <nav className="sidebar-nav">
               {item(LayoutDashboard, "Hoje", "dashboard")}
-              {item(CalendarDays, "Todos os treinos", "lessons")}
+              {item(CalendarDays, "Todos os grupos", "lessons")}
             </nav>
           )}
         </div>

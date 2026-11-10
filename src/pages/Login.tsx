@@ -78,8 +78,8 @@ function Login({ onLogin }: Props) {
           <p className="login-kicker">NextGeneration Surf School</p>
           <h1>NG Manager</h1>
           <p className="login-brand-text">
-            Cada treinador abre o seu treino, marca presenças e faltas, e
-            adiciona alunos extra quando for preciso.
+            O treinador escolhe o grupo que deu, marca presenças e faltas, e
+            pode registar até 2 treinadores na mesma sessão.
           </p>
         </div>
       </div>
