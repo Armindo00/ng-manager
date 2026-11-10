@@ -1,5 +1,10 @@
 import { supabase } from "./supabase";
 import type { Lesson, LessonResponse } from "../types";
+import {
+  encodeCoachNotes,
+  parseSecondaryCoachName,
+  stripSecondaryCoachNotes,
+} from "../utils/sessionCoaches";
 
 type DbLesson = {
   id: string;
@@ -34,7 +39,8 @@ function fromDb(lesson: DbLesson): Lesson {
     van: lesson.van,
     pickupTime: lesson.pickup_time,
     coachPickups: lesson.coach_pickups || [],
-    coachNotes: lesson.coach_notes || "",
+    coachNotes: stripSecondaryCoachNotes(lesson.coach_notes || ""),
+    secondaryCoachName: parseSecondaryCoachName(lesson.coach_notes || ""),
     bookedStudentIds: lesson.booked_student_ids || [],
     presentStudentIds: lesson.present_student_ids || [],
     responses: lesson.responses || [],
@@ -55,7 +61,10 @@ function toDb(lesson: Lesson) {
     van: lesson.van,
     pickup_time: lesson.pickupTime,
     coach_pickups: lesson.coachPickups || [],
-    coach_notes: lesson.coachNotes || "",
+    coach_notes: encodeCoachNotes(
+      lesson.coachNotes,
+      lesson.secondaryCoachName
+    ),
     booked_student_ids: lesson.bookedStudentIds,
     present_student_ids: lesson.presentStudentIds,
     responses: lesson.responses || [],

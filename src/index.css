@@ -2028,6 +2028,30 @@ textarea:focus {
   color: #64748b;
 }
 
+.coach-session-card-static {
+  cursor: default;
+}
+
+.coach-session-card-static:hover {
+  border-color: #e2e8f0;
+}
+
+.coach-group-students {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.coach-session-modal select {
+  width: 100%;
+  margin-top: 6px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+}
+
 .lesson-section textarea {
   width: 100%;
   margin: 0 0 12px;
