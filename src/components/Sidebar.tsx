@@ -12,6 +12,7 @@ import {
   Truck,
   CalendarClock,
   CalendarDays,
+  CalendarRange,
   Star,
   LogOut,
   Menu,
@@ -29,7 +30,7 @@ type Props = {
 };
 
 function roleLabel(role: User["role"]) {
-  if (role === "admin") return "Administrador";
+  if (role === "admin") return "Admin / Treinador";
   if (role === "coach") return "Treinador";
   return "Aluno";
 }
@@ -124,7 +125,9 @@ function Sidebar({ user, activeSection, onChangeSection, onLogout }: Props) {
 
           {user.role === "admin" && (
             <nav className="sidebar-nav">
-              {item(LayoutDashboard, "Dashboard", "dashboard")}
+              {item(CalendarDays, "Presenças hoje", "my-dashboard")}
+              {item(CalendarRange, "Os meus treinos", "my-lessons")}
+              {item(LayoutDashboard, "Gestão", "dashboard")}
               {item(Users, "Alunos", "students")}
               {item(UserCircle, "Treinadores", "coaches")}
               {item(UsersRound, "Grupos", "groups")}

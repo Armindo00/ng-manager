@@ -5,6 +5,7 @@ import { getStudents } from "../services/studentsService";
 import { getLessons, updateLesson } from "../services/lessonsService";
 import Modal from "../components/Modal";
 import CoachAttendancePanel from "../components/CoachAttendancePanel";
+import { resolveCoachId } from "../utils/coachAccess";
 import { canFinishLesson, canMarkAttendance } from "../utils/lessonWorkflow";
 
 type Props = {
@@ -21,24 +22,30 @@ function CoachArea({ user }: Props) {
   const [selectedLessonId, setSelectedLessonId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
+  const [coachId, setCoachId] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [user.id, user.role, user.name]);
 
   async function loadData() {
     try {
       setLoading(true);
 
-      const [studentsData, lessonsData] = await Promise.all([
+      const [studentsData, lessonsData, resolvedCoachId] = await Promise.all([
         getStudents(),
         getLessons(),
+        resolveCoachId(user),
       ]);
+
+      setCoachId(resolvedCoachId);
 
       const coachLessons = lessonsData
         .filter(
           (lesson) =>
-            lesson.coachId === user.id && lesson.status !== "draft"
+            Boolean(resolvedCoachId) &&
+            lesson.coachId === resolvedCoachId &&
+            lesson.status !== "draft"
         )
         .sort((a, b) =>
           `${b.date} ${b.time || ""}`.localeCompare(
@@ -99,6 +106,11 @@ function CoachArea({ user }: Props) {
 
       {loading ? (
         <p className="muted">A carregar treinos...</p>
+      ) : !coachId ? (
+        <p>
+          Não foi possível ligar esta conta a um treinador. Garante que existes
+          na lista de treinadores.
+        </p>
       ) : (
         <>
           <label className="field-label coach-session-search">

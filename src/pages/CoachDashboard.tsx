@@ -5,6 +5,7 @@ import { getStudents } from "../services/studentsService";
 import { getLessons, updateLesson } from "../services/lessonsService";
 import Modal from "../components/Modal";
 import CoachAttendancePanel from "../components/CoachAttendancePanel";
+import { resolveCoachId } from "../utils/coachAccess";
 import { getTodayDate } from "../utils/dateUtils";
 import { canFinishLesson, canMarkAttendance } from "../utils/lessonWorkflow";
 
@@ -21,24 +22,30 @@ function CoachDashboard({ user }: Props) {
   const [students, setStudents] = useState<Student[]>([]);
   const [selectedLessonId, setSelectedLessonId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [coachId, setCoachId] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [user.id, user.role, user.name]);
 
   async function loadData() {
     try {
       setLoading(true);
 
-      const [lessonsData, studentsData] = await Promise.all([
+      const [lessonsData, studentsData, resolvedCoachId] = await Promise.all([
         getLessons(),
         getStudents(),
+        resolveCoachId(user),
       ]);
+
+      setCoachId(resolvedCoachId);
 
       const coachLessons = lessonsData
         .filter(
           (lesson) =>
-            lesson.coachId === user.id && lesson.status !== "draft"
+            Boolean(resolvedCoachId) &&
+            lesson.coachId === resolvedCoachId &&
+            lesson.status !== "draft"
         )
         .sort((a, b) =>
           `${b.date} ${b.time || ""}`.localeCompare(
@@ -150,11 +157,22 @@ function CoachDashboard({ user }: Props) {
     return <p className="muted">A carregar treinos...</p>;
   }
 
+  if (!coachId) {
+    return (
+      <p>
+        Não foi possível ligar esta conta a um treinador. Garante que existes
+        na lista de treinadores.
+      </p>
+    );
+  }
+
   return (
     <div className="coach-dashboard-page">
       <div className="coach-dashboard-heading">
         <div>
-          <span className="coach-dashboard-kicker">Os teus treinos</span>
+          <span className="coach-dashboard-kicker">
+            {user.role === "admin" ? "Admin · treinador" : "Os teus treinos"}
+          </span>
           <h1 className="page-title">Olá, {user.name}</h1>
         </div>
         <p>
