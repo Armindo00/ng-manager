@@ -1,5 +1,6 @@
 import { FunctionsHttpError } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
+import { toErrorMessage } from "../utils/errorMessage";
 
 export type CoachAccess = {
   coachId: string;
@@ -15,6 +16,7 @@ export type CoachAuthResult = {
   email?: string;
   password?: string;
   error?: string;
+  repaired?: boolean;
 };
 
 type Action =
@@ -22,42 +24,40 @@ type Action =
   | "create-coach-access"
   | "reset-coach-password"
   | "toggle-coach-block"
-  | "delete-coach-access";
+  | "delete-coach-access"
+  | "ensure-school-coach";
 
-function formatErrorValue(value: unknown) {
-  if (!value) return "";
-  if (typeof value === "string") return value;
-  if (value instanceof Error) return value.message;
-  if (typeof value === "object") {
-    const record = value as Record<string, unknown>;
-    if (typeof record.error === "string") return record.error;
-    if (typeof record.message === "string") return record.message;
-    try {
-      return JSON.stringify(value);
-    } catch {
-      return "Erro desconhecido";
-    }
-  }
-  return String(value);
-}
-
-function formatInvokeError(error: unknown, data: unknown) {
-  if (data && typeof data === "object" && "error" in data) {
-    return (
-      formatErrorValue((data as { error: unknown }).error) ||
-      "Erro ao gerir acesso do treinador."
-    );
+async function readFunctionError(
+  error: unknown,
+  data: unknown
+): Promise<string> {
+  if (data && typeof data === "object") {
+    const message = toErrorMessage(data, "");
+    if (message) return message;
   }
 
   if (error instanceof FunctionsHttpError) {
-    return `Erro na Edge Function (${error.context.status}): verifica se fizeste deploy da function admin-student-auth.`;
+    try {
+      const payload = await error.context.json();
+      const message = toErrorMessage(payload, "");
+      if (message) {
+        return `${message} (HTTP ${error.context.status})`;
+      }
+    } catch {
+      try {
+        const text = await error.context.text();
+        if (text?.trim() && text.trim() !== "{}") {
+          return `${text.trim()} (HTTP ${error.context.status})`;
+        }
+      } catch {
+        // ignore
+      }
+    }
+
+    return `Falha na função admin-student-auth (HTTP ${error.context.status}). Confirma no Supabase se a Edge Function está publicada.`;
   }
 
-  if (error instanceof Error) {
-    return error.message;
-  }
-
-  return "Erro ao gerir acesso do treinador.";
+  return toErrorMessage(error, "Erro ao gerir acesso do treinador.");
 }
 
 async function invokeCoachAuth(
@@ -80,29 +80,19 @@ async function invokeCoachAuth(
   });
 
   if (error) {
-    if (error instanceof FunctionsHttpError) {
-      try {
-        const payload = await error.context.json();
-
-        if (payload?.error) {
-          throw new Error(formatErrorValue(payload.error));
-        }
-      } catch (parseError) {
-        if (
-          parseError instanceof Error &&
-          parseError.message &&
-          !parseError.message.includes("Unexpected")
-        ) {
-          throw parseError;
-        }
-      }
-    }
-
-    throw new Error(formatInvokeError(error, data));
+    throw new Error(await readFunctionError(error, data));
   }
 
   if (data?.error) {
-    throw new Error(formatErrorValue(data.error));
+    throw new Error(
+      toErrorMessage(data.error, "Erro ao gerir acesso do treinador.")
+    );
+  }
+
+  if (!data || typeof data !== "object") {
+    throw new Error(
+      "A função admin-student-auth não devolveu dados. Confirma o deploy no Supabase."
+    );
   }
 
   return data as CoachAuthResult;
@@ -155,6 +145,14 @@ export async function createCoachWithAccess(
   phone: string
 ) {
   return invokeCoachAuth("create-coach", { name, email, phone });
+}
+
+export async function ensureSchoolCoach(name: string) {
+  return invokeCoachAuth("ensure-school-coach", {
+    name,
+    email: undefined,
+    phone: "-",
+  });
 }
 
 export async function createCoachAccess(coachId: string, email: string) {

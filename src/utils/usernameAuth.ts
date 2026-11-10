@@ -1,7 +1,10 @@
 import { normalizeEmail } from "./email";
 
-/** Domínio interno: o Supabase Auth precisa de email, mas o utilizador só vê o nome. */
-export const AUTH_EMAIL_DOMAIN = "ngmanager.local";
+/**
+ * Domínio interno só para o Auth.
+ * Evita `.local` (alguns projetos Supabase rejeitam).
+ */
+export const AUTH_EMAIL_DOMAIN = "coaches.ngmanager.app";
 
 export function usernameToAuthEmail(username: string) {
   const local = username
