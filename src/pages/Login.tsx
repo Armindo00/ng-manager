@@ -3,6 +3,7 @@ import toast from "react-hot-toast";
 import type { User } from "../types";
 import { supabase } from "../services/supabase";
 import { getUserByEmail, isUserBlocked } from "../services/usersService";
+import { resolveLoginEmail } from "../utils/usernameAuth";
 import AppVersion from "../components/AppVersion";
 import logo from "../assets/logo next.jpeg";
 
@@ -11,28 +12,34 @@ type Props = {
 };
 
 function Login({ onLogin }: Props) {
-  const [email, setEmail] = useState(import.meta.env.DEV ? "admin@test.com" : "");
-  const [password, setPassword] = useState(import.meta.env.DEV ? "12345678" : "");
+  const [loginName, setLoginName] = useState(
+    import.meta.env.DEV ? "admin@test.com" : ""
+  );
+  const [password, setPassword] = useState(
+    import.meta.env.DEV ? "12345678" : ""
+  );
   const [loading, setLoading] = useState(false);
 
   async function login() {
-    if (!email || !password) return;
+    if (!loginName || !password) return;
 
     setLoading(true);
 
     try {
+      const email = resolveLoginEmail(loginName);
+
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) {
-        toast.error("Email ou password inválidos.");
+        toast.error("Nome ou password inválidos.");
         return;
       }
 
       if (!data.user?.email) {
-        toast.error("Utilizador sem email.");
+        toast.error("Utilizador sem conta válida.");
         return;
       }
 
@@ -88,17 +95,21 @@ function Login({ onLogin }: Props) {
         <div className="login-card">
           <h2>Entrar na conta</h2>
           <p className="login-subtitle">
-            Usa o email e password que te foram atribuídos.
+            Usa o teu nome de treinador e a password.
           </p>
 
           <div className="login-actions">
             <label className="field-label">
-              Email
+              Nome
               <input
-                type="email"
-                placeholder="nome@email.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                type="text"
+                placeholder="Ex: Mindo"
+                autoComplete="username"
+                value={loginName}
+                onChange={(e) => setLoginName(e.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") login();
+                }}
               />
             </label>
 
@@ -107,8 +118,12 @@ function Login({ onLogin }: Props) {
               <input
                 type="password"
                 placeholder="••••••••"
+                autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") login();
+                }}
               />
             </label>
 

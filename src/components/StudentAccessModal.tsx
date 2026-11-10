@@ -17,8 +17,8 @@ function StudentAccessModal({
 }: Props) {
   async function copyCredentials() {
     const text = password
-      ? `Aluno: ${studentName}\nEmail: ${email}\nPassword: ${password}`
-      : `Aluno: ${studentName}\nEmail: ${email}`;
+      ? `Nome: ${studentName}\nLogin: ${email}\nPassword: ${password}`
+      : `Nome: ${studentName}\nLogin: ${email}`;
 
     try {
       await navigator.clipboard.writeText(text);
@@ -31,12 +31,12 @@ function StudentAccessModal({
     <Modal title={title} onClose={onClose}>
       <div className="student-access-modal">
         <p>
-          O aluno <strong>{studentName}</strong> já pode entrar na aplicação.
+          <strong>{studentName}</strong> já pode entrar na aplicação.
         </p>
 
         <div className="student-access-credentials">
           <div>
-            <span className="muted">Email</span>
+            <span className="muted">Login</span>
             <strong>{email}</strong>
           </div>
 

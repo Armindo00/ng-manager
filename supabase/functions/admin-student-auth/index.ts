@@ -284,15 +284,26 @@ Deno.serve(async (req) => {
     }
 
     if (body.action === "create-coach") {
-      if (!body.name || !body.email || !body.phone) {
-        return jsonResponse({ error: "Nome, email e telefone são obrigatórios." }, 400);
+      if (!body.name) {
+        return jsonResponse({ error: "Nome é obrigatório." }, 400);
       }
 
-      const normalizedEmail = sanitizeEmail(String(body.email ?? ""));
+      const coachName = String(body.name).trim();
+      const generatedLocal = coachName
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, ".")
+        .replace(/^\.+|\.+$/g, "");
+
+      const normalizedEmail = sanitizeEmail(
+        String(body.email ?? "").trim() || `${generatedLocal}@ngmanager.local`
+      );
+      const phone = String(body.phone ?? "").trim() || "-";
 
       if (!isValidEmail(normalizedEmail)) {
         return jsonResponse({
-          error: `Email inválido: "${body.email}". Usa um formato como treinador@escola.com`,
+          error: `Email inválido: "${normalizedEmail}".`,
         }, 400);
       }
 
@@ -312,8 +323,9 @@ Deno.serve(async (req) => {
           password,
           email_confirm: true,
           user_metadata: {
-            name: body.name,
+            name: coachName,
             role: "coach",
+            login_name: coachName,
           },
         });
 
@@ -327,8 +339,8 @@ Deno.serve(async (req) => {
 
       const { error: coachError } = await adminClient.from("coaches").insert({
         id: coachId,
-        name: body.name,
-        phone: body.phone,
+        name: coachName,
+        phone,
       });
 
       if (coachError) {
@@ -338,7 +350,7 @@ Deno.serve(async (req) => {
 
       const { error: appUserError } = await adminClient.from("app_users").insert({
         id: coachId,
-        name: body.name,
+        name: coachName,
         email: normalizedEmail,
         role: "coach",
         must_change_password: true,

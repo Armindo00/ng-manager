@@ -3,18 +3,14 @@ import toast from "react-hot-toast";
 import { getUniqueStudentNames } from "../data/fixedTrainings";
 import { schoolCoaches } from "../data/schoolCoaches";
 import {
-  createSchoolCoachesWithEmails,
+  createSchoolCoaches,
   importFixedStudents,
   type CoachSeedResult,
 } from "../services/seedSchoolDataService";
-import { getEmailValidationMessage, normalizeEmail } from "../utils/email";
 
 function AdminSchoolSetup() {
   const [importingStudents, setImportingStudents] = useState(false);
   const [creatingCoaches, setCreatingCoaches] = useState(false);
-  const [coachEmails, setCoachEmails] = useState<Record<string, string>>(() =>
-    Object.fromEntries(schoolCoaches.map((name) => [name, ""]))
-  );
   const [coachResults, setCoachResults] = useState<CoachSeedResult[]>([]);
   const [lastStudentImport, setLastStudentImport] = useState<string>("");
 
@@ -41,31 +37,10 @@ function AdminSchoolSetup() {
   }
 
   async function handleCreateCoaches() {
-    for (const name of schoolCoaches) {
-      const email = normalizeEmail(coachEmails[name] || "");
-      if (!email) {
-        toast.error(`Preenche o email de ${name}.`);
-        return;
-      }
-
-      const emailError = getEmailValidationMessage(email);
-      if (emailError) {
-        toast.error(`${name}: ${emailError}`);
-        return;
-      }
-    }
-
     try {
       setCreatingCoaches(true);
 
-      const normalizedEmails = Object.fromEntries(
-        schoolCoaches.map((name) => [
-          name,
-          normalizeEmail(coachEmails[name] || ""),
-        ])
-      );
-
-      const results = await createSchoolCoachesWithEmails(normalizedEmails);
+      const results = await createSchoolCoaches();
       setCoachResults(results);
 
       const created = results.filter((item) => item.created).length;
@@ -90,6 +65,7 @@ function AdminSchoolSetup() {
       <h1 className="page-title">Setup da escola</h1>
       <p className="muted admin-home-intro">
         Importa os alunos dos grupos fixos e cria as contas dos treinadores.
+        O login de cada treinador é o <strong>nome</strong> + password.
       </p>
 
       <section className="card section-card">
@@ -132,28 +108,15 @@ function AdminSchoolSetup() {
         </div>
 
         <p className="muted">
-          Preenche um email por treinador. A app gera uma password temporária
-          para cada conta criada.
+          Cria Mindo, Goncalo, Manuel, Tiz, Kiko e Tomas. Cada um entra com o
+          próprio nome e a password temporária gerada.
         </p>
 
-        <div className="admin-coach-email-grid">
+        <ul className="muted" style={{ marginTop: 8 }}>
           {schoolCoaches.map((name) => (
-            <label className="field-label" key={name}>
-              {name}
-              <input
-                type="email"
-                placeholder={`${name.toLowerCase()}@escola.com`}
-                value={coachEmails[name] || ""}
-                onChange={(event) =>
-                  setCoachEmails((current) => ({
-                    ...current,
-                    [name]: event.target.value,
-                  }))
-                }
-              />
-            </label>
+            <li key={name}>{name}</li>
           ))}
-        </div>
+        </ul>
 
         <button
           type="button"
@@ -172,13 +135,12 @@ function AdminSchoolSetup() {
                 <strong>{result.name}</strong>
                 {result.created ? (
                   <span>
-                    Criado · {result.email}
+                    Login: {result.loginName}
                     {result.password ? ` · password: ${result.password}` : ""}
                   </span>
                 ) : (
                   <span className="coach-seed-error">
                     {result.error || "Falhou"}
-                    {result.email ? ` · ${result.email}` : ""}
                   </span>
                 )}
               </div>
