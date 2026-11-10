@@ -30,6 +30,8 @@ import ChangePassword from "./pages/ChangePassword";
 
 type AdminSection =
   | "dashboard"
+  | "my-dashboard"
+  | "my-lessons"
   | "students"
   | "coaches"
   | "groups"
@@ -47,7 +49,7 @@ function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [coachSection, setCoachSection] = useState<CoachSection>("dashboard");
   const [activeSection, setActiveSection] =
-    useState<AdminSection>("dashboard");
+    useState<AdminSection>("my-dashboard");
 
   useEffect(() => {
     if (!currentUser) return;
@@ -203,6 +205,14 @@ function App() {
                 <CoachArea user={currentUser} />
               )}
             </>
+          )}
+
+          {currentUser.role === "admin" && activeSection === "my-dashboard" && (
+            <CoachDashboard user={currentUser} />
+          )}
+
+          {currentUser.role === "admin" && activeSection === "my-lessons" && (
+            <CoachArea user={currentUser} />
           )}
 
           {currentUser.role === "admin" && activeSection === "dashboard" && (

@@ -1896,6 +1896,138 @@ textarea:focus {
   color: #64748b;
 }
 
+.coach-session-list {
+  display: grid;
+  gap: 10px;
+}
+
+.coach-session-card {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  color: #0f172a;
+  text-align: left;
+  cursor: pointer;
+}
+
+.coach-session-card:hover {
+  border-color: #94a3b8;
+}
+
+.coach-session-card-main {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.coach-session-card-main strong {
+  font-size: 16px;
+}
+
+.coach-session-card-main span {
+  color: #64748b;
+  font-size: 13px;
+}
+
+.coach-session-card-status {
+  flex-shrink: 0;
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.coach-session-card-status.ready {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.coach-session-card-status.status-finished {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.coach-session-modal {
+  display: grid;
+  gap: 16px;
+}
+
+.coach-session-meta {
+  display: grid;
+  gap: 4px;
+  color: #475569;
+  font-size: 14px;
+}
+
+.coach-session-meta p {
+  margin: 0;
+}
+
+.coach-add-extra {
+  margin-top: 16px;
+}
+
+.coach-area-intro {
+  margin: 0 0 16px;
+}
+
+.coach-session-search {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.coach-session-search input {
+  width: 100%;
+}
+
+.admin-home-intro {
+  margin: 0 0 18px;
+}
+
+.admin-module-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.admin-module-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-start;
+  text-align: left;
+  padding: 16px;
+  border-radius: 14px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  color: #0f172a;
+  cursor: pointer;
+}
+
+.admin-module-card:hover {
+  border-color: #94a3b8;
+}
+
+.admin-module-card strong {
+  font-size: 15px;
+}
+
+.admin-module-card span {
+  font-size: 13px;
+  color: #64748b;
+}
+
 .lesson-section textarea {
   width: 100%;
   margin: 0 0 12px;

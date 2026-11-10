@@ -12,7 +12,7 @@ type Props = {
 };
 
 function roleLabel(role: User["role"]) {
-  if (role === "admin") return "Administrador";
+  if (role === "admin") return "Admin / Treinador";
   if (role === "coach") return "Treinador";
   return "Aluno";
 }

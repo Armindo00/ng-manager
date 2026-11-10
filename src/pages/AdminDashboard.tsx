@@ -17,6 +17,10 @@ type AdminSection =
   | "groups"
   | "recurring"
   | "lessons"
+  | "inventory"
+  | "vans"
+  | "compensations"
+  | "evaluations"
   | "payments";
 
 type Props = {
@@ -102,57 +106,83 @@ function AdminDashboard({ onChangeSection }: Props) {
 
   return (
     <div className="dashboard-page">
-      <h1 className="page-title">Dashboard</h1>
+      <h1 className="page-title">Administração</h1>
+      <p className="muted admin-home-intro">
+        Gestão da escola: alunos, treinadores, treinos e restantes áreas.
+      </p>
 
       {loading ? (
         <p className="muted">A carregar dashboard...</p>
       ) : (
         <>
+      <div className="admin-module-grid">
+        <button type="button" className="admin-module-card" onClick={() => onChangeSection("students")}>
+          <strong>Alunos</strong>
+          <span>{students.length} registos</span>
+        </button>
+        <button type="button" className="admin-module-card" onClick={() => onChangeSection("coaches")}>
+          <strong>Treinadores</strong>
+          <span>{coaches.length} registos</span>
+        </button>
+        <button type="button" className="admin-module-card" onClick={() => onChangeSection("groups")}>
+          <strong>Grupos</strong>
+          <span>Turmas e alunos fixos</span>
+        </button>
+        <button type="button" className="admin-module-card" onClick={() => onChangeSection("recurring")}>
+          <strong>Horários</strong>
+          <span>Treinos recorrentes</span>
+        </button>
+        <button type="button" className="admin-module-card" onClick={() => onChangeSection("lessons")}>
+          <strong>Calendário</strong>
+          <span>{publishedLessons} publicados · {draftLessons} rascunhos</span>
+        </button>
+        <button type="button" className="admin-module-card" onClick={() => onChangeSection("inventory")}>
+          <strong>Inventário</strong>
+          <span>Material da escola</span>
+        </button>
+        <button type="button" className="admin-module-card" onClick={() => onChangeSection("vans")}>
+          <strong>Carrinhas</strong>
+          <span>Frota e tarefas</span>
+        </button>
+        <button type="button" className="admin-module-card" onClick={() => onChangeSection("compensations")}>
+          <strong>Compensações</strong>
+          <span>Faltas a repor</span>
+        </button>
+        <button type="button" className="admin-module-card" onClick={() => onChangeSection("evaluations")}>
+          <strong>Avaliações</strong>
+          <span>{evaluationsThisMonth} este mês</span>
+        </button>
+        <button type="button" className="admin-module-card" onClick={() => onChangeSection("payments")}>
+          <strong>Pagamentos</strong>
+          <span>{pendingPayments} pendentes</span>
+        </button>
+      </div>
+
       <div className="stats-grid">
         <div className="card stat-card">
-          <span className="stat-label">👥 Total de alunos</span>
+          <span className="stat-label">Total de alunos</span>
           <strong className="stat-number">{students.length}</strong>
         </div>
 
         <div className="card stat-card">
-          <span className="stat-label">🏄 Treinadores</span>
+          <span className="stat-label">Treinadores</span>
           <strong className="stat-number">{coaches.length}</strong>
         </div>
 
         <div className="card stat-card">
-          <span className="stat-label">📝 Treinos por publicar</span>
-          <strong className="stat-number">{draftLessons}</strong>
-        </div>
-
-        <div className="card stat-card">
-          <span className="stat-label">📢 Treinos publicados</span>
-          <strong className="stat-number">{publishedLessons}</strong>
-        </div>
-
-        <div className="card stat-card">
-          <span className="stat-label">✅ Treinos concluídos</span>
+          <span className="stat-label">Treinos concluídos</span>
           <strong className="stat-number">{finishedLessons}</strong>
         </div>
 
         <div className="card stat-card">
-          <span className="stat-label">💳 Pagamentos pendentes</span>
-          <strong className="stat-number">{pendingPayments}</strong>
-        </div>
-
-        <div className="card stat-card">
-          <span className="stat-label">⭐ Avaliações este mês</span>
-          <strong className="stat-number">{evaluationsThisMonth}</strong>
-        </div>
-
-        <div className="card stat-card">
-          <span className="stat-label">📊 Presença média</span>
+          <span className="stat-label">Presença média</span>
           <strong className="stat-number">{attendanceRate}%</strong>
         </div>
       </div>
 
       <div className="dashboard-row">
         <div className="card section-card">
-          <h2>📅 Próximos Treinos</h2>
+          <h2>Próximos treinos</h2>
 
           <div className="lesson-preview-list">
             {upcomingLessons.map((lesson) => (
@@ -179,28 +209,6 @@ function AdminDashboard({ onChangeSection }: Props) {
           {upcomingLessons.length === 0 && (
             <p className="muted">Ainda não existem treinos.</p>
           )}
-        </div>
-
-        <div className="card section-card">
-          <h2>⚡ Ações Rápidas</h2>
-
-          <div className="quick-actions">
-            <button className="primary-btn" onClick={() => onChangeSection("students")}>
-              ➕ Novo Aluno
-            </button>
-
-            <button className="primary-btn" onClick={() => onChangeSection("coaches")}>
-              👨‍🏫 Novo Treinador
-            </button>
-
-            <button className="primary-btn" onClick={() => onChangeSection("groups")}>
-              👥 Novo Grupo
-            </button>
-
-            <button className="primary-btn" onClick={() => onChangeSection("lessons")}>
-              🏄 Criar Treino
-            </button>
-          </div>
         </div>
       </div>
 
