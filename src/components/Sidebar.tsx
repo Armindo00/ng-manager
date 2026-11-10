@@ -15,6 +15,7 @@ import {
   Star,
   Shield,
   ArrowLeft,
+  Wrench,
   LogOut,
   Menu,
   X,
@@ -32,6 +33,7 @@ type Props = {
 
 const ADMIN_MANAGEMENT_SECTIONS = new Set([
   "dashboard",
+  "setup",
   "students",
   "coaches",
   "groups",
@@ -161,6 +163,7 @@ function Sidebar({ user, activeSection, onChangeSection, onLogout }: Props) {
               </button>
 
               {item(LayoutDashboard, "Painel admin", "dashboard")}
+              {item(Wrench, "Setup escola", "setup")}
               {item(Users, "Alunos", "students")}
               {item(UserCircle, "Treinadores", "coaches")}
               {item(UsersRound, "Grupos", "groups")}

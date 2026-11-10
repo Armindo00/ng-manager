@@ -17,6 +17,7 @@ import AdminInventory from "./pages/AdminInventory";
 import AdminVans from "./pages/AdminVans";
 import AdminCompensations from "./pages/AdminCompensations";
 import AdminEvaluations from "./pages/AdminEvaluations";
+import AdminSchoolSetup from "./pages/AdminSchoolSetup";
 import Sidebar from "./components/Sidebar";
 import Topbar from "./components/Topbar";
 
@@ -32,6 +33,7 @@ type AdminSection =
   | "dashboard"
   | "my-dashboard"
   | "my-lessons"
+  | "setup"
   | "students"
   | "coaches"
   | "groups"
@@ -218,6 +220,11 @@ function App() {
           {currentUser.role === "admin" && activeSection === "dashboard" && (
             <AdminDashboard onChangeSection={setActiveSection} />
           )}
+
+          {currentUser.role === "admin" && activeSection === "setup" && (
+            <AdminSchoolSetup />
+          )}
+
           {currentUser.role === "admin" &&
             activeSection === "students" && <AdminArea />}
 
