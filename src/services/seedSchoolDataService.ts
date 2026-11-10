@@ -5,6 +5,7 @@ import { addStudent, getStudents } from "./studentsService";
 import { getCoaches } from "./coachesService";
 import { createCoachWithAccess } from "./coachAuthService";
 import { normalizePersonName } from "../utils/studentNameMatch";
+import { usernameToAuthEmail } from "../utils/usernameAuth";
 
 export type StudentImportResult = {
   created: number;
@@ -15,7 +16,7 @@ export type StudentImportResult = {
 
 export type CoachSeedResult = {
   name: string;
-  email: string;
+  loginName: string;
   created: boolean;
   password?: string;
   error?: string;
@@ -81,29 +82,15 @@ export async function importFixedStudents() {
   } satisfies StudentImportResult;
 }
 
-export async function createSchoolCoachesWithEmails(
-  emailsByCoach: Record<string, string>
-) {
+export async function createSchoolCoaches() {
   const existingCoaches = await getCoaches();
   const results: CoachSeedResult[] = [];
 
   for (const name of schoolCoaches) {
-    const email = (emailsByCoach[name] || "").trim().toLowerCase();
-
-    if (!email) {
-      results.push({
-        name,
-        email: "",
-        created: false,
-        error: "Email em falta",
-      });
-      continue;
-    }
-
     if (coachExistsByName(existingCoaches, name)) {
       results.push({
         name,
-        email,
+        loginName: name,
         created: false,
         error: "Já existe um treinador com este nome",
       });
@@ -111,12 +98,14 @@ export async function createSchoolCoachesWithEmails(
     }
 
     try {
-      const result = await createCoachWithAccess(name, email, "");
+      const email = usernameToAuthEmail(name);
+      // Telefone interno vazio: a API atual exige um valor truthy.
+      const result = await createCoachWithAccess(name, email, "-");
 
       if (!result.hasAccess) {
         results.push({
           name,
-          email,
+          loginName: name,
           created: false,
           error: result.error || "Não foi possível criar o acesso",
         });
@@ -125,14 +114,14 @@ export async function createSchoolCoachesWithEmails(
 
       results.push({
         name,
-        email: result.email || email,
+        loginName: name,
         created: true,
         password: result.password,
       });
     } catch (error) {
       results.push({
         name,
-        email,
+        loginName: name,
         created: false,
         error:
           error instanceof Error ? error.message : "Erro ao criar treinador",

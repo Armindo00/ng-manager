@@ -27,6 +27,7 @@ import {
   SelectionListItem,
 } from "../components/MasterDetailLayout";
 import { getEmailValidationMessage, normalizeEmail } from "../utils/email";
+import { usernameToAuthEmail } from "../utils/usernameAuth";
 
 function Coaches() {
   const [coaches, setCoaches] = useState<Coach[]>([]);
@@ -46,7 +47,6 @@ function Coaches() {
 
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
-  const [email, setEmail] = useState("");
 
   useEffect(() => {
     loadCoaches();
@@ -81,7 +81,6 @@ function Coaches() {
   function clearCreateForm() {
     setName("");
     setPhone("");
-    setEmail("");
     setCreatingNew(false);
   }
 
@@ -92,21 +91,20 @@ function Coaches() {
   }
 
   async function createCoach() {
-    if (!name || !phone || !email) {
-      toast.error("Preenche nome, telefone e email.");
+    if (!name.trim()) {
+      toast.error("Preenche o nome do treinador.");
       return;
     }
 
-    const normalizedEmail = normalizeEmail(email);
-    const emailError = getEmailValidationMessage(normalizedEmail);
-
-    if (emailError) {
-      toast.error(emailError);
-      return;
-    }
+    const coachName = name.trim();
+    const normalizedEmail = usernameToAuthEmail(coachName);
 
     try {
-      const result = await createCoachWithAccess(name.trim(), normalizedEmail, phone.trim());
+      const result = await createCoachWithAccess(
+        coachName,
+        normalizedEmail,
+        phone.trim() || "-"
+      );
 
       if (!result.hasAccess) {
         toast.error("Não foi possível criar o treinador com acesso.");
@@ -115,8 +113,8 @@ function Coaches() {
 
       if (result.password) {
         setAccessModal({
-          coachName: name.trim(),
-          email: result.email || normalizedEmail,
+          coachName,
+          email: coachName,
           password: result.password,
           title: "Acesso do treinador criado",
         });
@@ -324,30 +322,17 @@ function Coaches() {
             creatingNew ? (
               <DetailPanel title="Novo treinador">
                 <div className="form-fields-grid">
-                  <FormField label="Nome do treinador">
+                  <FormField label="Nome do treinador (também é o login)">
                     <input
-                      placeholder="Ex: João Silva"
+                      placeholder="Ex: Mindo"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                     />
                   </FormField>
-                  <FormField label="Telefone">
-                    <input
-                      type="tel"
-                      placeholder="Ex: 912345678"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                    />
-                  </FormField>
-                  <FormField label="Email de acesso">
-                    <input
-                      type="email"
-                      placeholder="nome@email.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                    />
-                  </FormField>
                 </div>
+                <p className="muted">
+                  O login será este nome + a password temporária gerada.
+                </p>
                 <div className="form-fields-actions">
                   <button className="primary-btn" onClick={createCoach}>
                     Criar treinador
