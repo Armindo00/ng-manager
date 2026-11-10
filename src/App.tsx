@@ -4,12 +4,6 @@ import toast from "react-hot-toast";
 import type { User } from "./types";
 
 import Login from "./pages/Login";
-import StudentArea from "./pages/StudentArea";
-import StudentDashboard from "./pages/StudentDashboard";
-import StudentEvaluations from "./pages/StudentEvaluations";
-import StudentCalendar from "./pages/StudentCalendar";
-import SkillCard from "./pages/SkillCard";
-import Payments from "./pages/Payments";
 import CoachArea from "./pages/CoachArea";
 import CoachDashboard from "./pages/CoachDashboard";
 import AdminArea from "./pages/AdminArea";
@@ -24,7 +18,6 @@ import AdminVans from "./pages/AdminVans";
 import AdminCompensations from "./pages/AdminCompensations";
 import AdminEvaluations from "./pages/AdminEvaluations";
 import Sidebar from "./components/Sidebar";
-import Evaluations from "./pages/Evaluations";
 import Topbar from "./components/Topbar";
 
 import { supabase } from "./services/supabase";
@@ -48,21 +41,11 @@ type AdminSection =
   | "evaluations"
   | "payments";
 
-type CoachSection = "dashboard" | "lessons" | "evaluations";
-
-type StudentSection =
-  | "dashboard"
-  | "lessons"
-  | "evaluations"
-  | "skillcard"
-  | "calendar"
-  | "payments";
+type CoachSection = "dashboard" | "lessons";
 
 function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [coachSection, setCoachSection] = useState<CoachSection>("dashboard");
-  const [studentSection, setStudentSection] =
-    useState<StudentSection>("dashboard");
   const [activeSection, setActiveSection] =
     useState<AdminSection>("dashboard");
 
@@ -91,6 +74,15 @@ function App() {
             await supabase.auth.signOut();
             setCurrentUser(null);
             toast.error("Conta bloqueada. Contacta a escola.");
+            return;
+          }
+
+          if (appUser.role === "student") {
+            await supabase.auth.signOut();
+            setCurrentUser(null);
+            toast.error(
+              "O acesso de alunos está desativado. Contacta a escola."
+            );
             return;
           }
 
@@ -127,6 +119,13 @@ function App() {
         return;
       }
 
+      if (appUser.role === "student") {
+        await supabase.auth.signOut();
+        setCurrentUser(null);
+        toast.error("O acesso de alunos está desativado. Contacta a escola.");
+        return;
+      }
+
       setCurrentUser(appUser);
     } catch (sessionError) {
       console.error(sessionError);
@@ -147,8 +146,6 @@ function App() {
       setActiveSection(section as AdminSection);
     } else if (currentUser.role === "coach") {
       setCoachSection(section as CoachSection);
-    } else if (currentUser.role === "student") {
-      setStudentSection(section as StudentSection);
     }
   }
 
@@ -156,8 +153,7 @@ function App() {
     if (!currentUser) return "dashboard";
 
     if (currentUser.role === "admin") return activeSection;
-    if (currentUser.role === "coach") return coachSection;
-    return studentSection;
+    return coachSection;
   }
 
   if (!currentUser) {
@@ -197,34 +193,6 @@ function App() {
         <main className="main-content">
           <Topbar user={currentUser} />
 
-          {currentUser.role === "student" && (
-            <>
-              {studentSection === "dashboard" && (
-                <StudentDashboard user={currentUser} />
-              )}
-
-              {studentSection === "lessons" && (
-                <StudentArea user={currentUser} />
-              )}
-
-              {studentSection === "evaluations" && (
-                <StudentEvaluations user={currentUser} />
-              )}
-
-              {studentSection === "skillcard" && (
-                <SkillCard user={currentUser} />
-              )}
-
-              {studentSection === "calendar" && (
-                <StudentCalendar user={currentUser} />
-              )}
-
-              {studentSection === "payments" && (
-                <Payments user={currentUser} />
-              )}
-            </>
-          )}
-
           {currentUser.role === "coach" && (
             <>
               {coachSection === "dashboard" && (
@@ -233,10 +201,6 @@ function App() {
 
               {coachSection === "lessons" && (
                 <CoachArea user={currentUser} />
-              )}
-
-              {coachSection === "evaluations" && (
-                <Evaluations user={currentUser} />
               )}
             </>
           )}

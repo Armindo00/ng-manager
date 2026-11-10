@@ -1,13 +1,12 @@
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import type { Lesson, MonthlyEvaluation, Student, User } from "../types";
+import type { Lesson, Student, User } from "../types";
 import { getStudents } from "../services/studentsService";
 import { getLessons } from "../services/lessonsService";
-import { getEvaluations } from "../services/evaluationsService";
 import Modal from "../components/Modal";
-import LessonDetailCard from "../components/LessonDetailCard";
-import CoachStudentResponsesPanel from "../components/CoachStudentResponsesPanel";
-import { getTodayDate, getCurrentMonthYear } from "../utils/dateUtils";
+import CoachAttendancePanel from "../components/CoachAttendancePanel";
+import { getTodayDate } from "../utils/dateUtils";
+import { canMarkAttendance } from "../utils/lessonWorkflow";
 
 type Props = {
   user: User;
@@ -16,7 +15,6 @@ type Props = {
 function CoachDashboard({ user }: Props) {
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
-  const [evaluations, setEvaluations] = useState<MonthlyEvaluation[]>([]);
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -28,19 +26,26 @@ function CoachDashboard({ user }: Props) {
     try {
       setLoading(true);
 
-      const [lessonsData, studentsData, evaluationsData] = await Promise.all([
+      const [lessonsData, studentsData] = await Promise.all([
         getLessons(),
         getStudents(),
-        getEvaluations(),
       ]);
 
-      const coachLessons = lessonsData.filter(
-        (lesson) => lesson.coachId === user.id
-      );
+      const coachLessons = lessonsData
+        .filter((lesson) => lesson.coachId === user.id)
+        .sort((a, b) =>
+          `${a.date} ${a.time || ""}`.localeCompare(
+            `${b.date} ${b.time || ""}`
+          )
+        );
 
       setLessons(coachLessons);
       setStudents(studentsData);
-      setEvaluations(evaluationsData);
+
+      setSelectedLesson((current) => {
+        if (!current) return null;
+        return coachLessons.find((lesson) => lesson.id === current.id) ?? null;
+      });
     } catch (error) {
       console.error(error);
       toast.error("Erro ao carregar o dashboard do treinador.");
@@ -51,99 +56,46 @@ function CoachDashboard({ user }: Props) {
 
   const today = getTodayDate();
 
-  const sortedLessons = [...lessons].sort((a, b) =>
-    `${a.date} ${a.time || ""}`.localeCompare(
-      `${b.date} ${b.time || ""}`
-    )
-  );
+  const activeLessons = lessons.filter((lesson) => lesson.status !== "draft");
 
-  const todayLessons = sortedLessons.filter(
+  const todayLessons = activeLessons.filter(
     (lesson) => lesson.date === today && lesson.status !== "finished"
   );
 
-  const upcomingLessons = sortedLessons
-    .filter(
-      (lesson) =>
-        lesson.date > today && lesson.status !== "finished"
-    )
+  const upcomingLessons = activeLessons
+    .filter((lesson) => lesson.date > today && lesson.status !== "finished")
     .slice(0, 6);
 
-  const draftLessons = lessons.filter(
-    (lesson) => lesson.status === "draft"
-  );
-
-  const publishedLessons = lessons.filter(
-    (lesson) => lesson.status === "published"
-  );
-
-  const { month: currentMonth, year: currentYear } = getCurrentMonthYear();
-
-  const evaluatedStudentIds = evaluations
-    .filter(
-      (evaluation) =>
-        evaluation.month === currentMonth &&
-        evaluation.year === currentYear &&
-        evaluation.coachId === user.id
-    )
-    .map((evaluation) => evaluation.studentId);
-
-  const coachStudentIds = new Set(
-    lessons.flatMap((lesson) => lesson.bookedStudentIds)
-  );
-
-  const coachStudents = students.filter((student) =>
-    coachStudentIds.has(student.id)
-  );
-
-  const pendingEvaluations = coachStudents.filter(
-    (student) => !evaluatedStudentIds.includes(student.id)
-  );
-
-  function getResponseCounts(lesson: Lesson) {
-    const responses = lesson.responses || [];
-
-    const confirmed = responses.filter(
-      (response) => response.status === "confirmed"
-    ).length;
-
-    const declined = responses.filter(
-      (response) => response.status === "declined"
-    ).length;
-
-    const pending = Math.max(
-      lesson.bookedStudentIds.length - confirmed - declined,
-      0
-    );
-
-    return {
-      confirmed,
-      declined,
-      pending,
-    };
-  }
+  const pendingAttendance = activeLessons.filter((lesson) => {
+    if (!canMarkAttendance(lesson) || lesson.status === "finished") return false;
+    return lesson.presentStudentIds.length < lesson.bookedStudentIds.length;
+  }).length;
 
   function renderLessonCard(lesson: Lesson) {
-    const counts = getResponseCounts(lesson);
+    const presentCount = lesson.presentStudentIds.filter((id) =>
+      lesson.bookedStudentIds.includes(id)
+    ).length;
 
     return (
       <article className="coach-dashboard-lesson" key={lesson.id}>
         <div className="coach-lesson-main">
           <div>
             <span className={`coach-lesson-status status-${lesson.status}`}>
-              {lesson.status === "draft" && "Rascunho"}
-              {lesson.status === "published" && "Publicado"}
+              {lesson.status === "published" && "Agendado"}
               {lesson.status === "finished" && "Concluído"}
             </span>
 
-            <h3>{lesson.groupName || "Treino extra"}</h3>
+            <h3>{lesson.groupName || "Treino"}</h3>
 
             <p>
-              📅 {lesson.date}
-              {lesson.time ? ` · Chegada à praia: ${lesson.time}` : ""}
+              {lesson.date}
+              {lesson.time ? ` · ${lesson.time}` : ""}
             </p>
 
-            <p>🏖️ {lesson.beach || "Praia por definir"}</p>
-            <p>🚐 {lesson.van || "Carrinha por definir"}</p>
+            <p>{lesson.beach || "Praia por definir"}</p>
+            <p>
+              Presenças: {presentCount}/{lesson.bookedStudentIds.length}
+            </p>
           </div>
 
           <button
@@ -151,37 +103,9 @@ function CoachDashboard({ user }: Props) {
             className="primary-btn coach-open-lesson-btn"
             onClick={() => setSelectedLesson(lesson)}
           >
-            Abrir treino
+            Registar presenças
           </button>
         </div>
-
-        <div className="coach-lesson-summary">
-          <div>
-            <span>Alunos</span>
-            <strong>{lesson.bookedStudentIds.length}</strong>
-          </div>
-
-          <div>
-            <span>Confirmados</span>
-            <strong>{counts.confirmed}</strong>
-          </div>
-
-          <div>
-            <span>Não vão</span>
-            <strong>{counts.declined}</strong>
-          </div>
-
-          <div>
-            <span>Sem resposta</span>
-            <strong>{counts.pending}</strong>
-          </div>
-        </div>
-
-        <CoachStudentResponsesPanel
-          lesson={lesson}
-          students={students}
-          compact
-        />
       </article>
     );
   }
@@ -195,7 +119,7 @@ function CoachDashboard({ user }: Props) {
       <div className="coach-dashboard-heading">
         <div>
           <span className="coach-dashboard-kicker">Área do treinador</span>
-          <h1 className="page-title">Olá, {user.name} 👋</h1>
+          <h1 className="page-title">Olá, {user.name}</h1>
         </div>
 
         <p>
@@ -206,25 +130,18 @@ function CoachDashboard({ user }: Props) {
 
       <div className="stats-grid">
         <div className="card stat-card">
-          <span className="stat-label">🏄 Treinos hoje</span>
+          <span className="stat-label">Treinos hoje</span>
           <strong className="stat-number">{todayLessons.length}</strong>
         </div>
 
         <div className="card stat-card">
-          <span className="stat-label">📝 Por publicar</span>
-          <strong className="stat-number">{draftLessons.length}</strong>
+          <span className="stat-label">Próximos treinos</span>
+          <strong className="stat-number">{upcomingLessons.length}</strong>
         </div>
 
         <div className="card stat-card">
-          <span className="stat-label">📢 Publicados</span>
-          <strong className="stat-number">{publishedLessons.length}</strong>
-        </div>
-
-        <div className="card stat-card">
-          <span className="stat-label">⭐ Avaliações pendentes</span>
-          <strong className="stat-number">
-            {pendingEvaluations.length}
-          </strong>
+          <span className="stat-label">Presenças por marcar</span>
+          <strong className="stat-number">{pendingAttendance}</strong>
         </div>
       </div>
 
@@ -234,7 +151,6 @@ function CoachDashboard({ user }: Props) {
             <span>Agenda</span>
             <h2>Treinos de hoje</h2>
           </div>
-
           <strong>{todayLessons.length}</strong>
         </div>
 
@@ -253,7 +169,6 @@ function CoachDashboard({ user }: Props) {
             <span>Agenda</span>
             <h2>Próximos treinos</h2>
           </div>
-
           <strong>{upcomingLessons.length}</strong>
         </div>
 
@@ -266,49 +181,15 @@ function CoachDashboard({ user }: Props) {
         )}
       </section>
 
-      <section className="card section-card">
-        <div className="coach-section-title">
-          <div>
-            <span>Avaliações mensais</span>
-            <h2>Alunos por avaliar</h2>
-          </div>
-
-          <strong>{pendingEvaluations.length}</strong>
-        </div>
-
-        {pendingEvaluations.length === 0 ? (
-          <p className="muted">
-            Todas as avaliações deste mês estão concluídas.
-          </p>
-        ) : (
-          <div className="coach-pending-evaluations">
-            {pendingEvaluations.map((student) => (
-              <div key={student.id}>
-                <strong>{student.name}</strong>
-                <span>{student.level || "Nível não definido"}</span>
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
-
       {selectedLesson && (
         <Modal
-          title="Ficha do treino"
-          onClose={() => {
-            setSelectedLesson(null);
-            loadData();
-          }}
+          title={`${selectedLesson.groupName || "Treino"}${selectedLesson.time ? ` · ${selectedLesson.time}` : ""}`}
+          onClose={() => setSelectedLesson(null)}
         >
-          <LessonDetailCard
+          <CoachAttendancePanel
             lesson={selectedLesson}
             students={students}
-            readOnlyVan
-            coachMode
-            onClose={() => {
-              setSelectedLesson(null);
-              loadData();
-            }}
+            onSaved={loadData}
           />
         </Modal>
       )}

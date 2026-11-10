@@ -13,72 +13,100 @@ function CoachAttendancePanel({ lesson, students, onSaved }: Props) {
   const bookedStudents = students.filter((student) =>
     lesson.bookedStudentIds.includes(student.id)
   );
+  const canEdit = canMarkAttendance(lesson) && lesson.status !== "draft";
 
-  if (!canMarkAttendance(lesson)) {
-    return (
-      <div className="coach-attendance-locked">
-        <p className="muted">
-          As presenças só podem ser marcadas <strong>no dia do treino</strong> ou
-          depois ({lesson.date}).
-        </p>
-      </div>
-    );
-  }
+  async function setAttendance(studentId: string, present: boolean) {
+    if (!canEdit) return;
 
-  async function togglePresence(studentId: string) {
     const isPresent = lesson.presentStudentIds.includes(studentId);
+    if (present === isPresent) return;
 
     try {
       await updateLesson({
         ...lesson,
-        presentStudentIds: isPresent
-          ? lesson.presentStudentIds.filter((id) => id !== studentId)
-          : [...lesson.presentStudentIds, studentId],
+        presentStudentIds: present
+          ? [...lesson.presentStudentIds, studentId]
+          : lesson.presentStudentIds.filter((id) => id !== studentId),
       });
 
-      toast.success(isPresent ? "Presença removida." : "Presença marcada.");
+      toast.success(present ? "Presença marcada." : "Falta marcada.");
       onSaved();
     } catch (error) {
       console.error(error);
-      toast.error("Erro ao marcar presença.");
+      toast.error("Erro ao atualizar presença.");
     }
   }
 
   if (bookedStudents.length === 0) {
-    return <p className="muted">Sem alunos inscritos neste treino.</p>;
+    return <p className="muted">Sem alunos neste treino.</p>;
   }
+
+  const presentCount = bookedStudents.filter((student) =>
+    lesson.presentStudentIds.includes(student.id)
+  ).length;
 
   return (
     <div className="coach-attendance-panel">
-      <p className="muted">
-        Marca presenças durante ou depois do treino.
-      </p>
+      {!canEdit ? (
+        <div className="coach-attendance-locked">
+          <p className="muted">
+            As presenças só podem ser marcadas <strong>no dia do treino</strong>{" "}
+            ou depois ({lesson.date}).
+          </p>
+        </div>
+      ) : (
+        <p className="muted">
+          Presentes: {presentCount}/{bookedStudents.length}. Marca quem veio;
+          os restantes ficam como falta.
+        </p>
+      )}
 
       <div className="lesson-students-list">
         {bookedStudents.map((student) => {
           const isPresent = lesson.presentStudentIds.includes(student.id);
-          const response = lesson.responses?.find(
-            (item) => item.studentId === student.id
-          );
 
           return (
-            <button
-              type="button"
-              className={isPresent ? "lesson-student-row present" : "lesson-student-row"}
+            <div
+              className={
+                isPresent
+                  ? "lesson-student-row present"
+                  : "lesson-student-row absent"
+              }
               key={student.id}
-              onClick={() => togglePresence(student.id)}
             >
-              <span>
-                {student.name}
-                <small className="student-response-status">
-                  {response?.status === "confirmed" && "Confirmou"}
-                  {response?.status === "declined" && "Não vai"}
-                  {!response && "Sem resposta"}
-                </small>
-              </span>
+              <span className="lesson-student-name">{student.name}</span>
 
-              <strong>{isPresent ? "✅ Presente" : "⬜ Ausente"}</strong>
-            </button>
+              {canEdit ? (
+                <div className="attendance-actions">
+                  <button
+                    type="button"
+                    className={
+                      isPresent
+                        ? "attendance-btn present active"
+                        : "attendance-btn present"
+                    }
+                    onClick={() => setAttendance(student.id, true)}
+                  >
+                    Presente
+                  </button>
+                  <button
+                    type="button"
+                    className={
+                      !isPresent
+                        ? "attendance-btn absent active"
+                        : "attendance-btn absent"
+                    }
+                    onClick={() => setAttendance(student.id, false)}
+                  >
+                    Falta
+                  </button>
+                </div>
+              ) : (
+                <strong className="attendance-readonly">
+                  {isPresent ? "Presente" : "Por marcar"}
+                </strong>
+              )}
+            </div>
           );
         })}
       </div>
