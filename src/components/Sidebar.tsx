@@ -13,8 +13,6 @@ import {
   CalendarClock,
   CalendarDays,
   Star,
-  Award,
-  CalendarRange,
   LogOut,
   Menu,
   X,
@@ -143,19 +141,7 @@ function Sidebar({ user, activeSection, onChangeSection, onLogout }: Props) {
           {user.role === "coach" && (
             <nav className="sidebar-nav">
               {item(LayoutDashboard, "Dashboard", "dashboard")}
-              {item(CalendarDays, "Os meus treinos", "lessons")}
-              {item(Star, "Avaliar alunos", "evaluations")}
-            </nav>
-          )}
-
-          {user.role === "student" && (
-            <nav className="sidebar-nav">
-              {item(LayoutDashboard, "Dashboard", "dashboard")}
-              {item(CalendarDays, "Os meus treinos", "lessons")}
-              {item(Star, "As minhas avaliações", "evaluations")}
-              {item(Award, "Skill Card", "skillcard")}
-              {item(CalendarRange, "Calendário", "calendar")}
-              {item(CreditCard, "Pagamentos", "payments")}
+              {item(CalendarDays, "Presenças", "lessons")}
             </nav>
           )}
         </div>

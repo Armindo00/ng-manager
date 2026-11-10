@@ -2,8 +2,8 @@ import type { User } from "../types";
 import { getLessons } from "./lessonsService";
 import { getStudents } from "./studentsService";
 import { getPayments } from "./paymentsService";
-import { getEvaluations } from "./evaluationsService";
-import { getTodayDate, getCurrentMonthYear } from "../utils/dateUtils";
+import { getTodayDate } from "../utils/dateUtils";
+import { canMarkAttendance } from "../utils/lessonWorkflow";
 
 export type Notification = {
   id: string;
@@ -51,29 +51,13 @@ export async function getNotifications(user: User): Promise<Notification[]> {
   }
 
   if (user.role === "coach") {
-    const [lessons, evaluations, students] = await Promise.all([
-      getLessons(),
-      getEvaluations(),
-      getStudents(),
-    ]);
+    const lessons = await getLessons();
 
     const coachLessons = lessons.filter(
-      (lesson) => lesson.coachId === user.id
+      (lesson) => lesson.coachId === user.id && lesson.status !== "draft"
     );
 
-    const draftLessons = coachLessons.filter(
-      (lesson) => lesson.status === "draft"
-    ).length;
-
-    if (draftLessons > 0) {
-      notifications.push({
-        id: "coach-draft-lessons",
-        text: `${draftLessons} treino(s) por publicar`,
-      });
-    }
-
     const today = getTodayDate();
-    const { month: currentMonth, year: currentYear } = getCurrentMonthYear();
     const todayLessons = coachLessons.filter(
       (lesson) => lesson.date === today && lesson.status !== "finished"
     ).length;
@@ -85,69 +69,18 @@ export async function getNotifications(user: User): Promise<Notification[]> {
       });
     }
 
-    const evaluationsThisMonth = evaluations.filter(
-      (evaluation) =>
-        evaluation.month === currentMonth &&
-        evaluation.year === currentYear &&
-        evaluation.coachId === user.id
-    );
+    const pendingAttendance = coachLessons.filter((lesson) => {
+      if (!canMarkAttendance(lesson) || lesson.status === "finished") {
+        return false;
+      }
 
-    const coachStudentIds = new Set(
-      coachLessons.flatMap((lesson) => lesson.bookedStudentIds)
-    );
+      return lesson.presentStudentIds.length < lesson.bookedStudentIds.length;
+    }).length;
 
-    const coachStudents = students.filter((student) =>
-      coachStudentIds.has(student.id)
-    );
-
-    const pendingEvaluations = coachStudents.filter(
-      (student) =>
-        !evaluationsThisMonth.some(
-          (evaluation) => evaluation.studentId === student.id
-        )
-    ).length;
-
-    if (pendingEvaluations > 0) {
+    if (pendingAttendance > 0) {
       notifications.push({
-        id: "coach-pending-evaluations",
-        text: `${pendingEvaluations} avaliação(ões) por fazer este mês`,
-      });
-    }
-  }
-
-  if (user.role === "student" && user.studentId) {
-    const [lessons, payments] = await Promise.all([
-      getLessons(),
-      getPayments(),
-    ]);
-
-    const today = getTodayDate();
-    const studentId = user.studentId;
-
-    const pendingLessons = lessons.filter(
-      (lesson) =>
-        lesson.status === "published" &&
-        lesson.date >= today &&
-        lesson.bookedStudentIds.includes(studentId) &&
-        !lesson.responses?.some((response) => response.studentId === studentId)
-    ).length;
-
-    if (pendingLessons > 0) {
-      notifications.push({
-        id: "student-pending-lessons",
-        text: `${pendingLessons} treino(s) por responder`,
-      });
-    }
-
-    const pendingPayments = payments.filter(
-      (payment) =>
-        payment.studentId === studentId && payment.status === "pending"
-    ).length;
-
-    if (pendingPayments > 0) {
-      notifications.push({
-        id: "student-pending-payments",
-        text: `${pendingPayments} pagamento(s) pendente(s)`,
+        id: "coach-pending-attendance",
+        text: `${pendingAttendance} treino(s) com presenças por marcar`,
       });
     }
   }

@@ -45,6 +45,14 @@ function Login({ onLogin }: Props) {
           return;
         }
 
+        if (appUser.role === "student") {
+          await supabase.auth.signOut();
+          toast.error(
+            "O acesso de alunos está desativado. Contacta a escola."
+          );
+          return;
+        }
+
         onLogin(appUser);
       } catch (loginError) {
         console.error(loginError);
@@ -70,8 +78,8 @@ function Login({ onLogin }: Props) {
           <p className="login-kicker">NextGeneration Surf School</p>
           <h1>NG Manager</h1>
           <p className="login-brand-text">
-            Plataforma de gestão para alunos, treinadores e administração da
-            escola de surf.
+            App para treinadores e administração registarem presenças e faltas
+            dos treinos.
           </p>
         </div>
       </div>

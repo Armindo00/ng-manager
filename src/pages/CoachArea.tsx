@@ -3,8 +3,6 @@ import toast from "react-hot-toast";
 import type { Lesson, Student, User } from "../types";
 import { getStudents } from "../services/studentsService";
 import { getLessons, updateLesson } from "../services/lessonsService";
-import CoachLessonSetup from "../components/CoachLessonSetup";
-import CoachStudentResponsesPanel from "../components/CoachStudentResponsesPanel";
 import CoachAttendancePanel from "../components/CoachAttendancePanel";
 import LessonsCalendar from "../components/LessonsCalendar";
 import {
@@ -89,15 +87,22 @@ function CoachArea({ user }: Props) {
     selectedDayLessons.find((lesson) => lesson.id === selectedLessonId) ?? null;
 
   function renderLessonDetail(lesson: Lesson) {
+    const presentCount = lesson.presentStudentIds.filter((id) =>
+      lesson.bookedStudentIds.includes(id)
+    ).length;
+
     return (
       <div className="coach-lesson-card">
         <div className="coach-lesson-header">
           <div>
-            <p>🏖️ {lesson.beach || "Praia por definir"}</p>
-            <p>🚐 Carrinha: {lesson.van}</p>
+            <p>{lesson.beach || "Praia por definir"}</p>
+            {lesson.van ? <p>Carrinha: {lesson.van}</p> : null}
             <p>
               Estado:{" "}
-              {lesson.status === "published" ? "Publicado" : "Concluído"}
+              {lesson.status === "published" ? "Agendado" : "Concluído"}
+            </p>
+            <p>
+              Presenças: {presentCount}/{lesson.bookedStudentIds.length}
             </p>
           </div>
 
@@ -111,44 +116,17 @@ function CoachArea({ user }: Props) {
           )}
         </div>
 
-        {lesson.status !== "finished" && (
-          <>
-            <section className="coach-lesson-section">
-              <h4>1. Respostas dos alunos</h4>
-              <CoachStudentResponsesPanel lesson={lesson} students={students} />
-            </section>
-
-            <section className="coach-lesson-section">
-              <h4>2. Enviar plano (antes do treino)</h4>
-              <CoachLessonSetup lesson={lesson} onSaved={loadData} />
-
-              <div className="coach-planned-pickups">
-                <strong>Pickups enviados</strong>
-                {(lesson.coachPickups || []).length === 0 ? (
-                  <p className="muted">Ainda não enviaste pickups.</p>
-                ) : (
-                  (lesson.coachPickups || []).map((pickup) => (
-                    <p key={pickup.id}>
-                      {pickup.time} — {pickup.location}
-                    </p>
-                  ))
-                )}
-              </div>
-            </section>
-
-            <section className="coach-lesson-section">
-              <h4>
-                3. Presenças{" "}
-                {canMarkAttendance(lesson) ? "(disponível)" : "(bloqueado)"}
-              </h4>
-              <CoachAttendancePanel
-                lesson={lesson}
-                students={students}
-                onSaved={loadData}
-              />
-            </section>
-          </>
-        )}
+        <section className="coach-lesson-section">
+          <h4>
+            Presenças e faltas
+            {!canMarkAttendance(lesson) ? " (ainda não disponível)" : ""}
+          </h4>
+          <CoachAttendancePanel
+            lesson={lesson}
+            students={students}
+            onSaved={loadData}
+          />
+        </section>
       </div>
     );
   }
@@ -163,8 +141,8 @@ function CoachArea({ user }: Props) {
         <>
           <div className="workflow-help">
             <p>
-              Escolhe o dia no calendário, depois o treino na lista, e gere o
-              plano e as presenças no painel à direita.
+              Escolhe o dia, abre o treino e regista as presenças e faltas dos
+              alunos.
             </p>
           </div>
 
@@ -193,7 +171,7 @@ function CoachArea({ user }: Props) {
                   onClick={() => setSelectedLessonId(lesson.id)}
                   title={`${lesson.groupName || "Treino"}${lesson.time ? ` · ${lesson.time}` : ""}`}
                   subtitle={lesson.beach || "Praia por definir"}
-                  meta={lesson.status === "finished" ? "Concluído" : "Publicado"}
+                  meta={lesson.status === "finished" ? "Concluído" : "Agendado"}
                 />
               ))}
             </SelectionList>

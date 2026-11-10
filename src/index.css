@@ -1848,6 +1848,54 @@ textarea:focus {
   background: #f0fdf4;
 }
 
+.lesson-student-row.absent {
+  border-color: #fecaca;
+  background: #fff7f7;
+}
+
+.lesson-student-name {
+  font-weight: 600;
+}
+
+.attendance-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.attendance-btn {
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #334155;
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.attendance-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.attendance-btn.present.active {
+  border-color: #16a34a;
+  background: #dcfce7;
+  color: #166534;
+}
+
+.attendance-btn.absent.active {
+  border-color: #dc2626;
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.attendance-readonly {
+  font-size: 13px;
+  color: #64748b;
+}
+
 .lesson-section textarea {
   width: 100%;
   margin: 0 0 12px;
