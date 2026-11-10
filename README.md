@@ -5,10 +5,11 @@ App interna da **NextGeneration Surf School** para treinadores e administração
 ## Fluxo principal
 
 1. **Hoje** — o treinador escolhe o grupo fixo que deu, regista a sessão e marca presenças (pode indicar 2.º treinador).
-2. **Grupos fixos** — escala semanal completa (`src/data/fixedTrainings.ts`).
+2. **Grupos fixos** — escala semanal editável (Admin → Grupos fixos).
 3. **Os meus treinos** — totais mensais (água + videoanálise).
 4. **Admin → Calendário** — mostra grupos fixos planeados + treinos já registados.
 5. **Admin → Treinos / mês** — totais por treinador.
+6. **Admin → Inventário** — pranchas/fatos por tamanho e estado.
 
 ## Setup
 

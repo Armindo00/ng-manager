@@ -19,6 +19,7 @@ import AdminCompensations from "./pages/AdminCompensations";
 import AdminEvaluations from "./pages/AdminEvaluations";
 import AdminSchoolSetup from "./pages/AdminSchoolSetup";
 import AdminCoachActivity from "./pages/AdminCoachActivity";
+import AdminFixedTrainings from "./pages/AdminFixedTrainings";
 import CoachActivity from "./pages/CoachActivity";
 import Sidebar from "./components/Sidebar";
 import Topbar from "./components/Topbar";
@@ -40,6 +41,7 @@ type AdminSection =
   | "students"
   | "coaches"
   | "groups"
+  | "fixed-trainings"
   | "recurring"
   | "lessons"
   | "inventory"
@@ -245,6 +247,9 @@ function App() {
 
           {currentUser.role === "admin" &&
             activeSection === "groups" && <Groups />}
+
+          {currentUser.role === "admin" &&
+            activeSection === "fixed-trainings" && <AdminFixedTrainings />}
 
           {currentUser.role === "admin" &&
             activeSection === "recurring" && <RecurringTrainings />}

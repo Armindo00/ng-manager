@@ -1,4 +1,4 @@
-import { fixedTrainings, type FixedTraining } from "../data/fixedTrainings";
+import type { FixedTraining } from "../data/fixedTrainings";
 import type { Lesson } from "../types";
 import {
   buildMonthDate,
@@ -32,8 +32,11 @@ function daysInMonth(year: number, month: number) {
   return new Date(Date.UTC(year, month, 0, 12)).getUTCDate();
 }
 
-export function getFixedTrainingsForWeekday(weekday: WeekdayKey) {
-  return fixedTrainings.filter((training) => training.weekday === weekday);
+export function getFixedTrainingsForWeekday(
+  weekday: WeekdayKey,
+  trainings: FixedTraining[]
+) {
+  return trainings.filter((training) => training.weekday === weekday);
 }
 
 export function findRegisteredLessonForGroup(
@@ -53,9 +56,16 @@ export function buildMonthCalendarEntries(options: {
   year: number;
   month: number;
   lessons: Lesson[];
+  fixedTrainings: FixedTraining[];
   includePlanned?: boolean;
 }) {
-  const { year, month, lessons, includePlanned = true } = options;
+  const {
+    year,
+    month,
+    lessons,
+    fixedTrainings,
+    includePlanned = true,
+  } = options;
   const entries: CalendarEntry[] = [];
   const coveredKeys = new Set<string>();
   const totalDays = daysInMonth(year, month);
@@ -64,7 +74,7 @@ export function buildMonthCalendarEntries(options: {
     const [lessonYear, lessonMonth] = lesson.date.split("-").map(Number);
     if (lessonYear !== year || lessonMonth !== month) continue;
 
-    const entry: CalendarEntry = {
+    entries.push({
       id: lesson.id,
       date: lesson.date,
       time: lesson.time || "",
@@ -75,9 +85,7 @@ export function buildMonthCalendarEntries(options: {
       kind: "lesson",
       studentCount: lesson.bookedStudentIds.length,
       lesson,
-    };
-
-    entries.push(entry);
+    });
 
     if (lesson.groupName && lesson.status !== "draft") {
       coveredKeys.add(`${lesson.date}::${lesson.groupName}`);
@@ -89,7 +97,7 @@ export function buildMonthCalendarEntries(options: {
       const date = buildMonthDate(year, month, day);
       const weekday = getWeekdayKey(date);
 
-      for (const group of getFixedTrainingsForWeekday(weekday)) {
+      for (const group of getFixedTrainingsForWeekday(weekday, fixedTrainings)) {
         const key = `${date}::${group.title}`;
         if (coveredKeys.has(key)) continue;
 
@@ -117,22 +125,29 @@ export function buildMonthCalendarEntries(options: {
 
 export function getUpcomingCalendarEntries(
   lessons: Lesson[],
+  fixedTrainings: FixedTraining[],
   limit = 6
 ) {
   const today = getTodayDate();
   const { year, month } = getLisbonMonthParts();
-  // cover current + next month for upcoming list
   const next =
     month === 12
       ? { year: year + 1, month: 1 }
       : { year, month: month + 1 };
 
   const entries = [
-    ...buildMonthCalendarEntries({ year, month, lessons, includePlanned: true }),
+    ...buildMonthCalendarEntries({
+      year,
+      month,
+      lessons,
+      fixedTrainings,
+      includePlanned: true,
+    }),
     ...buildMonthCalendarEntries({
       year: next.year,
       month: next.month,
       lessons,
+      fixedTrainings,
       includePlanned: true,
     }),
   ].filter(

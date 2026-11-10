@@ -573,3 +573,47 @@ textarea {
 .coach-session-card-static:hover {
   border-color: #e2e8f0;
 }
+
+.coach-session-card.selected {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(3, 105, 161, 0.15);
+}
+
+.fixed-trainings-layout {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.95fr) minmax(320px, 1.05fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.fixed-trainings-day {
+  margin-bottom: 18px;
+}
+
+.fixed-trainings-day h3 {
+  margin: 0 0 10px;
+  font-size: 15px;
+}
+
+.table-scroll {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.inventory-qty-input {
+  width: 88px;
+  max-width: 100%;
+  margin: 0;
+  text-align: center;
+}
+
+.inventory-matrix-table td,
+.inventory-matrix-table th {
+  vertical-align: middle;
+}
+
+@media (max-width: 900px) {
+  .fixed-trainings-layout {
+    grid-template-columns: 1fr;
+  }
+}

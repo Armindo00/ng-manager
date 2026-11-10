@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import type { FixedTraining } from "../data/fixedTrainings";
 import type { Lesson } from "../types";
 import {
   buildMonthCalendarEntries,
@@ -14,6 +15,7 @@ import {
 
 type Props = {
   lessons: Lesson[];
+  fixedTrainings?: FixedTraining[];
   selectedDate?: string | null;
   onSelectDay: (entries: CalendarEntry[], date: string) => void;
   title?: string;
@@ -22,6 +24,7 @@ type Props = {
 
 function LessonsCalendar({
   lessons,
+  fixedTrainings = [],
   selectedDate,
   onSelectDay,
   title = "Calendário de treinos",
@@ -39,15 +42,16 @@ function LessonsCalendar({
         year: viewYear,
         month: viewMonth,
         lessons,
+        fixedTrainings,
         includePlanned,
       }),
-    [viewYear, viewMonth, lessons, includePlanned]
+    [viewYear, viewMonth, lessons, fixedTrainings, includePlanned]
   );
 
   const { cells, todayDay } = useMemo(() => {
     const firstDay = new Date(Date.UTC(viewYear, viewMonth - 1, 1, 12));
     const startOffset = (firstDay.getUTCDay() + 6) % 7;
-    const daysInMonth = new Date(
+    const daysInMonthCount = new Date(
       Date.UTC(viewYear, viewMonth, 0, 12)
     ).getUTCDate();
     const monthCells: Array<number | null> = [];
@@ -56,7 +60,7 @@ function LessonsCalendar({
       monthCells.push(null);
     }
 
-    for (let day = 1; day <= daysInMonth; day++) {
+    for (let day = 1; day <= daysInMonthCount; day++) {
       monthCells.push(day);
     }
 

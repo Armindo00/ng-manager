@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import type { Coach, Lesson, MonthlyEvaluation, Student } from "../types";
+import type { FixedTraining } from "../data/fixedTrainings";
 import { getStudents } from "../services/studentsService";
 import { getCoaches } from "../services/coachesService";
 import { getLessons } from "../services/lessonsService";
 import { getEvaluations } from "../services/evaluationsService";
+import { ensureFixedTrainingsSeeded } from "../services/fixedTrainingsService";
 import LessonsCalendar from "../components/LessonsCalendar";
 import Modal from "../components/Modal";
 import LessonDetailCard from "../components/LessonDetailCard";
@@ -22,6 +24,7 @@ type AdminSection =
   | "students"
   | "coaches"
   | "groups"
+  | "fixed-trainings"
   | "recurring"
   | "lessons"
   | "inventory"
@@ -40,6 +43,7 @@ function AdminDashboard({ onChangeSection }: Props) {
   const [coaches, setCoaches] = useState<Coach[]>([]);
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [evaluations, setEvaluations] = useState<MonthlyEvaluation[]>([]);
+  const [fixedTrainings, setFixedTrainings] = useState<FixedTraining[]>([]);
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
   const [dayEntries, setDayEntries] = useState<CalendarEntry[]>([]);
   const [selectedDate, setSelectedDate] = useState("");
@@ -52,18 +56,25 @@ function AdminDashboard({ onChangeSection }: Props) {
   async function loadData() {
     try {
       setLoading(true);
-      const [studentsData, coachesData, lessonsData, evaluationsData] =
-        await Promise.all([
-          getStudents(),
-          getCoaches(),
-          getLessons(),
-          getEvaluations(),
-        ]);
+      const [
+        studentsData,
+        coachesData,
+        lessonsData,
+        evaluationsData,
+        trainingsData,
+      ] = await Promise.all([
+        getStudents(),
+        getCoaches(),
+        getLessons(),
+        getEvaluations(),
+        ensureFixedTrainingsSeeded(),
+      ]);
 
       setStudents(studentsData);
       setCoaches(coachesData);
       setLessons(lessonsData);
       setEvaluations(evaluationsData);
+      setFixedTrainings(trainingsData);
     } catch (error) {
       console.error(error);
       toast.error("Erro ao carregar dashboard.");
@@ -105,8 +116,8 @@ function AdminDashboard({ onChangeSection }: Props) {
     totalBooked === 0 ? 0 : Math.round((totalPresent / totalBooked) * 100);
 
   const upcoming = useMemo(
-    () => getUpcomingCalendarEntries(lessons, 6),
-    [lessons]
+    () => getUpcomingCalendarEntries(lessons, fixedTrainings, 6),
+    [lessons, fixedTrainings]
   );
 
   const today = getTodayDate();
@@ -150,6 +161,14 @@ function AdminDashboard({ onChangeSection }: Props) {
             >
               <strong>Treinadores</strong>
               <span>{coaches.length} registos</span>
+            </button>
+            <button
+              type="button"
+              className="admin-module-card"
+              onClick={() => onChangeSection("fixed-trainings")}
+            >
+              <strong>Grupos fixos</strong>
+              <span>{fixedTrainings.length} grupos na escala</span>
             </button>
             <button
               type="button"
@@ -286,6 +305,7 @@ function AdminDashboard({ onChangeSection }: Props) {
           <div className="calendar-wrapper">
             <LessonsCalendar
               lessons={lessons}
+              fixedTrainings={fixedTrainings}
               onSelectDay={handleSelectCalendarDay}
               title="Calendário da escola"
             />

@@ -28,7 +28,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS inventory_items_board_unique
   WHERE item_type = 'board';
 
 CREATE UNIQUE INDEX IF NOT EXISTS inventory_items_wetsuit_unique
-  ON inventory_items (item_type, COALESCE(size, ''))
+  ON inventory_items (item_type, COALESCE(size, ''), COALESCE(condition, ''))
   WHERE item_type = 'wetsuit';
 
 CREATE UNIQUE INDEX IF NOT EXISTS inventory_items_simple_unique

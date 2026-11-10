@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import type { Coach, Lesson, Student, User } from "../types";
-import { fixedTrainings, type FixedTraining } from "../data/fixedTrainings";
+import type { FixedTraining } from "../data/fixedTrainings";
 import { getStudents } from "../services/studentsService";
 import { getCoaches } from "../services/coachesService";
 import {
@@ -9,6 +9,7 @@ import {
   getLessons,
   updateLesson,
 } from "../services/lessonsService";
+import { ensureFixedTrainingsSeeded } from "../services/fixedTrainingsService";
 import Modal from "../components/Modal";
 import CoachAttendancePanel from "../components/CoachAttendancePanel";
 import { resolveCoachId } from "../utils/coachAccess";
@@ -35,6 +36,7 @@ function CoachDashboard({ user }: Props) {
   const [saving, setSaving] = useState(false);
   const [coachId, setCoachId] = useState<string | null>(null);
   const [coaches, setCoaches] = useState<Coach[]>([]);
+  const [fixedTrainings, setFixedTrainings] = useState<FixedTraining[]>([]);
 
   const today = getTodayDate();
   const weekdayKey = getWeekdayKey(today);
@@ -47,16 +49,23 @@ function CoachDashboard({ user }: Props) {
     try {
       setLoading(true);
 
-      const [lessonsData, studentsData, coachesData, resolvedCoachId] =
-        await Promise.all([
-          getLessons(),
-          getStudents(),
-          getCoaches(),
-          resolveCoachId(user),
-        ]);
+      const [
+        lessonsData,
+        studentsData,
+        coachesData,
+        trainingsData,
+        resolvedCoachId,
+      ] = await Promise.all([
+        getLessons(),
+        getStudents(),
+        getCoaches(),
+        ensureFixedTrainingsSeeded(),
+        resolveCoachId(user),
+      ]);
 
       setCoachId(resolvedCoachId);
       setCoaches(coachesData);
+      setFixedTrainings(trainingsData);
       setLessons(
         lessonsData.sort((a, b) =>
           `${b.date} ${b.time || ""}`.localeCompare(

@@ -17,6 +17,8 @@ const APPLY_ORDER = [
   "publish-schedule.sql",
   "constraints.sql",
   "video-analysis.sql",
+  "fixed-trainings.sql",
+  "inventory-wetsuit-condition.sql",
 ];
 
 if (!token) {

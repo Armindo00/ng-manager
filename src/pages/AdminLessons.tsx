@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import type { Lesson, Student } from "../types";
+import type { FixedTraining } from "../data/fixedTrainings";
 import { getStudents } from "../services/studentsService";
 import { getLessons, deleteLesson } from "../services/lessonsService";
+import { ensureFixedTrainingsSeeded } from "../services/fixedTrainingsService";
 import LessonDetailCard from "../components/LessonDetailCard";
 import LessonsCalendar from "../components/LessonsCalendar";
 import ConfirmDialog from "../components/ConfirmDialog";
@@ -18,6 +20,7 @@ import { getTodayDate } from "../utils/dateUtils";
 function AdminLessons() {
   const [students, setStudents] = useState<Student[]>([]);
   const [lessons, setLessons] = useState<Lesson[]>([]);
+  const [fixedTrainings, setFixedTrainings] = useState<FixedTraining[]>([]);
   const [selectedDate, setSelectedDate] = useState(getTodayDate());
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
   const [lessonToDelete, setLessonToDelete] = useState<Lesson | null>(null);
@@ -30,12 +33,14 @@ function AdminLessons() {
   async function loadData() {
     try {
       setLoading(true);
-      const [studentsData, lessonsData] = await Promise.all([
+      const [studentsData, lessonsData, trainingsData] = await Promise.all([
         getStudents(),
         getLessons(),
+        ensureFixedTrainingsSeeded(),
       ]);
       setStudents(studentsData);
       setLessons(lessonsData);
+      setFixedTrainings(trainingsData);
     } catch (error) {
       console.error(error);
       toast.error("Erro ao carregar calendário.");
@@ -50,9 +55,10 @@ function AdminLessons() {
       year,
       month,
       lessons,
+      fixedTrainings,
       includePlanned: true,
     }).filter((entry) => entry.date === selectedDate);
-  }, [selectedDate, lessons]);
+  }, [selectedDate, lessons, fixedTrainings]);
 
   const monthStats = useMemo(() => {
     const [year, month] = selectedDate.split("-").map(Number);
@@ -60,6 +66,7 @@ function AdminLessons() {
       year,
       month,
       lessons,
+      fixedTrainings,
       includePlanned: true,
     });
     return {
@@ -70,7 +77,7 @@ function AdminLessons() {
       ).length,
       finished: entries.filter((entry) => entry.status === "finished").length,
     };
-  }, [selectedDate, lessons]);
+  }, [selectedDate, lessons, fixedTrainings]);
 
   function handleSelectDay(entries: CalendarEntry[], date: string) {
     setSelectedDate(date);
@@ -128,6 +135,7 @@ function AdminLessons() {
           <div className="calendar-wrapper">
             <LessonsCalendar
               lessons={lessons}
+              fixedTrainings={fixedTrainings}
               selectedDate={selectedDate}
               onSelectDay={handleSelectDay}
               title="Grupos fixos e treinos registados"
