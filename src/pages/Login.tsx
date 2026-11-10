@@ -78,8 +78,8 @@ function Login({ onLogin }: Props) {
           <p className="login-kicker">NextGeneration Surf School</p>
           <h1>NG Manager</h1>
           <p className="login-brand-text">
-            App para treinadores e administração registarem presenças e faltas
-            dos treinos.
+            Cada treinador abre o seu treino, marca presenças e faltas, e
+            adiciona alunos extra quando for preciso.
           </p>
         </div>
       </div>

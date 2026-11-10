@@ -140,8 +140,8 @@ function Sidebar({ user, activeSection, onChangeSection, onLogout }: Props) {
 
           {user.role === "coach" && (
             <nav className="sidebar-nav">
-              {item(LayoutDashboard, "Dashboard", "dashboard")}
-              {item(CalendarDays, "Presenças", "lessons")}
+              {item(LayoutDashboard, "Hoje", "dashboard")}
+              {item(CalendarDays, "Todos os treinos", "lessons")}
             </nav>
           )}
         </div>

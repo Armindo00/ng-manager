@@ -1,28 +1,25 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import type { Lesson, Student, User } from "../types";
 import { getStudents } from "../services/studentsService";
 import { getLessons, updateLesson } from "../services/lessonsService";
+import Modal from "../components/Modal";
 import CoachAttendancePanel from "../components/CoachAttendancePanel";
-import LessonsCalendar from "../components/LessonsCalendar";
-import {
-  DetailPanel,
-  DetailPanelEmpty,
-  SelectionList,
-  SelectionListItem,
-} from "../components/MasterDetailLayout";
-import { formatCalendarDayLabel, pickInitialCalendarDate } from "../utils/calendarUtils";
 import { canFinishLesson, canMarkAttendance } from "../utils/lessonWorkflow";
 
 type Props = {
   user: User;
 };
 
+function lessonTitle(lesson: Lesson) {
+  return lesson.groupName?.trim() || "Treino";
+}
+
 function CoachArea({ user }: Props) {
   const [students, setStudents] = useState<Student[]>([]);
   const [lessons, setLessons] = useState<Lesson[]>([]);
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedLessonId, setSelectedLessonId] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -39,16 +36,18 @@ function CoachArea({ user }: Props) {
       ]);
 
       const coachLessons = lessonsData
-        .filter((lesson) => lesson.coachId === user.id)
+        .filter(
+          (lesson) =>
+            lesson.coachId === user.id && lesson.status !== "draft"
+        )
         .sort((a, b) =>
-          `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`)
+          `${b.date} ${b.time || ""}`.localeCompare(
+            `${a.date} ${a.time || ""}`
+          )
         );
 
       setStudents(studentsData);
       setLessons(coachLessons);
-      setSelectedDate(
-        (current) => current ?? pickInitialCalendarDate(coachLessons)
-      );
     } catch (error) {
       console.error(error);
       toast.error("Erro ao carregar treinos.");
@@ -57,9 +56,25 @@ function CoachArea({ user }: Props) {
     }
   }
 
-  async function finishLesson(lessonId: string) {
-    const lesson = lessons.find((item) => item.id === lessonId);
-    if (!lesson || !canFinishLesson(lesson)) {
+  const selectedLesson =
+    lessons.find((lesson) => lesson.id === selectedLessonId) ?? null;
+
+  const filteredLessons = useMemo(() => {
+    const normalized = query.trim().toLowerCase();
+    if (!normalized) return lessons;
+
+    return lessons.filter((lesson) => {
+      const title = lessonTitle(lesson).toLowerCase();
+      return (
+        title.includes(normalized) ||
+        lesson.date.includes(normalized) ||
+        (lesson.beach || "").toLowerCase().includes(normalized)
+      );
+    });
+  }, [lessons, query]);
+
+  async function finishLesson(lesson: Lesson) {
+    if (!canFinishLesson(lesson)) {
       toast.error("Só podes finalizar o treino no dia do treino ou depois.");
       return;
     }
@@ -74,120 +89,108 @@ function CoachArea({ user }: Props) {
     }
   }
 
-  function handleSelectDay(dayLessons: Lesson[], date: string) {
-    setSelectedDate(date);
-    setSelectedLessonId(dayLessons[0]?.id ?? null);
-  }
-
-  const calendarLessons = lessons.filter((lesson) => lesson.status !== "draft");
-  const selectedDayLessons = selectedDate
-    ? calendarLessons.filter((lesson) => lesson.date === selectedDate)
-    : [];
-  const selectedLesson =
-    selectedDayLessons.find((lesson) => lesson.id === selectedLessonId) ?? null;
-
-  function renderLessonDetail(lesson: Lesson) {
-    const presentCount = lesson.presentStudentIds.filter((id) =>
-      lesson.bookedStudentIds.includes(id)
-    ).length;
-
-    return (
-      <div className="coach-lesson-card">
-        <div className="coach-lesson-header">
-          <div>
-            <p>{lesson.beach || "Praia por definir"}</p>
-            {lesson.van ? <p>Carrinha: {lesson.van}</p> : null}
-            <p>
-              Estado:{" "}
-              {lesson.status === "published" ? "Agendado" : "Concluído"}
-            </p>
-            <p>
-              Presenças: {presentCount}/{lesson.bookedStudentIds.length}
-            </p>
-          </div>
-
-          {canFinishLesson(lesson) && (
-            <button
-              className="primary-btn compact-btn"
-              onClick={() => finishLesson(lesson.id)}
-            >
-              Finalizar treino
-            </button>
-          )}
-        </div>
-
-        <section className="coach-lesson-section">
-          <h4>
-            Presenças e faltas
-            {!canMarkAttendance(lesson) ? " (ainda não disponível)" : ""}
-          </h4>
-          <CoachAttendancePanel
-            lesson={lesson}
-            students={students}
-            onSaved={loadData}
-          />
-        </section>
-      </div>
-    );
-  }
-
   return (
     <div>
       <h1 className="page-title">Os meus treinos</h1>
+      <p className="muted coach-area-intro">
+        Escolhe o treino (já vem com título e alunos fixos), marca presenças e
+        faltas, e adiciona um aluno extra se for preciso.
+      </p>
 
       {loading ? (
         <p className="muted">A carregar treinos...</p>
       ) : (
         <>
-          <div className="workflow-help">
-            <p>
-              Escolhe o dia, abre o treino e regista as presenças e faltas dos
-              alunos.
-            </p>
-          </div>
+          <label className="field-label coach-session-search">
+            Procurar treino
+            <input
+              placeholder="Nome do treino, data..."
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+            />
+          </label>
 
-          <div className="lessons-calendar-layout lessons-calendar-layout-triple">
-            <LessonsCalendar
-              lessons={calendarLessons}
-              selectedDate={selectedDate}
-              onSelectDay={handleSelectDay}
-              title="Calendário"
+          {filteredLessons.length === 0 ? (
+            <p className="muted">Sem treinos para mostrar.</p>
+          ) : (
+            <div className="coach-session-list">
+              {filteredLessons.map((lesson) => {
+                const presentCount = lesson.presentStudentIds.filter((id) =>
+                  lesson.bookedStudentIds.includes(id)
+                ).length;
+                const readyForAttendance = canMarkAttendance(lesson);
+
+                return (
+                  <button
+                    type="button"
+                    className="coach-session-card"
+                    key={lesson.id}
+                    onClick={() => setSelectedLessonId(lesson.id)}
+                  >
+                    <div className="coach-session-card-main">
+                      <strong>{lessonTitle(lesson)}</strong>
+                      <span>
+                        {lesson.date}
+                        {lesson.time ? ` · ${lesson.time}` : ""}
+                      </span>
+                      <span>
+                        {lesson.bookedStudentIds.length} alunos · {presentCount}{" "}
+                        presentes
+                      </span>
+                    </div>
+
+                    <span
+                      className={`coach-session-card-status status-${lesson.status}${
+                        readyForAttendance && lesson.status !== "finished"
+                          ? " ready"
+                          : ""
+                      }`}
+                    >
+                      {lesson.status === "finished"
+                        ? "Concluído"
+                        : readyForAttendance
+                          ? "Marcar"
+                          : "Agendado"}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </>
+      )}
+
+      {selectedLesson && (
+        <Modal
+          title={lessonTitle(selectedLesson)}
+          onClose={() => setSelectedLessonId(null)}
+        >
+          <div className="coach-session-modal">
+            <div className="coach-session-meta">
+              <p>
+                {selectedLesson.date}
+                {selectedLesson.time ? ` · ${selectedLesson.time}` : ""}
+              </p>
+              {selectedLesson.beach ? <p>{selectedLesson.beach}</p> : null}
+            </div>
+
+            <CoachAttendancePanel
+              lesson={selectedLesson}
+              students={students}
+              onSaved={loadData}
             />
 
-            <SelectionList
-              title={selectedDate ? formatCalendarDayLabel(selectedDate) : "Treinos do dia"}
-              empty={
-                selectedDate ? (
-                  <p className="muted">Sem treinos neste dia.</p>
-                ) : (
-                  <p className="muted">Seleciona um dia no calendário.</p>
-                )
-              }
-            >
-              {selectedDayLessons.map((lesson) => (
-                <SelectionListItem
-                  key={lesson.id}
-                  active={lesson.id === selectedLessonId}
-                  onClick={() => setSelectedLessonId(lesson.id)}
-                  title={`${lesson.groupName || "Treino"}${lesson.time ? ` · ${lesson.time}` : ""}`}
-                  subtitle={lesson.beach || "Praia por definir"}
-                  meta={lesson.status === "finished" ? "Concluído" : "Agendado"}
-                />
-              ))}
-            </SelectionList>
-
-            {selectedLesson ? (
-              <DetailPanel
-                title={`${selectedLesson.groupName || "Treino"}${selectedLesson.time ? ` · ${selectedLesson.time}` : ""}`}
-                onBack={() => setSelectedLessonId(null)}
+            {canFinishLesson(selectedLesson) && (
+              <button
+                type="button"
+                className="primary-btn"
+                onClick={() => finishLesson(selectedLesson)}
               >
-                {renderLessonDetail(selectedLesson)}
-              </DetailPanel>
-            ) : (
-              <DetailPanelEmpty message="Seleciona um treino da lista." />
+                Finalizar treino
+              </button>
             )}
           </div>
-        </>
+        </Modal>
       )}
     </div>
   );
