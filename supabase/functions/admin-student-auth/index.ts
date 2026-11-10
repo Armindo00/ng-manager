@@ -318,9 +318,22 @@ Deno.serve(async (req) => {
       }
 
       const password = generatePassword();
+      const coachId = crypto.randomUUID();
+
+      // coaches primeiro: o trigger validate_app_user_links exige coaches.id
+      const { error: coachError } = await adminClient.from("coaches").insert({
+        id: coachId,
+        name: coachName,
+        phone,
+      });
+
+      if (coachError) {
+        return jsonResponse({ error: coachError.message }, 400);
+      }
 
       const { data: authData, error: authError } =
         await adminClient.auth.admin.createUser({
+          id: coachId,
           email: normalizedEmail,
           password,
           email_confirm: true,
@@ -332,22 +345,10 @@ Deno.serve(async (req) => {
         });
 
       if (authError || !authData.user) {
+        await adminClient.from("coaches").delete().eq("id", coachId);
         return jsonResponse({
           error: authError?.message || "Erro ao criar utilizador de acesso.",
         }, 400);
-      }
-
-      const coachId = authData.user.id;
-
-      const { error: coachError } = await adminClient.from("coaches").insert({
-        id: coachId,
-        name: coachName,
-        phone,
-      });
-
-      if (coachError) {
-        await adminClient.auth.admin.deleteUser(coachId);
-        return jsonResponse({ error: coachError.message }, 400);
       }
 
       const { error: appUserError } = await adminClient.from("app_users").insert({
@@ -400,11 +401,25 @@ Deno.serve(async (req) => {
         normalizedEmail
       );
 
-      let coachId = existingCoachByName?.id || existingAuthUser?.id || null;
+      const coachId =
+        existingAuthUser?.id ||
+        existingCoachByName?.id ||
+        crypto.randomUUID();
+
+      const { error: coachUpsertError } = await adminClient.from("coaches").upsert({
+        id: coachId,
+        name: coachName,
+        phone: "-",
+      });
+
+      if (coachUpsertError) {
+        return jsonResponse({ error: coachUpsertError.message }, 400);
+      }
 
       if (!existingAuthUser) {
         const { data: authData, error: authError } =
           await adminClient.auth.admin.createUser({
+            id: coachId,
             email: normalizedEmail,
             password,
             email_confirm: true,
@@ -416,12 +431,13 @@ Deno.serve(async (req) => {
           });
 
         if (authError || !authData.user) {
+          if (!existingCoachByName) {
+            await adminClient.from("coaches").delete().eq("id", coachId);
+          }
           return jsonResponse({
             error: authError?.message || "Erro ao criar utilizador de acesso.",
           }, 400);
         }
-
-        coachId = authData.user.id;
       } else {
         const { error: passwordError } =
           await adminClient.auth.admin.updateUserById(existingAuthUser.id, {
@@ -438,22 +454,6 @@ Deno.serve(async (req) => {
         if (passwordError) {
           return jsonResponse({ error: passwordError.message }, 400);
         }
-
-        coachId = existingAuthUser.id;
-      }
-
-      if (!coachId) {
-        return jsonResponse({ error: "Não foi possível obter o id do treinador." }, 400);
-      }
-
-      const { error: coachUpsertError } = await adminClient.from("coaches").upsert({
-        id: coachId,
-        name: coachName,
-        phone: "-",
-      });
-
-      if (coachUpsertError) {
-        return jsonResponse({ error: coachUpsertError.message }, 400);
       }
 
       const { data: existingAppUser } = await adminClient
