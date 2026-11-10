@@ -12,8 +12,9 @@ import {
   Truck,
   CalendarClock,
   CalendarDays,
-  CalendarRange,
   Star,
+  Shield,
+  ArrowLeft,
   LogOut,
   Menu,
   X,
@@ -28,6 +29,20 @@ type Props = {
   onChangeSection: (section: string) => void;
   onLogout: () => void;
 };
+
+const ADMIN_MANAGEMENT_SECTIONS = new Set([
+  "dashboard",
+  "students",
+  "coaches",
+  "groups",
+  "recurring",
+  "lessons",
+  "inventory",
+  "vans",
+  "compensations",
+  "evaluations",
+  "payments",
+]);
 
 function roleLabel(role: User["role"]) {
   if (role === "admin") return "Admin / Treinador";
@@ -79,6 +94,8 @@ function Sidebar({ user, activeSection, onChangeSection, onLogout }: Props) {
     );
   }
 
+  const adminInManagement = ADMIN_MANAGEMENT_SECTIONS.has(activeSection);
+
   return (
     <>
       <button
@@ -123,11 +140,27 @@ function Sidebar({ user, activeSection, onChangeSection, onLogout }: Props) {
             </div>
           </div>
 
-          {user.role === "admin" && (
+          {user.role === "admin" && !adminInManagement && (
             <nav className="sidebar-nav">
-              {item(CalendarDays, "Presenças hoje", "my-dashboard")}
-              {item(CalendarRange, "Os meus treinos", "my-lessons")}
-              {item(LayoutDashboard, "Gestão", "dashboard")}
+              {item(LayoutDashboard, "Hoje", "my-dashboard")}
+              {item(CalendarDays, "Todos os treinos", "my-lessons")}
+              {item(Shield, "Admin", "dashboard")}
+            </nav>
+          )}
+
+          {user.role === "admin" && adminInManagement && (
+            <nav className="sidebar-nav">
+              <button
+                className="nav-item"
+                onClick={() => changeSection("my-dashboard")}
+              >
+                <span className="nav-icon">
+                  <ArrowLeft size={18} strokeWidth={2} />
+                </span>
+                <span>Voltar às presenças</span>
+              </button>
+
+              {item(LayoutDashboard, "Painel admin", "dashboard")}
               {item(Users, "Alunos", "students")}
               {item(UserCircle, "Treinadores", "coaches")}
               {item(UsersRound, "Grupos", "groups")}
