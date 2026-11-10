@@ -16,6 +16,7 @@ const APPLY_ORDER = [
   "lesson-rpcs.sql",
   "publish-schedule.sql",
   "constraints.sql",
+  "video-analysis.sql",
 ];
 
 if (!token) {

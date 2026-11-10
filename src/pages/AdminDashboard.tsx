@@ -22,7 +22,8 @@ type AdminSection =
   | "vans"
   | "compensations"
   | "evaluations"
-  | "payments";
+  | "payments"
+  | "coach-activity";
 
 type Props = {
   onChangeSection: (section: AdminSection) => void;
@@ -156,6 +157,10 @@ function AdminDashboard({ onChangeSection }: Props) {
         <button type="button" className="admin-module-card" onClick={() => onChangeSection("evaluations")}>
           <strong>Avaliações</strong>
           <span>{evaluationsThisMonth} este mês</span>
+        </button>
+        <button type="button" className="admin-module-card" onClick={() => onChangeSection("coach-activity")}>
+          <strong>Treinos / mês</strong>
+          <span>Totais por treinador</span>
         </button>
         <button type="button" className="admin-module-card" onClick={() => onChangeSection("payments")}>
           <strong>Pagamentos</strong>

@@ -19,6 +19,8 @@ import {
   LogOut,
   Menu,
   X,
+  Clapperboard,
+  BarChart3,
 } from "lucide-react";
 import type { User } from "../types";
 import logo from "../assets/logo next.jpeg";
@@ -44,6 +46,7 @@ const ADMIN_MANAGEMENT_SECTIONS = new Set([
   "compensations",
   "evaluations",
   "payments",
+  "coach-activity",
 ]);
 
 function roleLabel(role: User["role"]) {
@@ -146,6 +149,7 @@ function Sidebar({ user, activeSection, onChangeSection, onLogout }: Props) {
             <nav className="sidebar-nav">
               {item(LayoutDashboard, "Hoje", "my-dashboard")}
               {item(CalendarDays, "Todos os grupos", "my-lessons")}
+              {item(Clapperboard, "Os meus treinos", "my-activity")}
               {item(Shield, "Admin", "dashboard")}
             </nav>
           )}
@@ -173,6 +177,7 @@ function Sidebar({ user, activeSection, onChangeSection, onLogout }: Props) {
               {item(Truck, "Carrinhas", "vans")}
               {item(CalendarClock, "Compensações", "compensations")}
               {item(Star, "Avaliações", "evaluations")}
+              {item(BarChart3, "Treinos / mês", "coach-activity")}
               {item(CreditCard, "Pagamentos", "payments")}
             </nav>
           )}
@@ -181,6 +186,7 @@ function Sidebar({ user, activeSection, onChangeSection, onLogout }: Props) {
             <nav className="sidebar-nav">
               {item(LayoutDashboard, "Hoje", "dashboard")}
               {item(CalendarDays, "Todos os grupos", "lessons")}
+              {item(Clapperboard, "Os meus treinos", "activity")}
             </nav>
           )}
         </div>
