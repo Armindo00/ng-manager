@@ -105,10 +105,10 @@ function CoachArea({ user }: Props) {
 
   return (
     <div>
-      <h1 className="page-title">Todos os grupos</h1>
+      <h1 className="page-title">Grupos fixos</h1>
       <p className="muted coach-area-intro">
-        Grupos fixos da escola. Para registar presenças, usa <strong>Hoje</strong>{" "}
-        e escolhe o grupo que deste ({getWeekdayLabel(today)}).
+        Escala semanal da escola. Para registar presenças, usa{" "}
+        <strong>Hoje</strong> e escolhe o grupo que deste ({getWeekdayLabel(today)}).
       </p>
 
       {WEEKDAY_ORDER.map((weekday) => {

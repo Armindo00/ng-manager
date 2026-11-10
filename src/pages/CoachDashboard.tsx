@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
-import type { Lesson, Student, User } from "../types";
+import type { Coach, Lesson, Student, User } from "../types";
 import { fixedTrainings, type FixedTraining } from "../data/fixedTrainings";
-import { schoolCoaches } from "../data/schoolCoaches";
 import { getStudents } from "../services/studentsService";
+import { getCoaches } from "../services/coachesService";
 import {
   addLesson,
   getLessons,
@@ -34,6 +34,7 @@ function CoachDashboard({ user }: Props) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [coachId, setCoachId] = useState<string | null>(null);
+  const [coaches, setCoaches] = useState<Coach[]>([]);
 
   const today = getTodayDate();
   const weekdayKey = getWeekdayKey(today);
@@ -46,13 +47,16 @@ function CoachDashboard({ user }: Props) {
     try {
       setLoading(true);
 
-      const [lessonsData, studentsData, resolvedCoachId] = await Promise.all([
-        getLessons(),
-        getStudents(),
-        resolveCoachId(user),
-      ]);
+      const [lessonsData, studentsData, coachesData, resolvedCoachId] =
+        await Promise.all([
+          getLessons(),
+          getStudents(),
+          getCoaches(),
+          resolveCoachId(user),
+        ]);
 
       setCoachId(resolvedCoachId);
+      setCoaches(coachesData);
       setLessons(
         lessonsData.sort((a, b) =>
           `${b.date} ${b.time || ""}`.localeCompare(
@@ -297,14 +301,15 @@ function CoachDashboard({ user }: Props) {
                 onChange={(event) => setSecondaryCoachName(event.target.value)}
               >
                 <option value="">Só eu</option>
-                {schoolCoaches
+                {coaches
                   .filter(
-                    (name) =>
-                      name.toLowerCase() !== user.name.trim().toLowerCase()
+                    (coach) =>
+                      coach.name.trim().toLowerCase() !==
+                      user.name.trim().toLowerCase()
                   )
-                  .map((name) => (
-                    <option key={name} value={name}>
-                      {name}
+                  .map((coach) => (
+                    <option key={coach.id} value={coach.name}>
+                      {coach.name}
                     </option>
                   ))}
               </select>
@@ -355,11 +360,13 @@ function CoachDashboard({ user }: Props) {
                 }
               >
                 <option value="">Só um treinador</option>
-                {schoolCoaches.map((name) => (
-                  <option key={name} value={name}>
-                    {name}
-                  </option>
-                ))}
+                {coaches
+                  .filter((coach) => coach.id !== selectedLesson.coachId)
+                  .map((coach) => (
+                    <option key={coach.id} value={coach.name}>
+                      {coach.name}
+                    </option>
+                  ))}
               </select>
             </label>
 

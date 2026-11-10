@@ -2,35 +2,26 @@ import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import type { Lesson, Student } from "../types";
 import { getStudents } from "../services/studentsService";
-import { getLessons, deleteLesson, updateLesson } from "../services/lessonsService";
+import { getLessons, deleteLesson } from "../services/lessonsService";
 import LessonDetailCard from "../components/LessonDetailCard";
+import LessonsCalendar from "../components/LessonsCalendar";
 import ConfirmDialog from "../components/ConfirmDialog";
+import Modal from "../components/Modal";
+import { formatCalendarDayLabel } from "../utils/calendarUtils";
 import {
-  DetailPanel,
-  DetailPanelEmpty,
-  MasterDetailLayout,
-  SelectionList,
-  SelectionListItem,
-} from "../components/MasterDetailLayout";
-
-function statusLabel(status: Lesson["status"]) {
-  if (status === "published") return "Publicado";
-  if (status === "finished") return "Terminado";
-  return "Rascunho";
-}
-
-function statusBadgeClass(status: Lesson["status"]) {
-  if (status === "published") return "payment-status payment-status-paid";
-  if (status === "draft") return "payment-status payment-status-pending";
-  return "payment-status payment-status-cancelled";
-}
+  buildMonthCalendarEntries,
+  statusLabelForEntry,
+  type CalendarEntry,
+} from "../utils/fixedScheduleCalendar";
+import { getTodayDate } from "../utils/dateUtils";
 
 function AdminLessons() {
   const [students, setStudents] = useState<Student[]>([]);
   const [lessons, setLessons] = useState<Lesson[]>([]);
-  const [selectedLessonId, setSelectedLessonId] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState(getTodayDate());
+  const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
   const [lessonToDelete, setLessonToDelete] = useState<Lesson | null>(null);
-  const [publishingDrafts, setPublishingDrafts] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadData();
@@ -38,54 +29,54 @@ function AdminLessons() {
 
   async function loadData() {
     try {
-      setStudents(await getStudents());
-      const lessonsData = await getLessons();
+      setLoading(true);
+      const [studentsData, lessonsData] = await Promise.all([
+        getStudents(),
+        getLessons(),
+      ]);
+      setStudents(studentsData);
       setLessons(lessonsData);
-      setSelectedLessonId((current) => {
-        if (current && lessonsData.some((lesson) => lesson.id === current)) {
-          return current;
-        }
-        return lessonsData[0]?.id ?? null;
-      });
     } catch (error) {
       console.error(error);
-      toast.error("Erro ao carregar treinos.");
+      toast.error("Erro ao carregar calendário.");
+    } finally {
+      setLoading(false);
     }
   }
 
-  const sortedLessons = useMemo(
-    () =>
-      [...lessons].sort((a, b) =>
-        `${b.date} ${b.time}`.localeCompare(`${a.date} ${a.time}`)
-      ),
-    [lessons]
-  );
+  const selectedDayEntries = useMemo(() => {
+    const [year, month] = selectedDate.split("-").map(Number);
+    return buildMonthCalendarEntries({
+      year,
+      month,
+      lessons,
+      includePlanned: true,
+    }).filter((entry) => entry.date === selectedDate);
+  }, [selectedDate, lessons]);
 
-  const selectedLesson =
-    sortedLessons.find((lesson) => lesson.id === selectedLessonId) ?? null;
+  const monthStats = useMemo(() => {
+    const [year, month] = selectedDate.split("-").map(Number);
+    const entries = buildMonthCalendarEntries({
+      year,
+      month,
+      lessons,
+      includePlanned: true,
+    });
+    return {
+      planned: entries.filter((entry) => entry.status === "planned").length,
+      registered: entries.filter(
+        (entry) =>
+          entry.status === "published" || entry.status === "finished"
+      ).length,
+      finished: entries.filter((entry) => entry.status === "finished").length,
+    };
+  }, [selectedDate, lessons]);
 
-  async function publishAllDrafts() {
-    const drafts = lessons.filter((lesson) => lesson.status === "draft");
-
-    if (drafts.length === 0) {
-      toast.error("Não há treinos em rascunho.");
-      return;
-    }
-
-    try {
-      setPublishingDrafts(true);
-
-      for (const lesson of drafts) {
-        await updateLesson({ ...lesson, status: "published" });
-      }
-
-      await loadData();
-      toast.success(`${drafts.length} treino(s) publicado(s).`);
-    } catch (error) {
-      console.error(error);
-      toast.error("Erro ao publicar treinos.");
-    } finally {
-      setPublishingDrafts(false);
+  function handleSelectDay(entries: CalendarEntry[], date: string) {
+    setSelectedDate(date);
+    const withLesson = entries.filter((entry) => entry.lesson);
+    if (withLesson.length === 1 && withLesson[0].lesson) {
+      setSelectedLesson(withLesson[0].lesson);
     }
   }
 
@@ -94,114 +85,132 @@ function AdminLessons() {
 
     try {
       await deleteLesson(lessonToDelete.id);
-      if (selectedLessonId === lessonToDelete.id) {
-        setSelectedLessonId(null);
+      if (selectedLesson?.id === lessonToDelete.id) {
+        setSelectedLesson(null);
       }
       await loadData();
       setLessonToDelete(null);
-      toast.success("Treino eliminado com sucesso!");
+      toast.success("Treino eliminado.");
     } catch (error) {
       console.error(error);
       toast.error("Erro ao apagar treino.");
     }
   }
 
-  const publishedCount = lessons.filter((lesson) => lesson.status === "published").length;
-  const draftCount = lessons.filter((lesson) => lesson.status === "draft").length;
-
   return (
-    <div>
-      <h1 className="page-title">Calendário de Treinos</h1>
-
+    <div className="dashboard-page">
+      <h1 className="page-title">Calendário</h1>
       <p className="workflow-help">
-        Os treinos publicados em <strong>Horários</strong> aparecem aqui e ficam
-        visíveis para treinadores e alunos. Seleciona um treino na lista para ver
-        a ficha completa.
+        Mostra os <strong>grupos fixos</strong> planeados e os treinos já
+        registados pelos treinadores. Um grupo planeado passa a registado
+        quando alguém marca presenças em <strong>Hoje</strong>.
       </p>
 
-      <div className="stats-grid" style={{ marginBottom: 20 }}>
-        <div className="card stat-card">
-          <span className="stat-label">Publicados</span>
-          <strong className="stat-number">{publishedCount}</strong>
-        </div>
+      {loading ? (
+        <p className="muted">A carregar calendário...</p>
+      ) : (
+        <>
+          <div className="stats-grid">
+            <div className="card stat-card">
+              <span className="stat-label">Planeados no mês</span>
+              <strong className="stat-number">{monthStats.planned}</strong>
+            </div>
+            <div className="card stat-card">
+              <span className="stat-label">Registados</span>
+              <strong className="stat-number">{monthStats.registered}</strong>
+            </div>
+            <div className="card stat-card">
+              <span className="stat-label">Concluídos</span>
+              <strong className="stat-number">{monthStats.finished}</strong>
+            </div>
+          </div>
 
-        <div className="card stat-card">
-          <span className="stat-label">Rascunhos</span>
-          <strong className="stat-number">{draftCount}</strong>
-        </div>
-      </div>
+          <div className="calendar-wrapper">
+            <LessonsCalendar
+              lessons={lessons}
+              selectedDate={selectedDate}
+              onSelectDay={handleSelectDay}
+              title="Grupos fixos e treinos registados"
+            />
+          </div>
 
-      {draftCount > 0 && (
-        <div className="quick-actions" style={{ marginBottom: 20 }}>
-          <button
-            className="primary-btn"
-            onClick={publishAllDrafts}
-            disabled={publishingDrafts}
-          >
-            {publishingDrafts
-              ? "A publicar..."
-              : `Publicar ${draftCount} rascunho(s)`}
-          </button>
-        </div>
+          <div className="card section-card">
+            <h2>{formatCalendarDayLabel(selectedDate)}</h2>
+
+            {selectedDayEntries.length === 0 ? (
+              <p className="muted">Sem grupos neste dia.</p>
+            ) : (
+              <div className="coach-session-list">
+                {selectedDayEntries.map((entry) => (
+                  <div
+                    className="coach-session-card coach-session-card-static"
+                    key={entry.id}
+                  >
+                    <div className="coach-session-card-main">
+                      <strong>{entry.title}</strong>
+                      <span>
+                        {entry.coachName}
+                        {entry.secondaryCoachName
+                          ? ` + ${entry.secondaryCoachName}`
+                          : ""}
+                      </span>
+                      <span>
+                        {entry.studentCount} aluno
+                        {entry.studentCount === 1 ? "" : "s"}
+                        {entry.time ? ` · ${entry.time}` : ""}
+                      </span>
+                    </div>
+
+                    <div className="calendar-entry-actions">
+                      <span
+                        className={`coach-session-card-status${
+                          entry.status === "finished"
+                            ? " status-finished"
+                            : entry.status === "published"
+                              ? " ready"
+                              : ""
+                        }`}
+                      >
+                        {statusLabelForEntry(entry)}
+                      </span>
+
+                      {entry.lesson && (
+                        <>
+                          <button
+                            type="button"
+                            className="compact-btn"
+                            onClick={() => setSelectedLesson(entry.lesson!)}
+                          >
+                            Abrir
+                          </button>
+                          <button
+                            type="button"
+                            className="danger-btn compact-btn"
+                            onClick={() => setLessonToDelete(entry.lesson!)}
+                          >
+                            Apagar
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </>
       )}
 
-      <MasterDetailLayout
-        showDetail={Boolean(selectedLesson)}
-        list={
-          <SelectionList
-            title="Treinos"
-            empty={
-              <p className="muted">
-                Ainda não existem treinos. Vai a Horários e clica em Publicar.
-              </p>
-            }
-          >
-            {sortedLessons.map((lesson) => (
-              <SelectionListItem
-                key={lesson.id}
-                active={lesson.id === selectedLessonId}
-                onClick={() => setSelectedLessonId(lesson.id)}
-                title={`${lesson.date} · ${lesson.groupName || "Treino"}`}
-                subtitle={`${lesson.coachName} · ${lesson.beach || "Praia por definir"}`}
-                meta={lesson.time || "--:--"}
-                badge={
-                  <span className={statusBadgeClass(lesson.status)}>
-                    {statusLabel(lesson.status)}
-                  </span>
-                }
-              />
-            ))}
-          </SelectionList>
-        }
-        detail={
-          selectedLesson ? (
-            <DetailPanel
-              title="Ficha do treino"
-              actions={
-                <button
-                  className="compact-btn danger-btn"
-                  onClick={() => setLessonToDelete(selectedLesson)}
-                >
-                  Eliminar
-                </button>
-              }
-            >
-              <LessonDetailCard lesson={selectedLesson} students={students} />
-            </DetailPanel>
-          ) : (
-            <DetailPanelEmpty message="Seleciona um treino da lista." />
-          )
-        }
-      />
+      {selectedLesson && (
+        <Modal title="Ficha do treino" onClose={() => setSelectedLesson(null)}>
+          <LessonDetailCard lesson={selectedLesson} students={students} />
+        </Modal>
+      )}
 
       {lessonToDelete && (
         <ConfirmDialog
-          title="⚠️ Eliminar treino"
-          message={
-            "Tens a certeza que pretendes eliminar este treino de " +
-            lessonToDelete.date +
-            "? Esta ação não pode ser desfeita."
-          }
+          title="Eliminar treino"
+          message="Apagar este treino registado? Esta ação não pode ser anulada."
           confirmText="Eliminar"
           cancelText="Cancelar"
           onConfirm={confirmDeleteLesson}

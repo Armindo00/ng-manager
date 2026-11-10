@@ -148,7 +148,7 @@ function Sidebar({ user, activeSection, onChangeSection, onLogout }: Props) {
           {user.role === "admin" && !adminInManagement && (
             <nav className="sidebar-nav">
               {item(LayoutDashboard, "Hoje", "my-dashboard")}
-              {item(CalendarDays, "Todos os grupos", "my-lessons")}
+              {item(CalendarDays, "Grupos fixos", "my-lessons")}
               {item(Clapperboard, "Os meus treinos", "my-activity")}
               {item(Shield, "Admin", "dashboard")}
             </nav>
@@ -170,22 +170,23 @@ function Sidebar({ user, activeSection, onChangeSection, onLogout }: Props) {
               {item(Wrench, "Setup escola", "setup")}
               {item(Users, "Alunos", "students")}
               {item(UserCircle, "Treinadores", "coaches")}
-              {item(UsersRound, "Grupos", "groups")}
-              {item(Repeat, "Horários", "recurring")}
               {item(Calendar, "Calendário", "lessons")}
-              {item(Package, "Inventário", "inventory")}
-              {item(Truck, "Carrinhas", "vans")}
-              {item(CalendarClock, "Compensações", "compensations")}
-              {item(Star, "Avaliações", "evaluations")}
               {item(BarChart3, "Treinos / mês", "coach-activity")}
               {item(CreditCard, "Pagamentos", "payments")}
+              {item(Star, "Avaliações", "evaluations")}
+              {item(CalendarClock, "Compensações", "compensations")}
+              {item(Package, "Inventário", "inventory")}
+              {item(Truck, "Carrinhas", "vans")}
+              <div className="nav-section-label">Avançado</div>
+              {item(UsersRound, "Grupos (DB)", "groups")}
+              {item(Repeat, "Horários", "recurring")}
             </nav>
           )}
 
           {user.role === "coach" && (
             <nav className="sidebar-nav">
               {item(LayoutDashboard, "Hoje", "dashboard")}
-              {item(CalendarDays, "Todos os grupos", "lessons")}
+              {item(CalendarDays, "Grupos fixos", "lessons")}
               {item(Clapperboard, "Os meus treinos", "activity")}
             </nav>
           )}
