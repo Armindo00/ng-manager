@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
-import type { Lesson, Student, User } from "../types";
-import { fixedTrainings, type FixedTraining } from "../data/fixedTrainings";
-import { schoolCoaches } from "../data/schoolCoaches";
+import type { Coach, Lesson, Student, User } from "../types";
+import type { FixedTraining } from "../data/fixedTrainings";
 import { getStudents } from "../services/studentsService";
+import { getCoaches } from "../services/coachesService";
 import {
   addLesson,
   getLessons,
   updateLesson,
 } from "../services/lessonsService";
+import { ensureFixedTrainingsSeeded } from "../services/fixedTrainingsService";
 import Modal from "../components/Modal";
 import CoachAttendancePanel from "../components/CoachAttendancePanel";
 import { resolveCoachId } from "../utils/coachAccess";
@@ -34,6 +35,8 @@ function CoachDashboard({ user }: Props) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [coachId, setCoachId] = useState<string | null>(null);
+  const [coaches, setCoaches] = useState<Coach[]>([]);
+  const [fixedTrainings, setFixedTrainings] = useState<FixedTraining[]>([]);
 
   const today = getTodayDate();
   const weekdayKey = getWeekdayKey(today);
@@ -46,13 +49,23 @@ function CoachDashboard({ user }: Props) {
     try {
       setLoading(true);
 
-      const [lessonsData, studentsData, resolvedCoachId] = await Promise.all([
+      const [
+        lessonsData,
+        studentsData,
+        coachesData,
+        trainingsData,
+        resolvedCoachId,
+      ] = await Promise.all([
         getLessons(),
         getStudents(),
+        getCoaches(),
+        ensureFixedTrainingsSeeded(),
         resolveCoachId(user),
       ]);
 
       setCoachId(resolvedCoachId);
+      setCoaches(coachesData);
+      setFixedTrainings(trainingsData);
       setLessons(
         lessonsData.sort((a, b) =>
           `${b.date} ${b.time || ""}`.localeCompare(
@@ -297,14 +310,15 @@ function CoachDashboard({ user }: Props) {
                 onChange={(event) => setSecondaryCoachName(event.target.value)}
               >
                 <option value="">Só eu</option>
-                {schoolCoaches
+                {coaches
                   .filter(
-                    (name) =>
-                      name.toLowerCase() !== user.name.trim().toLowerCase()
+                    (coach) =>
+                      coach.name.trim().toLowerCase() !==
+                      user.name.trim().toLowerCase()
                   )
-                  .map((name) => (
-                    <option key={name} value={name}>
-                      {name}
+                  .map((coach) => (
+                    <option key={coach.id} value={coach.name}>
+                      {coach.name}
                     </option>
                   ))}
               </select>
@@ -355,11 +369,13 @@ function CoachDashboard({ user }: Props) {
                 }
               >
                 <option value="">Só um treinador</option>
-                {schoolCoaches.map((name) => (
-                  <option key={name} value={name}>
-                    {name}
-                  </option>
-                ))}
+                {coaches
+                  .filter((coach) => coach.id !== selectedLesson.coachId)
+                  .map((coach) => (
+                    <option key={coach.id} value={coach.name}>
+                      {coach.name}
+                    </option>
+                  ))}
               </select>
             </label>
 

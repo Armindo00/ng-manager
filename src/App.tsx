@@ -18,6 +18,9 @@ import AdminVans from "./pages/AdminVans";
 import AdminCompensations from "./pages/AdminCompensations";
 import AdminEvaluations from "./pages/AdminEvaluations";
 import AdminSchoolSetup from "./pages/AdminSchoolSetup";
+import AdminCoachActivity from "./pages/AdminCoachActivity";
+import AdminFixedTrainings from "./pages/AdminFixedTrainings";
+import CoachActivity from "./pages/CoachActivity";
 import Sidebar from "./components/Sidebar";
 import Topbar from "./components/Topbar";
 
@@ -33,19 +36,22 @@ type AdminSection =
   | "dashboard"
   | "my-dashboard"
   | "my-lessons"
+  | "my-activity"
   | "setup"
   | "students"
   | "coaches"
   | "groups"
+  | "fixed-trainings"
   | "recurring"
   | "lessons"
   | "inventory"
   | "vans"
   | "compensations"
   | "evaluations"
-  | "payments";
+  | "payments"
+  | "coach-activity";
 
-type CoachSection = "dashboard" | "lessons";
+type CoachSection = "dashboard" | "lessons" | "activity";
 
 function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -206,6 +212,10 @@ function App() {
               {coachSection === "lessons" && (
                 <CoachArea user={currentUser} />
               )}
+
+              {coachSection === "activity" && (
+                <CoachActivity user={currentUser} />
+              )}
             </>
           )}
 
@@ -215,6 +225,10 @@ function App() {
 
           {currentUser.role === "admin" && activeSection === "my-lessons" && (
             <CoachArea user={currentUser} />
+          )}
+
+          {currentUser.role === "admin" && activeSection === "my-activity" && (
+            <CoachActivity user={currentUser} />
           )}
 
           {currentUser.role === "admin" && activeSection === "dashboard" && (
@@ -233,6 +247,9 @@ function App() {
 
           {currentUser.role === "admin" &&
             activeSection === "groups" && <Groups />}
+
+          {currentUser.role === "admin" &&
+            activeSection === "fixed-trainings" && <AdminFixedTrainings />}
 
           {currentUser.role === "admin" &&
             activeSection === "recurring" && <RecurringTrainings />}
@@ -254,6 +271,9 @@ function App() {
 
           {currentUser.role === "admin" &&
             activeSection === "payments" && <AdminPayments />}
+
+          {currentUser.role === "admin" &&
+            activeSection === "coach-activity" && <AdminCoachActivity />}
         </main>
       </div>
     </>

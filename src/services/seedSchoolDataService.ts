@@ -1,8 +1,11 @@
-import { getUniqueStudentNames } from "../data/fixedTrainings";
 import { schoolCoaches } from "../data/schoolCoaches";
 import type { Student } from "../types";
 import { addStudent, getStudents } from "./studentsService";
 import { ensureSchoolCoach } from "./coachAuthService";
+import {
+  ensureFixedTrainingsSeeded,
+  getUniqueStudentNamesFromTrainings,
+} from "./fixedTrainingsService";
 import { normalizePersonName } from "../utils/studentNameMatch";
 import { toErrorMessage } from "../utils/errorMessage";
 
@@ -31,7 +34,8 @@ function studentExists(students: Student[], name: string) {
 
 export async function importFixedStudents() {
   const existing = await getStudents();
-  const names = getUniqueStudentNames();
+  const trainings = await ensureFixedTrainingsSeeded();
+  const names = getUniqueStudentNamesFromTrainings(trainings);
   const knownNames = new Set(
     existing.map((student) => normalizePersonName(student.name))
   );

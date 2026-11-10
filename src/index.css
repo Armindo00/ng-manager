@@ -525,6 +525,13 @@ textarea:focus {
   background: #f59e0b;
 }
 
+.calendar-dots span.dot-planned,
+.legend-dot.dot-planned {
+  background: #94a3b8;
+  opacity: 0.85;
+  box-shadow: inset 0 0 0 1px #64748b;
+}
+
 .calendar-dots span.dot-confirmed,
 .legend-dot.dot-confirmed {
   background: #16a34a;

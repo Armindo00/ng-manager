@@ -125,12 +125,12 @@ function StudentCalendar({ user }: Props) {
         <LessonsCalendar
           lessons={lessons}
           selectedDate={selectedDate}
-          onSelectDay={(dayLessons, date) => {
+          includePlanned={false}
+          onSelectDay={(entries, date) => {
             setSelectedDate(date);
-            setSelectedLesson(dayLessons[0] ?? null);
+            setSelectedLesson(entries.find((entry) => entry.lesson)?.lesson ?? null);
           }}
           title="Os meus treinos"
-          studentId={studentId}
         />
 
         <SelectionList

@@ -87,7 +87,13 @@ function StudentArea({ user }: Props) {
     return lesson.responses?.find((response) => response.studentId === studentId);
   }
 
-  function handleSelectDay(dayLessons: Lesson[], date: string) {
+  function handleSelectDay(
+    entries: { lesson?: Lesson }[],
+    date: string
+  ) {
+    const dayLessons = entries
+      .map((entry) => entry.lesson)
+      .filter((lesson): lesson is Lesson => Boolean(lesson));
     setSelectedDate(date);
     setSelectedLesson(dayLessons[0] ?? null);
   }
@@ -158,9 +164,9 @@ function StudentArea({ user }: Props) {
         <LessonsCalendar
           lessons={lessons}
           selectedDate={selectedDate}
+          includePlanned={false}
           onSelectDay={handleSelectDay}
           title="Calendário"
-          studentId={studentId}
         />
 
         <SelectionList

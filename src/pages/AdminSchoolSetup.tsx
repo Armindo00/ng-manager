@@ -1,7 +1,10 @@
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import { getUniqueStudentNames } from "../data/fixedTrainings";
 import { schoolCoaches } from "../data/schoolCoaches";
+import {
+  ensureFixedTrainingsSeeded,
+  getUniqueStudentNamesFromTrainings,
+} from "../services/fixedTrainingsService";
 import {
   createSchoolCoaches,
   importFixedStudents,
@@ -13,8 +16,15 @@ function AdminSchoolSetup() {
   const [creatingCoaches, setCreatingCoaches] = useState(false);
   const [coachResults, setCoachResults] = useState<CoachSeedResult[]>([]);
   const [lastStudentImport, setLastStudentImport] = useState<string>("");
+  const [studentCount, setStudentCount] = useState(0);
 
-  const studentCount = useMemo(() => getUniqueStudentNames().length, []);
+  useEffect(() => {
+    ensureFixedTrainingsSeeded()
+      .then((trainings) =>
+        setStudentCount(getUniqueStudentNamesFromTrainings(trainings).length)
+      )
+      .catch((error) => console.error(error));
+  }, []);
 
   async function handleImportStudents() {
     try {

@@ -1,27 +1,34 @@
 import { useMemo, useState } from "react";
+import type { FixedTraining } from "../data/fixedTrainings";
 import type { Lesson } from "../types";
+import {
+  buildMonthCalendarEntries,
+  getEntryDotClass,
+  type CalendarEntry,
+} from "../utils/fixedScheduleCalendar";
 import {
   buildMonthDate,
   formatMonthName,
   getLisbonMonthParts,
   getTodayDate,
 } from "../utils/dateUtils";
-import { getLessonDotClass } from "../utils/calendarUtils";
 
 type Props = {
   lessons: Lesson[];
+  fixedTrainings?: FixedTraining[];
   selectedDate?: string | null;
-  onSelectDay: (lessons: Lesson[], date: string) => void;
+  onSelectDay: (entries: CalendarEntry[], date: string) => void;
   title?: string;
-  studentId?: string;
+  includePlanned?: boolean;
 };
 
 function LessonsCalendar({
   lessons,
+  fixedTrainings = [],
   selectedDate,
   onSelectDay,
   title = "Calendário de treinos",
-  studentId,
+  includePlanned = true,
 }: Props) {
   const initialMonth = getLisbonMonthParts();
   const [viewYear, setViewYear] = useState(initialMonth.year);
@@ -29,17 +36,31 @@ function LessonsCalendar({
 
   const monthName = formatMonthName(viewYear, viewMonth);
 
+  const monthEntries = useMemo(
+    () =>
+      buildMonthCalendarEntries({
+        year: viewYear,
+        month: viewMonth,
+        lessons,
+        fixedTrainings,
+        includePlanned,
+      }),
+    [viewYear, viewMonth, lessons, fixedTrainings, includePlanned]
+  );
+
   const { cells, todayDay } = useMemo(() => {
     const firstDay = new Date(Date.UTC(viewYear, viewMonth - 1, 1, 12));
     const startOffset = (firstDay.getUTCDay() + 6) % 7;
-    const daysInMonth = new Date(Date.UTC(viewYear, viewMonth, 0, 12)).getUTCDate();
+    const daysInMonthCount = new Date(
+      Date.UTC(viewYear, viewMonth, 0, 12)
+    ).getUTCDate();
     const monthCells: Array<number | null> = [];
 
     for (let i = 0; i < startOffset; i++) {
       monthCells.push(null);
     }
 
-    for (let day = 1; day <= daysInMonth; day++) {
+    for (let day = 1; day <= daysInMonthCount; day++) {
       monthCells.push(day);
     }
 
@@ -57,11 +78,9 @@ function LessonsCalendar({
     return buildMonthDate(viewYear, viewMonth, day);
   }
 
-  function lessonsForDay(day: number) {
+  function entriesForDay(day: number) {
     const date = getDateForDay(day);
-    return lessons
-      .filter((lesson) => lesson.date === date)
-      .sort((a, b) => (a.time || "").localeCompare(b.time || ""));
+    return monthEntries.filter((entry) => entry.date === date);
   }
 
   function goToPreviousMonth() {
@@ -70,7 +89,6 @@ function LessonsCalendar({
       setViewYear((current) => current - 1);
       return;
     }
-
     setViewMonth((current) => current - 1);
   }
 
@@ -80,7 +98,6 @@ function LessonsCalendar({
       setViewYear((current) => current + 1);
       return;
     }
-
     setViewMonth((current) => current + 1);
   }
 
@@ -93,17 +110,15 @@ function LessonsCalendar({
   return (
     <div className="card section-card calendar-card">
       <div className="calendar-title-row">
-        <h2>📅 {title}</h2>
+        <h2>{title}</h2>
 
         <div className="calendar-nav">
           <button type="button" className="compact-btn" onClick={goToPreviousMonth}>
             ←
           </button>
-
           <button type="button" className="compact-btn" onClick={goToCurrentMonth}>
             Hoje
           </button>
-
           <button type="button" className="compact-btn" onClick={goToNextMonth}>
             →
           </button>
@@ -138,9 +153,9 @@ function LessonsCalendar({
 
       <div className="calendar-grid">
         {cells.map((day, index) => {
-          const dayLessons = day ? lessonsForDay(day) : [];
+          const dayEntries = day ? entriesForDay(day) : [];
           const date = day ? getDateForDay(day) : "";
-          const hasLessons = dayLessons.length > 0;
+          const hasEntries = dayEntries.length > 0;
           const isToday = day !== null && day === todayDay;
           const isSelected = Boolean(selectedDate && date === selectedDate);
 
@@ -151,35 +166,36 @@ function LessonsCalendar({
                 "calendar-day",
                 isToday ? "calendar-today" : "",
                 isSelected ? "calendar-selected" : "",
-                hasLessons ? "calendar-has-lessons" : "",
+                hasEntries ? "calendar-has-lessons" : "",
               ]
                 .filter(Boolean)
                 .join(" ")}
               key={index}
               disabled={!day}
               onClick={() => {
-                if (day) {
-                  onSelectDay(dayLessons, date);
-                }
+                if (day) onSelectDay(dayEntries, date);
               }}
             >
               {day && (
                 <>
                   <strong>{day}</strong>
 
-                  {hasLessons && (
+                  {hasEntries && (
                     <div className="calendar-dots">
-                      {dayLessons.slice(0, 3).map((lesson) => (
+                      {dayEntries.slice(0, 3).map((entry) => (
                         <span
-                          key={lesson.id}
-                          className={getLessonDotClass(lesson, { studentId })}
+                          key={entry.id}
+                          className={getEntryDotClass(entry)}
+                          title={entry.title}
                         />
                       ))}
                     </div>
                   )}
 
-                  {dayLessons.length > 3 && (
-                    <small className="calendar-more">+{dayLessons.length - 3}</small>
+                  {dayEntries.length > 3 && (
+                    <small className="calendar-more">
+                      +{dayEntries.length - 3}
+                    </small>
                   )}
                 </>
               )}
@@ -189,28 +205,15 @@ function LessonsCalendar({
       </div>
 
       <div className="calendar-legend">
-        {studentId ? (
-          <>
-            <span>
-              <i className="legend-dot dot-confirmed" /> Confirmado
-            </span>
-            <span>
-              <i className="legend-dot dot-pending" /> Por responder
-            </span>
-            <span>
-              <i className="legend-dot dot-declined" /> Não vou
-            </span>
-          </>
-        ) : (
-          <>
-            <span>
-              <i className="legend-dot dot-published" /> Publicado
-            </span>
-            <span>
-              <i className="legend-dot dot-finished" /> Concluído
-            </span>
-          </>
-        )}
+        <span>
+          <i className="legend-dot dot-planned" /> Planeado (grupo fixo)
+        </span>
+        <span>
+          <i className="legend-dot dot-published" /> Registado
+        </span>
+        <span>
+          <i className="legend-dot dot-finished" /> Concluído
+        </span>
       </div>
     </div>
   );

@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import type { Lesson, Student, User } from "../types";
-import { fixedTrainings } from "../data/fixedTrainings";
+import type { FixedTraining } from "../data/fixedTrainings";
 import { getStudents } from "../services/studentsService";
 import { getLessons } from "../services/lessonsService";
+import { ensureFixedTrainingsSeeded } from "../services/fixedTrainingsService";
 import Modal from "../components/Modal";
 import CoachAttendancePanel from "../components/CoachAttendancePanel";
 import { resolveCoachId } from "../utils/coachAccess";
@@ -45,6 +46,7 @@ function CoachArea({ user }: Props) {
   const [selectedLessonId, setSelectedLessonId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [coachId, setCoachId] = useState<string | null>(null);
+  const [fixedTrainings, setFixedTrainings] = useState<FixedTraining[]>([]);
 
   const today = getTodayDate();
   const todayKey = getWeekdayKey(today);
@@ -57,14 +59,17 @@ function CoachArea({ user }: Props) {
     try {
       setLoading(true);
 
-      const [studentsData, lessonsData, resolvedCoachId] = await Promise.all([
-        getStudents(),
-        getLessons(),
-        resolveCoachId(user),
-      ]);
+      const [studentsData, lessonsData, trainingsData, resolvedCoachId] =
+        await Promise.all([
+          getStudents(),
+          getLessons(),
+          ensureFixedTrainingsSeeded(),
+          resolveCoachId(user),
+        ]);
 
       setCoachId(resolvedCoachId);
       setStudents(studentsData);
+      setFixedTrainings(trainingsData);
       setLessons(
         lessonsData
           .filter((lesson) => lesson.status !== "draft")
@@ -105,10 +110,10 @@ function CoachArea({ user }: Props) {
 
   return (
     <div>
-      <h1 className="page-title">Todos os grupos</h1>
+      <h1 className="page-title">Grupos fixos</h1>
       <p className="muted coach-area-intro">
-        Grupos fixos da escola. Para registar presenças, usa <strong>Hoje</strong>{" "}
-        e escolhe o grupo que deste ({getWeekdayLabel(today)}).
+        Escala semanal da escola. Para registar presenças, usa{" "}
+        <strong>Hoje</strong> e escolhe o grupo que deste ({getWeekdayLabel(today)}).
       </p>
 
       {WEEKDAY_ORDER.map((weekday) => {

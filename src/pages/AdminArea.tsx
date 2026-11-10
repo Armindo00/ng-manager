@@ -10,19 +10,14 @@ import {
 import { getLessons } from "../services/lessonsService";
 import { getEvaluations } from "../services/evaluationsService";
 import {
-  createStudentAccess,
   deleteStudentAccess,
   getStudentAccessMap,
-  resetStudentPassword,
-  toggleStudentBlock,
   updateStudentAccessEmail,
   type StudentAccess,
 } from "../services/studentAuthService";
 import FormField from "../components/FormField";
 import ConfirmDialog from "../components/ConfirmDialog";
 import StudentProfileTabs from "../components/StudentProfileTabs";
-import StudentAccessButtons from "../components/StudentAccessButtons";
-import StudentAccessModal from "../components/StudentAccessModal";
 import {
   DetailPanel,
   DetailPanelEmpty,
@@ -31,13 +26,6 @@ import {
   SelectionListItem,
 } from "../components/MasterDetailLayout";
 import { getEmailValidationMessage, normalizeEmail } from "../utils/email";
-
-type AccessModalState = {
-  studentName: string;
-  email: string;
-  password: string;
-  title: string;
-};
 
 function AdminArea() {
   const [students, setStudents] = useState<Student[]>([]);
@@ -48,7 +36,6 @@ function AdminArea() {
   );
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [studentToDelete, setStudentToDelete] = useState<Student | null>(null);
-  const [accessModal, setAccessModal] = useState<AccessModalState | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [creatingNew, setCreatingNew] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -188,31 +175,6 @@ function AdminArea() {
       }
 
       await addStudent(student);
-
-      try {
-        const accessResult = await createStudentAccess(
-          student.id,
-          student.name,
-          student.email
-        );
-
-        if (accessResult.password) {
-          setAccessModal({
-            studentName: student.name,
-            email: accessResult.email || student.email,
-            password: accessResult.password,
-            title: "Acesso do aluno criado",
-          });
-        }
-      } catch (accessError) {
-        console.error(accessError);
-        toast.error(
-          accessError instanceof Error
-            ? accessError.message
-            : "Aluno criado, mas falhou a criação do acesso."
-        );
-      }
-
       await loadData();
       clearForm();
       toast.success("Aluno criado com sucesso!");
@@ -234,99 +196,6 @@ function AdminArea() {
     setPickup(student.pickup);
     setMainCoach(student.mainCoach);
     setNotes(student.notes);
-  }
-
-  async function handleResetPassword(student: Student) {
-    try {
-      const result = await resetStudentPassword(student.id);
-
-      if (!result.password) {
-        toast.error("Não foi possível gerar nova password.");
-        return;
-      }
-
-      setAccessModal({
-        studentName: student.name,
-        email: result.email || student.email,
-        password: result.password,
-        title: "Nova password gerada",
-      });
-
-      await loadData();
-      toast.success("Password reiniciada com sucesso.");
-    } catch (error) {
-      console.error(error);
-      toast.error(
-        error instanceof Error ? error.message : "Erro ao reiniciar password."
-      );
-    }
-  }
-
-  async function handleToggleBlock(student: Student) {
-    const access = accessMap.get(student.id);
-
-    if (!access) {
-      toast.error("Este aluno ainda não tem acesso criado.");
-      return;
-    }
-
-    try {
-      const result = await toggleStudentBlock(student.id);
-      await loadData();
-
-      toast.success(
-        result.blocked
-          ? `${student.name} foi bloqueado.`
-          : `${student.name} foi desbloqueado.`
-      );
-    } catch (error) {
-      console.error(error);
-      toast.error(
-        error instanceof Error ? error.message : "Erro ao atualizar acesso."
-      );
-    }
-  }
-
-  async function handleCreateMissingAccess(student: Student) {
-    const emailError = getEmailValidationMessage(student.email);
-
-    if (emailError) {
-      toast.error(`${emailError} Edita o aluno e corrige o email primeiro.`);
-      return;
-    }
-
-    try {
-      const normalizedEmail = normalizeEmail(student.email);
-      const result = await createStudentAccess(
-        student.id,
-        student.name,
-        normalizedEmail
-      );
-
-      if (!result.hasAccess) {
-        toast.error("Não foi possível criar o acesso.");
-        return;
-      }
-
-      if (result.password) {
-        setAccessModal({
-          studentName: student.name,
-          email: result.email || student.email,
-          password: result.password,
-          title: "Acesso do aluno criado",
-        });
-      } else if (result.hasAccess) {
-        toast.success("Acesso ligado à conta existente. Usa Reset password se precisares de nova password.");
-      }
-
-      await loadData();
-      toast.success("Acesso criado com sucesso.");
-    } catch (error) {
-      console.error(error);
-      toast.error(
-        error instanceof Error ? error.message : "Erro ao criar acesso."
-      );
-    }
   }
 
   async function confirmDeleteStudent() {
@@ -513,21 +382,9 @@ function AdminArea() {
                     >
                       Eliminar
                     </button>
-                    {accessMap.get(detailStudent.id) ? (
-                      <StudentAccessButtons
-                        hasAccess
-                        blocked={accessMap.get(detailStudent.id)!.blocked}
-                        onResetPassword={() => handleResetPassword(detailStudent)}
-                        onToggleBlock={() => handleToggleBlock(detailStudent)}
-                      />
-                    ) : (
-                      <button
-                        className="compact-btn"
-                        onClick={() => handleCreateMissingAccess(detailStudent)}
-                      >
-                        Criar acesso
-                      </button>
-                    )}
+                    <span className="muted student-access-disabled-note">
+                      Acesso de alunos desativado
+                    </span>
                   </div>
                 }
               >
@@ -544,16 +401,6 @@ function AdminArea() {
         />
       )}
 
-      {accessModal && (
-        <StudentAccessModal
-          studentName={accessModal.studentName}
-          email={accessModal.email}
-          password={accessModal.password}
-          title={accessModal.title}
-          onClose={() => setAccessModal(null)}
-        />
-      )}
-
       {studentToDelete && (
         <ConfirmDialog
           title="Eliminar aluno"
@@ -564,7 +411,7 @@ function AdminArea() {
             "O histórico em treinos e avaliações pode deixar de estar associado a este aluno.",
             "Esta ação não pode ser desfeita.",
           ]}
-          recommendation="Se o aluno desistiu ou saiu, usa Bloquear em vez de eliminar — o registo e o histórico mantêm-se."
+          recommendation="Só elimina se tiveres a certeza. Em dúvida, mantém o registo."
           confirmText="Eliminar registo"
           cancelText="Cancelar"
           onConfirm={confirmDeleteStudent}

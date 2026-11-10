@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import FormField from "../components/FormField";
-import ActionButtons from "../components/ActionButtons";
 import ConfirmDialog from "../components/ConfirmDialog";
 import type {
   InventoryCondition,
   InventoryItem,
+  InventoryItemType,
 } from "../types/inventory";
 import { INVENTORY_CONDITION_LABELS } from "../types/inventory";
 import {
@@ -15,27 +15,64 @@ import {
   upsertSimpleInventoryCount,
 } from "../services/inventoryService";
 
-const BOARD_SIZE_SUGGESTIONS = ["5'6\"", "5'10\"", "6'0\"", "6'4\"", "6'8\"", "7'0\"", "7'6\"", "8'0\""];
+const BOARD_SIZE_SUGGESTIONS = [
+  "5'6\"",
+  "5'10\"",
+  "6'0\"",
+  "6'4\"",
+  "6'8\"",
+  "7'0\"",
+  "7'6\"",
+  "8'0\"",
+];
 const WETSUIT_SIZE_SUGGESTIONS = ["XS", "S", "M", "L", "XL", "XXL"];
+const CONDITIONS: InventoryCondition[] = ["good", "fair", "bad"];
 
-type SizedDraft = {
+type SizeMatrixRow = {
   size: string;
-  condition: InventoryCondition | "";
-  quantity: string;
+  byCondition: Record<InventoryCondition, InventoryItem | null>;
+  total: number;
 };
+
+function buildSizeMatrix(items: InventoryItem[]): SizeMatrixRow[] {
+  const map = new Map<string, SizeMatrixRow>();
+
+  for (const item of items) {
+    const size = item.size?.trim() || "—";
+    if (!map.has(size)) {
+      map.set(size, {
+        size,
+        byCondition: { good: null, fair: null, bad: null },
+        total: 0,
+      });
+    }
+
+    const row = map.get(size)!;
+    const condition = item.condition || "good";
+    row.byCondition[condition] = item;
+    row.total += item.quantity;
+  }
+
+  return [...map.values()].sort((a, b) => a.size.localeCompare(b.size, "pt"));
+}
 
 function AdminInventory() {
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [itemToDelete, setItemToDelete] = useState<InventoryItem | null>(null);
+  const [rowToClear, setRowToClear] = useState<{
+    itemType: "board" | "wetsuit";
+    size: string;
+    items: InventoryItem[];
+  } | null>(null);
 
-  const [boardDraft, setBoardDraft] = useState<SizedDraft>({
+  const [boardDraft, setBoardDraft] = useState({
     size: "",
-    condition: "good",
+    condition: "good" as InventoryCondition,
     quantity: "1",
   });
   const [wetsuitDraft, setWetsuitDraft] = useState({
     size: "",
+    condition: "good" as InventoryCondition,
     quantity: "1",
   });
 
@@ -90,91 +127,120 @@ function AdminInventory() {
     () => items.filter((item) => item.itemType === "wetsuit"),
     [items]
   );
+  const boardMatrix = useMemo(() => buildSizeMatrix(boards), [boards]);
+  const wetsuitMatrix = useMemo(() => buildSizeMatrix(wetsuits), [wetsuits]);
 
-  const totals = useMemo(() => {
-    const boardTotal = boards.reduce((sum, item) => sum + item.quantity, 0);
-    const wetsuitTotal = wetsuits.reduce((sum, item) => sum + item.quantity, 0);
+  const conditionTotals = useMemo(() => {
+    const count = (list: InventoryItem[], condition: InventoryCondition) =>
+      list
+        .filter((item) => (item.condition || "good") === condition)
+        .reduce((sum, item) => sum + item.quantity, 0);
 
     return {
-      boards: boardTotal,
-      wetsuits: wetsuitTotal,
-      leashes: Number(simpleCounts.leash) || 0,
-      lycrasCoach: Number(simpleCounts.lycra_coach) || 0,
-      lycrasStudent: Number(simpleCounts.lycra_student) || 0,
-      flags: Number(simpleCounts.flags) || 0,
-      medicalKit: Number(simpleCounts.medical_kit) || 0,
+      boards: {
+        good: count(boards, "good"),
+        fair: count(boards, "fair"),
+        bad: count(boards, "bad"),
+        total: boards.reduce((sum, item) => sum + item.quantity, 0),
+      },
+      wetsuits: {
+        good: count(wetsuits, "good"),
+        fair: count(wetsuits, "fair"),
+        bad: count(wetsuits, "bad"),
+        total: wetsuits.reduce((sum, item) => sum + item.quantity, 0),
+      },
     };
-  }, [boards, wetsuits, simpleCounts]);
+  }, [boards, wetsuits]);
 
-  async function addBoard() {
-    if (!boardDraft.size.trim() || !boardDraft.condition) {
-      toast.error("Indica o tamanho e o estado da prancha.");
-      return;
-    }
-
-    const quantity = Number(boardDraft.quantity);
-    if (!Number.isFinite(quantity) || quantity < 1) {
-      toast.error("Indica uma quantidade válida.");
-      return;
-    }
-
-    const existing = boards.find(
+  async function upsertSizedItem(
+    itemType: "board" | "wetsuit",
+    size: string,
+    condition: InventoryCondition,
+    quantityDelta: number
+  ) {
+    const list = itemType === "board" ? boards : wetsuits;
+    const existing = list.find(
       (item) =>
-        item.size === boardDraft.size.trim() &&
-        item.condition === boardDraft.condition
+        item.size === size && (item.condition || "good") === condition
+    );
+    const nextQuantity = Math.max(
+      0,
+      (existing?.quantity || 0) + quantityDelta
     );
 
-    try {
-      await saveInventoryItem({
-        id: existing?.id || crypto.randomUUID(),
-        itemType: "board",
-        size: boardDraft.size.trim(),
-        condition: boardDraft.condition as InventoryCondition,
-        quantity: (existing?.quantity || 0) + quantity,
-        notes: "",
-      });
+    if (nextQuantity === 0 && existing) {
+      await deleteInventoryItem(existing.id);
+      return;
+    }
 
-      setBoardDraft({ size: "", condition: "good", quantity: "1" });
+    await saveInventoryItem({
+      id: existing?.id || crypto.randomUUID(),
+      itemType,
+      size,
+      condition,
+      quantity: nextQuantity,
+      notes: "",
+    });
+  }
+
+  async function setSizedQuantity(
+    itemType: "board" | "wetsuit",
+    size: string,
+    condition: InventoryCondition,
+    quantity: number,
+    existing: InventoryItem | null
+  ) {
+    const safe = Math.max(0, quantity);
+
+    try {
+      if (safe === 0) {
+        if (existing) await deleteInventoryItem(existing.id);
+      } else {
+        await saveInventoryItem({
+          id: existing?.id || crypto.randomUUID(),
+          itemType,
+          size,
+          condition,
+          quantity: safe,
+          notes: "",
+        });
+      }
       await loadData();
-      toast.success("Prancha registada no inventário.");
     } catch (error) {
       console.error(error);
-      toast.error("Erro ao guardar prancha.");
+      toast.error("Erro ao atualizar quantidade.");
     }
   }
 
-  async function addWetsuit() {
-    if (!wetsuitDraft.size.trim()) {
-      toast.error("Indica o tamanho do fato.");
+  async function addSizedDraft(
+    itemType: "board" | "wetsuit",
+    draft: { size: string; condition: InventoryCondition; quantity: string }
+  ) {
+    if (!draft.size.trim()) {
+      toast.error("Indica o tamanho.");
       return;
     }
 
-    const quantity = Number(wetsuitDraft.quantity);
+    const quantity = Number(draft.quantity);
     if (!Number.isFinite(quantity) || quantity < 1) {
       toast.error("Indica uma quantidade válida.");
       return;
     }
 
-    const existing = wetsuits.find(
-      (item) => item.size === wetsuitDraft.size.trim()
-    );
-
     try {
-      await saveInventoryItem({
-        id: existing?.id || crypto.randomUUID(),
-        itemType: "wetsuit",
-        size: wetsuitDraft.size.trim(),
-        condition: null,
-        quantity: (existing?.quantity || 0) + quantity,
-        notes: "",
-      });
-
-      setWetsuitDraft({ size: "", quantity: "1" });
+      await upsertSizedItem(
+        itemType,
+        draft.size.trim(),
+        draft.condition,
+        quantity
+      );
       await loadData();
-      toast.success("Fato registado no inventário.");
+      toast.success(
+        itemType === "board" ? "Prancha adicionada." : "Fato adicionado."
+      );
     } catch (error) {
       console.error(error);
-      toast.error("Erro ao guardar fato.");
+      toast.error("Erro ao guardar no inventário.");
     }
   }
 
@@ -221,38 +287,146 @@ function AdminInventory() {
     }
   }
 
-  async function confirmDeleteItem() {
-    if (!itemToDelete) return;
+  async function confirmClearRow() {
+    if (!rowToClear) return;
 
     try {
-      await deleteInventoryItem(itemToDelete.id);
-      setItemToDelete(null);
+      await Promise.all(
+        rowToClear.items.map((item) => deleteInventoryItem(item.id))
+      );
+      setRowToClear(null);
       await loadData();
-      toast.success("Registo removido do inventário.");
+      toast.success("Tamanho removido do inventário.");
     } catch (error) {
       console.error(error);
       toast.error("Erro ao remover registo.");
     }
   }
 
-  function renderConditionBadge(condition: InventoryCondition | null) {
-    if (!condition) return "—";
-
+  function renderMatrixTable(
+    itemType: "board" | "wetsuit",
+    matrix: SizeMatrixRow[],
+    emptyLabel: string
+  ) {
     return (
-      <span className={`inventory-condition inventory-condition-${condition}`}>
-        {INVENTORY_CONDITION_LABELS[condition]}
-      </span>
+      <div className="table-scroll">
+        <table className="data-table inventory-matrix-table">
+          <thead>
+            <tr>
+              <th>Tamanho</th>
+              <th>Bom</th>
+              <th>Razoável</th>
+              <th>Mau</th>
+              <th>Total</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            {matrix.length === 0 && (
+              <tr>
+                <td colSpan={6} className="muted">
+                  {emptyLabel}
+                </td>
+              </tr>
+            )}
+            {matrix.map((row) => (
+              <tr key={`${itemType}-${row.size}`}>
+                <td data-label="Tamanho" className="data-table-primary">
+                  <strong>{row.size}</strong>
+                </td>
+                {CONDITIONS.map((condition) => {
+                  const cell = row.byCondition[condition];
+                  return (
+                    <td
+                      key={condition}
+                      data-label={INVENTORY_CONDITION_LABELS[condition]}
+                    >
+                      <input
+                        className="inventory-qty-input"
+                        type="number"
+                        min={0}
+                        defaultValue={cell?.quantity ?? 0}
+                        key={`${cell?.id || row.size}-${condition}-${cell?.quantity ?? 0}`}
+                        onBlur={(event) => {
+                          const next = Number(event.target.value);
+                          if (!Number.isFinite(next)) return;
+                          if (next === (cell?.quantity ?? 0)) return;
+                          setSizedQuantity(
+                            itemType,
+                            row.size,
+                            condition,
+                            next,
+                            cell
+                          );
+                        }}
+                      />
+                    </td>
+                  );
+                })}
+                <td data-label="Total">
+                  <strong>{row.total}</strong>
+                </td>
+                <td data-label="Ações">
+                  <button
+                    type="button"
+                    className="danger-btn compact-btn"
+                    onClick={() => {
+                      const rowItems = CONDITIONS.map(
+                        (condition) => row.byCondition[condition]
+                      ).filter((item): item is InventoryItem => Boolean(item));
+                      if (rowItems.length > 0) {
+                        setRowToClear({
+                          itemType,
+                          size: row.size,
+                          items: rowItems,
+                        });
+                      }
+                    }}
+                  >
+                    Limpar linha
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     );
   }
 
-  return (
-    <div>
-      <h1 className="page-title">Inventário</h1>
+  const generalRows: Array<{
+    key: Extract<
+      InventoryItemType,
+      "leash" | "lycra_coach" | "lycra_student" | "flags" | "medical_kit"
+    >;
+    label: string;
+    value: string;
+  }> = [
+    { key: "leash", label: "Leashes", value: simpleCounts.leash },
+    {
+      key: "lycra_coach",
+      label: "Licras de treinador",
+      value: simpleCounts.lycra_coach,
+    },
+    {
+      key: "lycra_student",
+      label: "Licras de alunos",
+      value: simpleCounts.lycra_student,
+    },
+    { key: "flags", label: "Bandeiras", value: simpleCounts.flags },
+    {
+      key: "medical_kit",
+      label: "Kits médicos",
+      value: simpleCounts.medical_kit,
+    },
+  ];
 
-      <p className="muted workflow-help">
-        Regista e consulta o material da escola. Usa esta página para controlar
-        pranchas por tamanho e estado, fatos, leashes, licras, bandeiras e kit
-        médico.
+  return (
+    <div className="dashboard-page">
+      <h1 className="page-title">Inventário</h1>
+      <p className="workflow-help">
+        Tabela completa do material: pranchas e fatos por <strong>tamanho</strong>{" "}
+        e <strong>estado</strong>. Edita as quantidades diretamente nas células.
       </p>
 
       {loading ? (
@@ -260,31 +434,38 @@ function AdminInventory() {
       ) : (
         <>
           <div className="stats-grid">
-            <div className="card">
+            <div className="card stat-card">
               <span className="stat-label">Pranchas</span>
-              <strong className="stat-number">{totals.boards}</strong>
+              <strong className="stat-number">
+                {conditionTotals.boards.total}
+              </strong>
+              <small className="muted">
+                B {conditionTotals.boards.good} · R {conditionTotals.boards.fair}{" "}
+                · M {conditionTotals.boards.bad}
+              </small>
             </div>
-            <div className="card">
+            <div className="card stat-card">
               <span className="stat-label">Fatos</span>
-              <strong className="stat-number">{totals.wetsuits}</strong>
+              <strong className="stat-number">
+                {conditionTotals.wetsuits.total}
+              </strong>
+              <small className="muted">
+                B {conditionTotals.wetsuits.good} · R{" "}
+                {conditionTotals.wetsuits.fair} · M {conditionTotals.wetsuits.bad}
+              </small>
             </div>
-            <div className="card">
+            <div className="card stat-card">
               <span className="stat-label">Leashes</span>
-              <strong className="stat-number">{totals.leashes}</strong>
-            </div>
-            <div className="card">
-              <span className="stat-label">Licras</span>
-              <strong className="stat-number small">
-                T {totals.lycrasCoach} · A {totals.lycrasStudent}
+              <strong className="stat-number">
+                {Number(simpleCounts.leash) || 0}
               </strong>
             </div>
-            <div className="card">
-              <span className="stat-label">Bandeiras</span>
-              <strong className="stat-number">{totals.flags}</strong>
-            </div>
-            <div className="card">
-              <span className="stat-label">Kits médicos</span>
-              <strong className="stat-number">{totals.medicalKit}</strong>
+            <div className="card stat-card">
+              <span className="stat-label">Licras</span>
+              <strong className="stat-number small">
+                T {Number(simpleCounts.lycra_coach) || 0} · A{" "}
+                {Number(simpleCounts.lycra_student) || 0}
+              </strong>
             </div>
           </div>
 
@@ -295,10 +476,13 @@ function AdminInventory() {
               <FormField label="Tamanho">
                 <input
                   list="board-sizes"
-                  placeholder="Ex: 6'0"
+                  placeholder="Ex: 6'0&quot;"
                   value={boardDraft.size}
-                  onChange={(e) =>
-                    setBoardDraft((current) => ({ ...current, size: e.target.value }))
+                  onChange={(event) =>
+                    setBoardDraft((current) => ({
+                      ...current,
+                      size: event.target.value,
+                    }))
                   }
                 />
               </FormField>
@@ -311,16 +495,18 @@ function AdminInventory() {
               <FormField label="Estado">
                 <select
                   value={boardDraft.condition}
-                  onChange={(e) =>
+                  onChange={(event) =>
                     setBoardDraft((current) => ({
                       ...current,
-                      condition: e.target.value as InventoryCondition | "",
+                      condition: event.target.value as InventoryCondition,
                     }))
                   }
                 >
-                  <option value="good">Bom</option>
-                  <option value="fair">Razoável</option>
-                  <option value="bad">Mau</option>
+                  {CONDITIONS.map((condition) => (
+                    <option key={condition} value={condition}>
+                      {INVENTORY_CONDITION_LABELS[condition]}
+                    </option>
+                  ))}
                 </select>
               </FormField>
 
@@ -328,56 +514,38 @@ function AdminInventory() {
                 <input
                   type="number"
                   min={1}
-                  placeholder="Ex: 3"
                   value={boardDraft.quantity}
-                  onChange={(e) =>
+                  onChange={(event) =>
                     setBoardDraft((current) => ({
                       ...current,
-                      quantity: e.target.value,
+                      quantity: event.target.value,
                     }))
                   }
                 />
               </FormField>
             </div>
             <div className="form-fields-actions">
-              <button className="primary-btn" onClick={addBoard}>
-                Adicionar
+              <button
+                type="button"
+                className="primary-btn"
+                onClick={async () => {
+                  await addSizedDraft("board", boardDraft);
+                  setBoardDraft({ size: "", condition: "good", quantity: "1" });
+                }}
+              >
+                Adicionar prancha
               </button>
             </div>
 
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Tamanho</th>
-                  <th>Estado</th>
-                  <th>Quantidade</th>
-                  <th>Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {boards.length === 0 && (
-                  <tr>
-                    <td colSpan={4} className="muted">
-                      Sem pranchas registadas.
-                    </td>
-                  </tr>
-                )}
-                {boards.map((item) => (
-                  <tr key={item.id}>
-                    <td data-label="Tamanho">{item.size}</td>
-                    <td data-label="Estado">{renderConditionBadge(item.condition)}</td>
-                    <td data-label="Quantidade">{item.quantity}</td>
-                    <td data-label="Ações">
-                      <ActionButtons onDelete={() => setItemToDelete(item)} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            {renderMatrixTable(
+              "board",
+              boardMatrix,
+              "Sem pranchas registadas."
+            )}
           </div>
 
           <div className="card section-card inventory-section">
-            <h2>Fatos de surf por tamanho</h2>
+            <h2>Fatos de surf por tamanho e estado</h2>
 
             <div className="form-fields-grid inventory-form-row">
               <FormField label="Tamanho">
@@ -385,8 +553,11 @@ function AdminInventory() {
                   list="wetsuit-sizes"
                   placeholder="Ex: M"
                   value={wetsuitDraft.size}
-                  onChange={(e) =>
-                    setWetsuitDraft((current) => ({ ...current, size: e.target.value }))
+                  onChange={(event) =>
+                    setWetsuitDraft((current) => ({
+                      ...current,
+                      size: event.target.value,
+                    }))
                   }
                 />
               </FormField>
@@ -396,169 +567,137 @@ function AdminInventory() {
                 ))}
               </datalist>
 
+              <FormField label="Estado">
+                <select
+                  value={wetsuitDraft.condition}
+                  onChange={(event) =>
+                    setWetsuitDraft((current) => ({
+                      ...current,
+                      condition: event.target.value as InventoryCondition,
+                    }))
+                  }
+                >
+                  {CONDITIONS.map((condition) => (
+                    <option key={condition} value={condition}>
+                      {INVENTORY_CONDITION_LABELS[condition]}
+                    </option>
+                  ))}
+                </select>
+              </FormField>
+
               <FormField label="Quantidade">
                 <input
                   type="number"
                   min={1}
-                  placeholder="Ex: 5"
                   value={wetsuitDraft.quantity}
-                  onChange={(e) =>
+                  onChange={(event) =>
                     setWetsuitDraft((current) => ({
                       ...current,
-                      quantity: e.target.value,
+                      quantity: event.target.value,
                     }))
                   }
                 />
               </FormField>
             </div>
             <div className="form-fields-actions">
-              <button className="primary-btn" onClick={addWetsuit}>
-                Adicionar
+              <button
+                type="button"
+                className="primary-btn"
+                onClick={async () => {
+                  await addSizedDraft("wetsuit", wetsuitDraft);
+                  setWetsuitDraft({
+                    size: "",
+                    condition: "good",
+                    quantity: "1",
+                  });
+                }}
+              >
+                Adicionar fato
               </button>
             </div>
 
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Tamanho</th>
-                  <th>Quantidade</th>
-                  <th>Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {wetsuits.length === 0 && (
-                  <tr>
-                    <td colSpan={3} className="muted">
-                      Sem fatos registados.
-                    </td>
-                  </tr>
-                )}
-                {wetsuits.map((item) => (
-                  <tr key={item.id}>
-                    <td data-label="Tamanho">{item.size}</td>
-                    <td data-label="Quantidade">{item.quantity}</td>
-                    <td data-label="Ações">
-                      <ActionButtons onDelete={() => setItemToDelete(item)} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            {renderMatrixTable(
+              "wetsuit",
+              wetsuitMatrix,
+              "Sem fatos registados."
+            )}
           </div>
 
           <div className="card section-card inventory-section">
             <h2>Equipamento geral</h2>
 
-            <div className="inventory-simple-grid">
-              <label className="field-label">
-                Leashes
-                <input
-                  type="number"
-                  min={0}
-                  value={simpleCounts.leash}
-                  onChange={(e) =>
-                    setSimpleCounts((current) => ({
-                      ...current,
-                      leash: e.target.value,
-                    }))
-                  }
-                />
-              </label>
-
-              <label className="field-label">
-                Licras de treinador
-                <input
-                  type="number"
-                  min={0}
-                  value={simpleCounts.lycra_coach}
-                  onChange={(e) =>
-                    setSimpleCounts((current) => ({
-                      ...current,
-                      lycra_coach: e.target.value,
-                    }))
-                  }
-                />
-              </label>
-
-              <label className="field-label">
-                Licras de alunos
-                <input
-                  type="number"
-                  min={0}
-                  value={simpleCounts.lycra_student}
-                  onChange={(e) =>
-                    setSimpleCounts((current) => ({
-                      ...current,
-                      lycra_student: e.target.value,
-                    }))
-                  }
-                />
-              </label>
-
-              <label className="field-label">
-                Bandeiras
-                <input
-                  type="number"
-                  min={0}
-                  value={simpleCounts.flags}
-                  onChange={(e) =>
-                    setSimpleCounts((current) => ({
-                      ...current,
-                      flags: e.target.value,
-                    }))
-                  }
-                />
-              </label>
-
-              <label className="field-label">
-                Kits médicos
-                <input
-                  type="number"
-                  min={0}
-                  value={simpleCounts.medical_kit}
-                  onChange={(e) =>
-                    setSimpleCounts((current) => ({
-                      ...current,
-                      medical_kit: e.target.value,
-                    }))
-                  }
-                />
-              </label>
+            <div className="table-scroll">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Item</th>
+                    <th>Quantidade</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {generalRows.map((row) => (
+                    <tr key={row.key}>
+                      <td data-label="Item" className="data-table-primary">
+                        <strong>{row.label}</strong>
+                      </td>
+                      <td data-label="Quantidade">
+                        <input
+                          className="inventory-qty-input"
+                          type="number"
+                          min={0}
+                          value={row.value}
+                          onChange={(event) =>
+                            setSimpleCounts((current) => ({
+                              ...current,
+                              [row.key]: event.target.value,
+                            }))
+                          }
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
 
-            <label className="field-label inventory-notes-field">
-              Notas do kit médico (validade, conteúdo em falta, etc.)
+            <FormField label="Notas do kit médico">
               <textarea
                 rows={3}
                 value={simpleCounts.medical_notes}
-                onChange={(e) =>
+                onChange={(event) =>
                   setSimpleCounts((current) => ({
                     ...current,
-                    medical_notes: e.target.value,
+                    medical_notes: event.target.value,
                   }))
                 }
+                placeholder="Validade, conteúdo em falta, etc."
               />
-            </label>
+            </FormField>
 
-            <button className="primary-btn" onClick={saveSimpleCounts}>
-              Guardar equipamento geral
-            </button>
+            <div className="form-fields-actions">
+              <button
+                type="button"
+                className="primary-btn"
+                onClick={saveSimpleCounts}
+              >
+                Guardar equipamento geral
+              </button>
+            </div>
           </div>
         </>
       )}
 
-      {itemToDelete && (
+      {rowToClear && (
         <ConfirmDialog
-          title="Remover do inventário"
-          message={`Remover este registo (${itemToDelete.size || "equipamento"}) do inventário?`}
-          consequences={[
-            "O registo deixa de aparecer no inventário.",
-            "Podes voltar a adicionar o material mais tarde.",
-          ]}
-          confirmText="Remover"
+          title="Limpar tamanho"
+          message={`Remover todas as quantidades de ${rowToClear.size} (${
+            rowToClear.itemType === "board" ? "pranchas" : "fatos"
+          })?`}
+          consequences={["Bom, razoável e mau deste tamanho são apagados."]}
+          confirmText="Limpar"
           cancelText="Cancelar"
-          onConfirm={confirmDeleteItem}
-          onCancel={() => setItemToDelete(null)}
+          onConfirm={confirmClearRow}
+          onCancel={() => setRowToClear(null)}
         />
       )}
     </div>

@@ -200,7 +200,12 @@ function Groups() {
 
   return (
     <div>
-      <h1 className="page-title">Grupos</h1>
+      <h1 className="page-title">Grupos (DB / legado)</h1>
+      <p className="workflow-help">
+        Os grupos do dia a dia estão em <strong>Grupos fixos</strong> (código /
+        calendário). Esta lista na base de dados é só para o fluxo avançado de
+        Horários.
+      </p>
 
       <p className="workflow-help">
         Seleciona um grupo para editar treinador e alunos. Depois vai a{" "}

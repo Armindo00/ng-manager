@@ -260,6 +260,29 @@ TO authenticated
 USING (public.is_admin())
 WITH CHECK (public.is_admin());
 
+CREATE OR REPLACE FUNCTION public.coach_is_secondary_in_notes(notes text)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM coaches
+    WHERE coaches.id::text = public.current_app_user_id()
+      AND coalesce(notes, '') ~* '^SECONDARY_COACH='
+      AND lower(trim(coaches.name)) = lower(trim(
+        regexp_replace(
+          split_part(coalesce(notes, ''), E'\n', 1),
+          '^SECONDARY_COACH=',
+          '',
+          'i'
+        )
+      ))
+  );
+$$;
+
 CREATE POLICY "lessons_select"
 ON lessons
 FOR SELECT
@@ -268,7 +291,12 @@ USING (
   public.is_admin()
   OR (
     public.is_coach()
-    AND lessons.coach_id::text = public.current_app_user_id()
+    AND (
+      lessons.coach_id::text = public.current_app_user_id()
+      OR public.coach_is_secondary_in_notes(
+        split_part(coalesce(lessons.coach_notes, ''), E'\n', 1)
+      )
+    )
   )
   OR (
     public.is_student()

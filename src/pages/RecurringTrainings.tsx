@@ -221,18 +221,17 @@ function RecurringTrainings() {
 
   return (
     <div>
-      <h1 className="page-title">Horários dos Grupos</h1>
+      <h1 className="page-title">Horários (legado)</h1>
 
       <div className="workflow-help">
         <p>
-          <strong>1.</strong> Cria o grupo em <em>Grupos</em> (treinador + alunos)
+          Esta área é <strong>avançada / legada</strong>. O fluxo normal da escola
+          usa os <strong>grupos fixos</strong> em <em>Hoje</em> e o{" "}
+          <em>Calendário</em> atualizado automaticamente.
         </p>
         <p>
-          <strong>2.</strong> Define aqui o dia da semana, carrinha e até quando o grupo treina
-        </p>
-        <p>
-          <strong>3.</strong> Clica <strong>Publicar</strong> — o treinador define depois a
-          praia, hora e pickups
+          Só uses Publicar aqui se precisares de gerar treinos antigos a partir
+          de grupos da base de dados.
         </p>
       </div>
 
