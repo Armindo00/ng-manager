@@ -18,6 +18,7 @@ type Action =
   | "reset-coach-password"
   | "toggle-coach-block"
   | "delete-coach-access"
+  | "ensure-school-coach"
   | "complete-password-change";
 
 type RequestBody = {
@@ -297,7 +298,8 @@ Deno.serve(async (req) => {
         .replace(/^\.+|\.+$/g, "");
 
       const normalizedEmail = sanitizeEmail(
-        String(body.email ?? "").trim() || `${generatedLocal}@ngmanager.local`
+        String(body.email ?? "").trim() ||
+          `${generatedLocal}@coaches.ngmanager.app`
       );
       const phone = String(body.phone ?? "").trim() || "-";
 
@@ -367,6 +369,135 @@ Deno.serve(async (req) => {
         coachId,
         email: normalizedEmail,
         password,
+      });
+    }
+
+    if (body.action === "ensure-school-coach") {
+      if (!body.name) {
+        return jsonResponse({ error: "Nome é obrigatório." }, 400);
+      }
+
+      const coachName = String(body.name).trim();
+      const generatedLocal = coachName
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, ".")
+        .replace(/^\.+|\.+$/g, "");
+      const normalizedEmail = sanitizeEmail(
+        `${generatedLocal}@coaches.ngmanager.app`
+      );
+      const password = generatePassword();
+
+      const { data: existingCoachByName } = await adminClient
+        .from("coaches")
+        .select("id, name, phone")
+        .ilike("name", coachName)
+        .maybeSingle();
+
+      const existingAuthUser = await findAuthUserByEmail(
+        adminClient,
+        normalizedEmail
+      );
+
+      let coachId = existingCoachByName?.id || existingAuthUser?.id || null;
+
+      if (!existingAuthUser) {
+        const { data: authData, error: authError } =
+          await adminClient.auth.admin.createUser({
+            email: normalizedEmail,
+            password,
+            email_confirm: true,
+            user_metadata: {
+              name: coachName,
+              role: "coach",
+              login_name: coachName,
+            },
+          });
+
+        if (authError || !authData.user) {
+          return jsonResponse({
+            error: authError?.message || "Erro ao criar utilizador de acesso.",
+          }, 400);
+        }
+
+        coachId = authData.user.id;
+      } else {
+        const { error: passwordError } =
+          await adminClient.auth.admin.updateUserById(existingAuthUser.id, {
+            password,
+            email_confirm: true,
+            ban_duration: "none",
+            user_metadata: {
+              name: coachName,
+              role: "coach",
+              login_name: coachName,
+            },
+          });
+
+        if (passwordError) {
+          return jsonResponse({ error: passwordError.message }, 400);
+        }
+
+        coachId = existingAuthUser.id;
+      }
+
+      if (!coachId) {
+        return jsonResponse({ error: "Não foi possível obter o id do treinador." }, 400);
+      }
+
+      const { error: coachUpsertError } = await adminClient.from("coaches").upsert({
+        id: coachId,
+        name: coachName,
+        phone: "-",
+      });
+
+      if (coachUpsertError) {
+        return jsonResponse({ error: coachUpsertError.message }, 400);
+      }
+
+      const { data: existingAppUser } = await adminClient
+        .from("app_users")
+        .select("id")
+        .eq("id", coachId)
+        .maybeSingle();
+
+      if (existingAppUser) {
+        const { error: appUserUpdateError } = await adminClient
+          .from("app_users")
+          .update({
+            name: coachName,
+            email: normalizedEmail,
+            role: "coach",
+            blocked: false,
+            must_change_password: true,
+          })
+          .eq("id", coachId);
+
+        if (appUserUpdateError) {
+          return jsonResponse({ error: appUserUpdateError.message }, 400);
+        }
+      } else {
+        const { error: appUserInsertError } = await adminClient.from("app_users").insert({
+          id: coachId,
+          name: coachName,
+          email: normalizedEmail,
+          role: "coach",
+          must_change_password: true,
+          blocked: false,
+        });
+
+        if (appUserInsertError) {
+          return jsonResponse({ error: appUserInsertError.message }, 400);
+        }
+      }
+
+      return jsonResponse({
+        hasAccess: true,
+        coachId,
+        email: normalizedEmail,
+        password,
+        repaired: Boolean(existingAuthUser || existingCoachByName),
       });
     }
 

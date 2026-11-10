@@ -119,6 +119,10 @@ function AdminSchoolSetup() {
           Cria Mindo, Goncalo, Manuel, Tiz, Kiko e Tomas. Se já existirem,
           reinicia a password e mostra aqui o login + password.
         </p>
+        <p className="muted">
+          Se aparecer erro da Edge Function, no Supabase faz deploy de{" "}
+          <strong>admin-student-auth</strong> e volta a tentar.
+        </p>
 
         <ul className="muted" style={{ marginTop: 8 }}>
           {schoolCoaches.map((name) => (
