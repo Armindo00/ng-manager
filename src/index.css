@@ -2052,6 +2052,38 @@ textarea:focus {
   background: #fff;
 }
 
+.admin-coach-email-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.coach-seed-results {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.coach-seed-result {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+}
+
+.coach-seed-result span {
+  font-size: 13px;
+  color: #475569;
+  word-break: break-word;
+}
+
+.coach-seed-error {
+  color: #b91c1c !important;
+}
+
 .lesson-section textarea {
   width: 100%;
   margin: 0 0 12px;

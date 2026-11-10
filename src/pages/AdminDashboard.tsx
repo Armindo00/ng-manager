@@ -12,6 +12,7 @@ import { getCurrentMonthYear } from "../utils/dateUtils";
 
 type AdminSection =
   | "dashboard"
+  | "setup"
   | "students"
   | "coaches"
   | "groups"
@@ -116,6 +117,10 @@ function AdminDashboard({ onChangeSection }: Props) {
       ) : (
         <>
       <div className="admin-module-grid">
+        <button type="button" className="admin-module-card" onClick={() => onChangeSection("setup")}>
+          <strong>Setup escola</strong>
+          <span>Importar alunos e criar treinadores</span>
+        </button>
         <button type="button" className="admin-module-card" onClick={() => onChangeSection("students")}>
           <strong>Alunos</strong>
           <span>{students.length} registos</span>
