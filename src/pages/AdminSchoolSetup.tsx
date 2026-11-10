@@ -44,13 +44,21 @@ function AdminSchoolSetup() {
       setCoachResults(results);
 
       const created = results.filter((item) => item.created).length;
-      const failed = results.filter((item) => !item.created).length;
+      const resetOk = results.filter(
+        (item) => item.ok && !item.created && Boolean(item.password)
+      ).length;
+      const failed = results.filter((item) => !item.ok).length;
 
       if (created > 0) {
         toast.success(`${created} treinador(es) criados.`);
+      } else if (resetOk > 0) {
+        toast.success(
+          `${resetOk} password(s) reiniciada(s) para treinadores que já existiam.`
+        );
       }
+
       if (failed > 0) {
-        toast.error(`${failed} treinador(es) não foram criados. Vê os detalhes.`);
+        toast.error(`${failed} treinador(es) com erro. Vê os detalhes.`);
       }
     } catch (error) {
       console.error(error);
@@ -108,8 +116,8 @@ function AdminSchoolSetup() {
         </div>
 
         <p className="muted">
-          Cria Mindo, Goncalo, Manuel, Tiz, Kiko e Tomas. Cada um entra com o
-          próprio nome e a password temporária gerada.
+          Cria Mindo, Goncalo, Manuel, Tiz, Kiko e Tomas. Se já existirem,
+          reinicia a password e mostra aqui o login + password.
         </p>
 
         <ul className="muted" style={{ marginTop: 8 }}>
@@ -125,7 +133,9 @@ function AdminSchoolSetup() {
           onClick={handleCreateCoaches}
           style={{ marginTop: 16 }}
         >
-          {creatingCoaches ? "A criar..." : "Criar treinadores"}
+          {creatingCoaches
+            ? "A criar..."
+            : "Criar / reiniciar passwords"}
         </button>
 
         {coachResults.length > 0 && (
@@ -133,16 +143,9 @@ function AdminSchoolSetup() {
             {coachResults.map((result) => (
               <div className="coach-seed-result" key={result.name}>
                 <strong>{result.name}</strong>
-                {result.created ? (
-                  <span>
-                    Login: {result.loginName}
-                    {result.password ? ` · password: ${result.password}` : ""}
-                  </span>
-                ) : (
-                  <span className="coach-seed-error">
-                    {result.error || "Falhou"}
-                  </span>
-                )}
+                <span className={result.ok ? undefined : "coach-seed-error"}>
+                  {result.message}
+                </span>
               </div>
             ))}
           </div>

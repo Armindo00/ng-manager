@@ -24,9 +24,29 @@ type Action =
   | "toggle-coach-block"
   | "delete-coach-access";
 
+function formatErrorValue(value: unknown) {
+  if (!value) return "";
+  if (typeof value === "string") return value;
+  if (value instanceof Error) return value.message;
+  if (typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    if (typeof record.error === "string") return record.error;
+    if (typeof record.message === "string") return record.message;
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return "Erro desconhecido";
+    }
+  }
+  return String(value);
+}
+
 function formatInvokeError(error: unknown, data: unknown) {
   if (data && typeof data === "object" && "error" in data) {
-    return String((data as { error: string }).error);
+    return (
+      formatErrorValue((data as { error: unknown }).error) ||
+      "Erro ao gerir acesso do treinador."
+    );
   }
 
   if (error instanceof FunctionsHttpError) {
@@ -65,7 +85,7 @@ async function invokeCoachAuth(
         const payload = await error.context.json();
 
         if (payload?.error) {
-          throw new Error(String(payload.error));
+          throw new Error(formatErrorValue(payload.error));
         }
       } catch (parseError) {
         if (
@@ -82,7 +102,7 @@ async function invokeCoachAuth(
   }
 
   if (data?.error) {
-    throw new Error(String(data.error));
+    throw new Error(formatErrorValue(data.error));
   }
 
   return data as CoachAuthResult;

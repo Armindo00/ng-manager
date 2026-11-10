@@ -3,9 +3,14 @@ import { schoolCoaches } from "../data/schoolCoaches";
 import type { Student } from "../types";
 import { addStudent, getStudents } from "./studentsService";
 import { getCoaches } from "./coachesService";
-import { createCoachWithAccess } from "./coachAuthService";
+import {
+  createCoachWithAccess,
+  getCoachAccessMap,
+  resetCoachPassword,
+} from "./coachAuthService";
 import { normalizePersonName } from "../utils/studentNameMatch";
 import { usernameToAuthEmail } from "../utils/usernameAuth";
+import { toErrorMessage } from "../utils/errorMessage";
 
 export type StudentImportResult = {
   created: number;
@@ -19,7 +24,8 @@ export type CoachSeedResult = {
   loginName: string;
   created: boolean;
   password?: string;
-  error?: string;
+  message: string;
+  ok: boolean;
 };
 
 function studentExists(students: Student[], name: string) {
@@ -29,13 +35,13 @@ function studentExists(students: Student[], name: string) {
   );
 }
 
-function coachExistsByName(
-  coaches: Array<{ name: string }>,
+function findCoachByName(
+  coaches: Array<{ id: string; name: string }>,
   name: string
 ) {
   const target = normalizePersonName(name);
-  return coaches.some(
-    (coach) => normalizePersonName(coach.name) === target
+  return (
+    coaches.find((coach) => normalizePersonName(coach.name) === target) || null
   );
 }
 
@@ -83,23 +89,55 @@ export async function importFixedStudents() {
 }
 
 export async function createSchoolCoaches() {
-  const existingCoaches = await getCoaches();
+  const [existingCoaches, accessMap] = await Promise.all([
+    getCoaches(),
+    getCoachAccessMap(),
+  ]);
   const results: CoachSeedResult[] = [];
 
   for (const name of schoolCoaches) {
-    if (coachExistsByName(existingCoaches, name)) {
-      results.push({
-        name,
-        loginName: name,
-        created: false,
-        error: "Já existe um treinador com este nome",
-      });
+    const existing = findCoachByName(existingCoaches, name);
+
+    if (existing) {
+      try {
+        if (!accessMap.has(existing.id)) {
+          results.push({
+            name,
+            loginName: name,
+            created: false,
+            ok: false,
+            message:
+              "Treinador já existe, mas sem acesso de login. Cria o acesso em Treinadores.",
+          });
+          continue;
+        }
+
+        const reset = await resetCoachPassword(existing.id);
+
+        results.push({
+          name,
+          loginName: name,
+          created: false,
+          ok: true,
+          password: reset.password,
+          message: reset.password
+            ? `Já existia · nova password: ${reset.password}`
+            : "Já existia · password reiniciada.",
+        });
+      } catch (error) {
+        results.push({
+          name,
+          loginName: name,
+          created: false,
+          ok: false,
+          message: `Já existia · ${toErrorMessage(error, "erro ao reiniciar password")}`,
+        });
+      }
       continue;
     }
 
     try {
       const email = usernameToAuthEmail(name);
-      // Telefone interno vazio: a API atual exige um valor truthy.
       const result = await createCoachWithAccess(name, email, "-");
 
       if (!result.hasAccess) {
@@ -107,7 +145,11 @@ export async function createSchoolCoaches() {
           name,
           loginName: name,
           created: false,
-          error: result.error || "Não foi possível criar o acesso",
+          ok: false,
+          message: toErrorMessage(
+            result.error,
+            "Não foi possível criar o acesso"
+          ),
         });
         continue;
       }
@@ -116,15 +158,19 @@ export async function createSchoolCoaches() {
         name,
         loginName: name,
         created: true,
+        ok: true,
         password: result.password,
+        message: result.password
+          ? `Criado · login: ${name} · password: ${result.password}`
+          : `Criado · login: ${name}`,
       });
     } catch (error) {
       results.push({
         name,
         loginName: name,
         created: false,
-        error:
-          error instanceof Error ? error.message : "Erro ao criar treinador",
+        ok: false,
+        message: toErrorMessage(error, "Erro ao criar treinador"),
       });
     }
   }
