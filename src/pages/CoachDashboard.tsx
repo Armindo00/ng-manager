@@ -45,9 +45,11 @@ function CoachDashboard({ user }: Props) {
     loadData();
   }, [user.id, user.role, user.name]);
 
-  async function loadData() {
+  async function loadData(options?: { silent?: boolean }) {
+    const silent = options?.silent === true;
+
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
 
       const [
         lessonsData,
@@ -78,8 +80,14 @@ function CoachDashboard({ user }: Props) {
       console.error(error);
       toast.error("Erro ao carregar os treinos.");
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
+  }
+
+  function handleLessonUpdated(nextLesson: Lesson) {
+    setLessons((current) =>
+      current.map((item) => (item.id === nextLesson.id ? nextLesson : item))
+    );
   }
 
   const todayGroups = useMemo(
@@ -379,7 +387,8 @@ function CoachDashboard({ user }: Props) {
             <CoachAttendancePanel
               lesson={selectedLesson}
               students={students}
-              onSaved={loadData}
+              onLessonUpdated={handleLessonUpdated}
+              onSaved={() => loadData({ silent: true })}
             />
 
             {canFinishLesson(selectedLesson) && (

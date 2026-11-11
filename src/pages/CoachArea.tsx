@@ -55,9 +55,11 @@ function CoachArea({ user }: Props) {
     loadData();
   }, [user.id, user.role, user.name]);
 
-  async function loadData() {
+  async function loadData(options?: { silent?: boolean }) {
+    const silent = options?.silent === true;
+
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
 
       const [studentsData, lessonsData, trainingsData, resolvedCoachId] =
         await Promise.all([
@@ -83,8 +85,14 @@ function CoachArea({ user }: Props) {
       console.error(error);
       toast.error("Erro ao carregar treinos.");
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
+  }
+
+  function handleLessonUpdated(nextLesson: Lesson) {
+    setLessons((current) =>
+      current.map((item) => (item.id === nextLesson.id ? nextLesson : item))
+    );
   }
 
   const selectedLesson =
@@ -236,7 +244,8 @@ function CoachArea({ user }: Props) {
             <CoachAttendancePanel
               lesson={selectedLesson}
               students={students}
-              onSaved={loadData}
+              onLessonUpdated={handleLessonUpdated}
+              onSaved={() => loadData({ silent: true })}
             />
           </div>
         </Modal>
