@@ -298,12 +298,13 @@ function AdminArea() {
 
   return (
     <div>
-      <h1 className="page-title">Alunos</h1>
-
-      <p className="muted workflow-help">
-        Fichas dos alunos para a operação da escola (presenças, avaliações e
-        pagamentos). Não há login de aluno nesta app.
-      </p>
+      <header className="page-header">
+        <p className="page-eyebrow">Pessoas</p>
+        <h1 className="page-title">Alunos</h1>
+        <p className="page-description">
+          Fichas para presenças, avaliações e pagamentos. Sem login de aluno.
+        </p>
+      </header>
 
       {loading && <p className="muted">A carregar alunos...</p>}
 

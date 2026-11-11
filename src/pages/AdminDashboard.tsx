@@ -1,5 +1,20 @@
 import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
+import {
+  ArrowRight,
+  BarChart3,
+  Calendar,
+  CalendarClock,
+  CalendarDays,
+  CreditCard,
+  Package,
+  Star,
+  Truck,
+  UserCircle,
+  Users,
+  Wrench,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import type { Coach, Lesson, MonthlyEvaluation, Student } from "../types";
 import type { FixedTraining } from "../data/fixedTrainings";
 import { getStudents } from "../services/studentsService";
@@ -7,16 +22,13 @@ import { getCoaches } from "../services/coachesService";
 import { getLessons } from "../services/lessonsService";
 import { getEvaluations } from "../services/evaluationsService";
 import { ensureFixedTrainingsSeeded } from "../services/fixedTrainingsService";
-import LessonsCalendar from "../components/LessonsCalendar";
 import Modal from "../components/Modal";
 import LessonDetailCard from "../components/LessonDetailCard";
 import { getCurrentMonthYear, getTodayDate } from "../utils/dateUtils";
 import {
   getUpcomingCalendarEntries,
   statusLabelForEntry,
-  type CalendarEntry,
 } from "../utils/fixedScheduleCalendar";
-import { formatCalendarDayLabel } from "../utils/calendarUtils";
 
 type AdminSection =
   | "dashboard"
@@ -36,6 +48,19 @@ type Props = {
   onChangeSection: (section: AdminSection) => void;
 };
 
+type ModuleLink = {
+  section: AdminSection;
+  title: string;
+  detail: string;
+  icon: LucideIcon;
+};
+
+type ModuleGroup = {
+  title: string;
+  description: string;
+  items: ModuleLink[];
+};
+
 function AdminDashboard({ onChangeSection }: Props) {
   const [students, setStudents] = useState<Student[]>([]);
   const [coaches, setCoaches] = useState<Coach[]>([]);
@@ -43,8 +68,6 @@ function AdminDashboard({ onChangeSection }: Props) {
   const [evaluations, setEvaluations] = useState<MonthlyEvaluation[]>([]);
   const [fixedTrainings, setFixedTrainings] = useState<FixedTraining[]>([]);
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
-  const [dayEntries, setDayEntries] = useState<CalendarEntry[]>([]);
-  const [selectedDate, setSelectedDate] = useState("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -81,21 +104,7 @@ function AdminDashboard({ onChangeSection }: Props) {
     }
   }
 
-  function handleSelectCalendarDay(entries: CalendarEntry[], date: string) {
-    const registered = entries.filter((entry) => entry.lesson);
-    if (registered.length === 1 && registered[0].lesson) {
-      setSelectedLesson(registered[0].lesson);
-      return;
-    }
-
-    setDayEntries(entries);
-    setSelectedDate(date);
-  }
-
   const pendingPayments = students.filter((student) => !student.paid).length;
-  const finishedLessons = lessons.filter(
-    (lesson) => lesson.status === "finished"
-  ).length;
   const { month: currentMonth, year: currentYear } = getCurrentMonthYear();
   const evaluationsThisMonth = evaluations.filter(
     (evaluation) =>
@@ -113,224 +122,295 @@ function AdminDashboard({ onChangeSection }: Props) {
   const attendanceRate =
     totalBooked === 0 ? 0 : Math.round((totalPresent / totalBooked) * 100);
 
-  const upcoming = useMemo(
-    () => getUpcomingCalendarEntries(lessons, fixedTrainings, 6),
-    [lessons, fixedTrainings]
-  );
-
   const today = getTodayDate();
   const todayRegistered = lessons.filter(
     (lesson) => lesson.date === today && lesson.status !== "draft"
+  );
+  const todayOpen = todayRegistered.filter(
+    (lesson) => lesson.status !== "finished"
   ).length;
 
+  const upcoming = useMemo(
+    () => getUpcomingCalendarEntries(lessons, fixedTrainings, 5),
+    [lessons, fixedTrainings]
+  );
+
+  const attentionItems = [
+    pendingPayments > 0
+      ? {
+          id: "payments",
+          label: `${pendingPayments} mensalidade${pendingPayments === 1 ? "" : "s"} em falta`,
+          action: "Ver pagamentos" as const,
+          section: "payments" as AdminSection,
+        }
+      : null,
+    todayOpen > 0
+      ? {
+          id: "today-open",
+          label:
+            todayOpen === 1
+              ? "1 sessão aberta hoje"
+              : `${todayOpen} sessões abertas hoje`,
+          action: "Ver calendário" as const,
+          section: "lessons" as AdminSection,
+        }
+      : null,
+    evaluationsThisMonth === 0
+      ? {
+          id: "evaluations",
+          label: "Ainda sem avaliações este mês",
+          action: "Abrir avaliações" as const,
+          section: "evaluations" as AdminSection,
+        }
+      : null,
+  ].filter(Boolean) as Array<{
+    id: string;
+    label: string;
+    action: string;
+    section: AdminSection;
+  }>;
+
+  const moduleGroups: ModuleGroup[] = [
+    {
+      title: "Pessoas",
+      description: "Fichas e contas da escola",
+      items: [
+        {
+          section: "students",
+          title: "Alunos",
+          detail: `${students.length} fichas`,
+          icon: Users,
+        },
+        {
+          section: "coaches",
+          title: "Treinadores",
+          detail: `${coaches.length} contas`,
+          icon: UserCircle,
+        },
+        {
+          section: "setup",
+          title: "Importação",
+          detail: "Alunos e passwords",
+          icon: Wrench,
+        },
+      ],
+    },
+    {
+      title: "Escala e treinos",
+      description: "Semana, histórico e totais",
+      items: [
+        {
+          section: "fixed-trainings",
+          title: "Grupos fixos",
+          detail: `${fixedTrainings.length} na escala`,
+          icon: CalendarDays,
+        },
+        {
+          section: "lessons",
+          title: "Calendário",
+          detail: `${todayRegistered.length} hoje`,
+          icon: Calendar,
+        },
+        {
+          section: "coach-activity",
+          title: "Relatório mensal",
+          detail: "Totais por treinador",
+          icon: BarChart3,
+        },
+      ],
+    },
+    {
+      title: "Gestão",
+      description: "Follow-up e logística",
+      items: [
+        {
+          section: "payments",
+          title: "Pagamentos",
+          detail:
+            pendingPayments > 0
+              ? `${pendingPayments} pendentes`
+              : "Em dia",
+          icon: CreditCard,
+        },
+        {
+          section: "evaluations",
+          title: "Avaliações",
+          detail: `${evaluationsThisMonth} este mês`,
+          icon: Star,
+        },
+        {
+          section: "compensations",
+          title: "Compensações",
+          detail: "Faltas a repor",
+          icon: CalendarClock,
+        },
+        {
+          section: "inventory",
+          title: "Inventário",
+          detail: "Material",
+          icon: Package,
+        },
+        {
+          section: "vans",
+          title: "Carrinhas",
+          detail: "Frota",
+          icon: Truck,
+        },
+      ],
+    },
+  ];
+
   return (
-    <div className="dashboard-page">
+    <div className="dashboard-page admin-dashboard">
       <header className="page-header">
-        <p className="page-eyebrow">Gestão da escola</p>
-        <h1 className="page-title">Painel admin</h1>
+        <p className="page-eyebrow">Administração</p>
+        <h1 className="page-title">Visão geral</h1>
         <p className="page-description">
-          Visão geral e atalhos. O dia a dia de presenças continua em{" "}
-          <strong>Hoje</strong>.
+          Estado da escola e atalhos por área. Presenças do dia ficam em{" "}
+          <strong>Hoje</strong>, no menu principal.
         </p>
       </header>
 
       {loading ? (
-        <p className="muted">A carregar dashboard...</p>
+        <p className="muted">A carregar visão geral...</p>
       ) : (
         <>
-          <div className="admin-module-grid">
-            <button
-              type="button"
-              className="admin-module-card"
-              onClick={() => onChangeSection("setup")}
-            >
-              <strong>Setup escola</strong>
-              <span>Importar alunos e criar treinadores</span>
-            </button>
-            <button
-              type="button"
-              className="admin-module-card"
-              onClick={() => onChangeSection("students")}
-            >
-              <strong>Alunos</strong>
-              <span>{students.length} registos</span>
-            </button>
-            <button
-              type="button"
-              className="admin-module-card"
-              onClick={() => onChangeSection("coaches")}
-            >
-              <strong>Treinadores</strong>
-              <span>{coaches.length} registos</span>
-            </button>
-            <button
-              type="button"
-              className="admin-module-card"
-              onClick={() => onChangeSection("fixed-trainings")}
-            >
-              <strong>Grupos fixos</strong>
-              <span>{fixedTrainings.length} grupos na escala</span>
-            </button>
-            <button
-              type="button"
-              className="admin-module-card"
-              onClick={() => onChangeSection("lessons")}
-            >
-              <strong>Calendário</strong>
-              <span>
-                {todayRegistered} registado
-                {todayRegistered === 1 ? "" : "s"} hoje
+          <div className="stats-grid admin-snapshot-grid">
+            <div className="card stat-card">
+              <span className="stat-label">Sessões hoje</span>
+              <strong className="stat-number">{todayRegistered.length}</strong>
+              <span className="stat-hint">
+                {todayOpen > 0
+                  ? `${todayOpen} por concluir`
+                  : todayRegistered.length > 0
+                    ? "Todas concluídas"
+                    : "Nenhuma registada"}
               </span>
-            </button>
-            <button
-              type="button"
-              className="admin-module-card"
-              onClick={() => onChangeSection("coach-activity")}
-            >
-              <strong>Treinos / mês</strong>
-              <span>Totais por treinador</span>
-            </button>
-            <button
-              type="button"
-              className="admin-module-card"
-              onClick={() => onChangeSection("payments")}
-            >
-              <strong>Pagamentos</strong>
-              <span>{pendingPayments} pendentes</span>
-            </button>
-            <button
-              type="button"
-              className="admin-module-card"
-              onClick={() => onChangeSection("evaluations")}
-            >
-              <strong>Avaliações</strong>
-              <span>{evaluationsThisMonth} este mês</span>
-            </button>
-            <button
-              type="button"
-              className="admin-module-card"
-              onClick={() => onChangeSection("compensations")}
-            >
-              <strong>Compensações</strong>
-              <span>Faltas a repor</span>
-            </button>
-            <button
-              type="button"
-              className="admin-module-card"
-              onClick={() => onChangeSection("inventory")}
-            >
-              <strong>Inventário</strong>
-              <span>Material da escola</span>
-            </button>
-            <button
-              type="button"
-              className="admin-module-card"
-              onClick={() => onChangeSection("vans")}
-            >
-              <strong>Carrinhas</strong>
-              <span>Frota e tarefas</span>
-            </button>
-          </div>
-
-          <div className="stats-grid">
-            <div className="card stat-card">
-              <span className="stat-label">Alunos</span>
-              <strong className="stat-number">{students.length}</strong>
             </div>
             <div className="card stat-card">
-              <span className="stat-label">Treinadores</span>
-              <strong className="stat-number">{coaches.length}</strong>
+              <span className="stat-label">Mensalidades</span>
+              <strong className="stat-number">{pendingPayments}</strong>
+              <span className="stat-hint">
+                {pendingPayments > 0 ? "em falta" : "tudo em dia"}
+              </span>
             </div>
             <div className="card stat-card">
-              <span className="stat-label">Treinos concluídos</span>
-              <strong className="stat-number">{finishedLessons}</strong>
-            </div>
-            <div className="card stat-card">
-              <span className="stat-label">Presença média</span>
+              <span className="stat-label">Presença</span>
               <strong className="stat-number">{attendanceRate}%</strong>
+              <span className="stat-hint">média global</span>
+            </div>
+            <div className="card stat-card">
+              <span className="stat-label">Escala</span>
+              <strong className="stat-number">{fixedTrainings.length}</strong>
+              <span className="stat-hint">grupos fixos</span>
             </div>
           </div>
 
-          <div className="dashboard-row">
-            <div className="card section-card">
-              <h2>Próximos grupos</h2>
-              <div className="lesson-preview-list">
-                {upcoming.map((entry) => (
-                  <div
-                    className="lesson-preview lesson-preview-button"
-                    key={entry.id}
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => {
-                      if (entry.lesson) setSelectedLesson(entry.lesson);
-                      else {
-                        setDayEntries([entry]);
-                        setSelectedDate(entry.date);
-                      }
-                    }}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter" || event.key === " ") {
-                        if (entry.lesson) setSelectedLesson(entry.lesson);
-                      }
-                    }}
-                  >
-                    <strong>{entry.date}</strong>
-                    <span>{statusLabelForEntry(entry)}</span>
-                    <span>{entry.title}</span>
-                    <span>{entry.coachName}</span>
-                  </div>
-                ))}
+          {attentionItems.length > 0 && (
+            <section className="card section-card admin-attention-card">
+              <div className="admin-section-heading">
+                <div>
+                  <span className="admin-section-kicker">Prioridade</span>
+                  <h2>Precisa de atenção</h2>
+                </div>
               </div>
-              {upcoming.length === 0 && (
-                <p className="muted">Sem grupos próximos.</p>
-              )}
-            </div>
-          </div>
 
-          <div className="calendar-wrapper">
-            <LessonsCalendar
-              lessons={lessons}
-              fixedTrainings={fixedTrainings}
-              onSelectDay={handleSelectCalendarDay}
-              title="Calendário da escola"
-            />
-          </div>
-
-          {dayEntries.length > 0 && (
-            <Modal
-              title={formatCalendarDayLabel(selectedDate)}
-              onClose={() => {
-                setDayEntries([]);
-                setSelectedDate("");
-              }}
-            >
-              <div className="calendar-day-lessons-list">
-                {dayEntries.map((entry) => (
+              <div className="admin-attention-list">
+                {attentionItems.map((item) => (
                   <button
                     type="button"
-                    className="calendar-day-lesson-row"
-                    key={entry.id}
-                    onClick={() => {
-                      if (!entry.lesson) return;
-                      setDayEntries([]);
-                      setSelectedDate("");
-                      setSelectedLesson(entry.lesson);
-                    }}
-                    disabled={!entry.lesson}
+                    className="admin-attention-row"
+                    key={item.id}
+                    onClick={() => onChangeSection(item.section)}
                   >
-                    <strong>{statusLabelForEntry(entry)}</strong>
-                    <span>{entry.title}</span>
-                    <small>
-                      {entry.coachName}
-                      {entry.studentCount
-                        ? ` · ${entry.studentCount} alunos`
-                        : ""}
-                    </small>
+                    <span>{item.label}</span>
+                    <span className="admin-attention-action">
+                      {item.action}
+                      <ArrowRight size={16} strokeWidth={2.2} />
+                    </span>
                   </button>
                 ))}
               </div>
-            </Modal>
+            </section>
           )}
+
+          <div className="admin-module-groups">
+            {moduleGroups.map((group) => (
+              <section className="card section-card admin-module-group" key={group.title}>
+                <div className="admin-section-heading">
+                  <div>
+                    <span className="admin-section-kicker">{group.title}</span>
+                    <h2>{group.description}</h2>
+                  </div>
+                </div>
+
+                <div className="admin-module-grid">
+                  {group.items.map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <button
+                        type="button"
+                        className="admin-module-card"
+                        key={item.section}
+                        onClick={() => onChangeSection(item.section)}
+                      >
+                        <span className="admin-module-icon">
+                          <Icon size={18} strokeWidth={2} />
+                        </span>
+                        <strong>{item.title}</strong>
+                        <span>{item.detail}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
+            ))}
+          </div>
+
+          <section className="card section-card">
+            <div className="admin-section-heading">
+              <div>
+                <span className="admin-section-kicker">Próximos</span>
+                <h2>Na escala</h2>
+              </div>
+              <button
+                type="button"
+                className="compact-btn"
+                onClick={() => onChangeSection("lessons")}
+              >
+                Calendário completo
+              </button>
+            </div>
+
+            {upcoming.length === 0 ? (
+              <p className="muted">Sem grupos próximos na escala.</p>
+            ) : (
+              <div className="admin-upcoming-list">
+                {upcoming.map((entry) => (
+                  <button
+                    type="button"
+                    className="admin-upcoming-row"
+                    key={entry.id}
+                    onClick={() => {
+                      if (entry.lesson) setSelectedLesson(entry.lesson);
+                      else onChangeSection("lessons");
+                    }}
+                  >
+                    <div className="admin-upcoming-main">
+                      <strong>{entry.title}</strong>
+                      <span>
+                        {entry.date}
+                        {entry.coachName ? ` · ${entry.coachName}` : ""}
+                      </span>
+                    </div>
+                    <span className="admin-upcoming-status">
+                      {statusLabelForEntry(entry)}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </section>
 
           {selectedLesson && (
             <Modal

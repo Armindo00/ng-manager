@@ -271,12 +271,14 @@ function Coaches() {
 
   return (
     <div>
-      <h1 className="page-title">Treinadores</h1>
-
-      <p className="muted workflow-help">
-        Seleciona um treinador na lista para gerir o acesso. Para saídas, usa{" "}
-        <strong>Bloquear</strong> em vez de eliminar.
-      </p>
+      <header className="page-header">
+        <p className="page-eyebrow">Pessoas</p>
+        <h1 className="page-title">Treinadores</h1>
+        <p className="page-description">
+          Contas e acessos. Para saídas, usa <strong>Bloquear</strong> em vez
+          de eliminar.
+        </p>
+      </header>
 
       {loading ? (
         <p>A carregar...</p>

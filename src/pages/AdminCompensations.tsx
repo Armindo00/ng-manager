@@ -344,12 +344,13 @@ function AdminCompensations() {
 
   return (
     <div>
-      <h1 className="page-title">Compensações</h1>
-
-      <p className="muted workflow-help">
-        Seleciona um pedido na lista para validar a justificação e agendar a
-        compensação.
-      </p>
+      <header className="page-header">
+        <p className="page-eyebrow">Gestão</p>
+        <h1 className="page-title">Compensações</h1>
+        <p className="page-description">
+          Valida faltas justificadas e agenda a reposição.
+        </p>
+      </header>
 
       {loading ? (
         <p className="muted">A carregar compensações...</p>

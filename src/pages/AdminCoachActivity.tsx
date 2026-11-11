@@ -84,10 +84,10 @@ function AdminCoachActivity() {
   return (
     <div className="dashboard-page">
       <header className="page-header">
-        <p className="page-eyebrow">Relatório mensal</p>
-        <h1 className="page-title">Treinos por treinador</h1>
+        <p className="page-eyebrow">Escala</p>
+        <h1 className="page-title">Relatório mensal</h1>
         <p className="page-description">
-          Totais do mês: água concluída + videoanálises registadas.
+          Totais do mês por treinador: água concluída + videoanálises.
         </p>
       </header>
 
