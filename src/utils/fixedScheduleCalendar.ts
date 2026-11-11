@@ -169,8 +169,8 @@ export function getEntryDotClass(entry: CalendarEntry) {
 }
 
 export function statusLabelForEntry(entry: CalendarEntry) {
-  if (entry.status === "planned") return "Planeado";
+  if (entry.status === "planned") return "Na escala";
   if (entry.status === "published") return "Registado";
   if (entry.status === "finished") return "Concluído";
-  return "Rascunho";
+  return "Aberto";
 }

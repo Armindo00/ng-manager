@@ -206,7 +206,7 @@ function LessonsCalendar({
 
       <div className="calendar-legend">
         <span>
-          <i className="legend-dot dot-planned" /> Planeado (grupo fixo)
+          <i className="legend-dot dot-planned" /> Na escala
         </span>
         <span>
           <i className="legend-dot dot-published" /> Registado

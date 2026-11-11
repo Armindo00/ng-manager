@@ -10,9 +10,7 @@ import AdminArea from "./pages/AdminArea";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminPayments from "./pages/AdminPayments";
 import Coaches from "./pages/Coaches";
-import Groups from "./pages/Groups";
 import AdminLessons from "./pages/AdminLessons";
-import RecurringTrainings from "./pages/RecurringTrainings";
 import AdminInventory from "./pages/AdminInventory";
 import AdminVans from "./pages/AdminVans";
 import AdminCompensations from "./pages/AdminCompensations";
@@ -40,9 +38,7 @@ type AdminSection =
   | "setup"
   | "students"
   | "coaches"
-  | "groups"
   | "fixed-trainings"
-  | "recurring"
   | "lessons"
   | "inventory"
   | "vans"
@@ -246,13 +242,7 @@ function App() {
             activeSection === "coaches" && <Coaches />}
 
           {currentUser.role === "admin" &&
-            activeSection === "groups" && <Groups />}
-
-          {currentUser.role === "admin" &&
             activeSection === "fixed-trainings" && <AdminFixedTrainings />}
-
-          {currentUser.role === "admin" &&
-            activeSection === "recurring" && <RecurringTrainings />}
 
           {currentUser.role === "admin" &&
             activeSection === "lessons" && <AdminLessons />}

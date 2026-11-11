@@ -4,8 +4,6 @@ import {
   LayoutDashboard,
   Users,
   UserCircle,
-  UsersRound,
-  Repeat,
   Calendar,
   CreditCard,
   Package,
@@ -38,9 +36,7 @@ const ADMIN_MANAGEMENT_SECTIONS = new Set([
   "setup",
   "students",
   "coaches",
-  "groups",
   "fixed-trainings",
-  "recurring",
   "lessons",
   "inventory",
   "vans",
@@ -186,10 +182,6 @@ function Sidebar({ user, activeSection, onChangeSection, onLogout }: Props) {
               {item(Star, "Avaliações", "evaluations")}
               {item(CalendarClock, "Compensações", "compensations")}
               {item(Truck, "Carrinhas", "vans")}
-
-              <div className="nav-section-label">Avançado</div>
-              {item(UsersRound, "Grupos (DB)", "groups")}
-              {item(Repeat, "Horários", "recurring")}
             </nav>
           )}
 

@@ -23,9 +23,7 @@ type AdminSection =
   | "setup"
   | "students"
   | "coaches"
-  | "groups"
   | "fixed-trainings"
-  | "recurring"
   | "lessons"
   | "inventory"
   | "vans"
@@ -218,35 +216,19 @@ function AdminDashboard({ onChangeSection }: Props) {
             </button>
             <button
               type="button"
-              className="admin-module-card admin-module-card-secondary"
+              className="admin-module-card"
               onClick={() => onChangeSection("inventory")}
             >
               <strong>Inventário</strong>
-              <span>Material</span>
+              <span>Material da escola</span>
             </button>
             <button
               type="button"
-              className="admin-module-card admin-module-card-secondary"
+              className="admin-module-card"
               onClick={() => onChangeSection("vans")}
             >
               <strong>Carrinhas</strong>
-              <span>Frota</span>
-            </button>
-            <button
-              type="button"
-              className="admin-module-card admin-module-card-secondary"
-              onClick={() => onChangeSection("groups")}
-            >
-              <strong>Grupos (DB)</strong>
-              <span>Avançado / legado</span>
-            </button>
-            <button
-              type="button"
-              className="admin-module-card admin-module-card-secondary"
-              onClick={() => onChangeSection("recurring")}
-            >
-              <strong>Horários</strong>
-              <span>Avançado / legado</span>
+              <span>Frota e tarefas</span>
             </button>
           </div>
 
