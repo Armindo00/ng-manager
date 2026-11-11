@@ -1,36 +1,20 @@
 import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import FormField from "../components/FormField";
-import ConfirmDialog from "../components/ConfirmDialog";
+import InventorySheet from "../components/InventorySheet";
 import type {
   InventoryCondition,
   InventoryItem,
   InventoryItemType,
 } from "../types/inventory";
+import { INVENTORY_CONDITION_LABELS } from "../types/inventory";
 import {
-  INVENTORY_CONDITION_LABELS,
-  INVENTORY_TYPE_LABELS,
-} from "../types/inventory";
-import {
-  deleteInventoryItem,
   getInventoryItems,
   saveInventoryItem,
   setInventoryQuantity,
 } from "../services/inventoryService";
 
 const CONDITIONS: InventoryCondition[] = ["good", "fair", "bad"];
-
-const MATERIAL_ORDER: InventoryItemType[] = [
-  "board",
-  "wetsuit",
-  "leash",
-  "lycra_coach",
-  "lycra_student",
-  "flags",
-  "medical_kit",
-];
-
-const SIZED_TYPES = new Set<InventoryItemType>(["board", "wetsuit"]);
 
 const BOARD_SIZE_SUGGESTIONS = [
   "5'6\"",
@@ -44,93 +28,15 @@ const BOARD_SIZE_SUGGESTIONS = [
 ];
 const WETSUIT_SIZE_SUGGESTIONS = ["XS", "S", "M", "L", "XL", "XXL"];
 
-type MatrixRow = {
-  key: string;
-  itemType: InventoryItemType;
-  materialLabel: string;
-  sizeLabel: string;
-  size: string | null;
-  byCondition: Record<InventoryCondition, InventoryItem | null>;
-  total: number;
-  notes: string;
-};
-
 function conditionOf(item: InventoryItem): InventoryCondition {
   return item.condition || "good";
-}
-
-function buildMatrixRows(items: InventoryItem[]): MatrixRow[] {
-  const map = new Map<string, MatrixRow>();
-
-  for (const itemType of MATERIAL_ORDER) {
-    const typeItems = items.filter((item) => item.itemType === itemType);
-
-    if (SIZED_TYPES.has(itemType)) {
-      const sizes = new Set(
-        typeItems
-          .map((item) => item.size?.trim() || "")
-          .filter(Boolean)
-      );
-
-      for (const size of [...sizes].sort((a, b) => a.localeCompare(b, "pt"))) {
-        const key = `${itemType}::${size}`;
-        map.set(key, {
-          key,
-          itemType,
-          materialLabel: INVENTORY_TYPE_LABELS[itemType],
-          sizeLabel: size,
-          size,
-          byCondition: { good: null, fair: null, bad: null },
-          total: 0,
-          notes: "",
-        });
-      }
-
-      for (const item of typeItems) {
-        const size = item.size?.trim();
-        if (!size) continue;
-        const row = map.get(`${itemType}::${size}`);
-        if (!row) continue;
-        const condition = conditionOf(item);
-        row.byCondition[condition] = item;
-        row.total += item.quantity;
-        if (item.notes) row.notes = item.notes;
-      }
-      continue;
-    }
-
-    const key = `${itemType}::`;
-    const row: MatrixRow = {
-      key,
-      itemType,
-      materialLabel: INVENTORY_TYPE_LABELS[itemType],
-      sizeLabel: "—",
-      size: null,
-      byCondition: { good: null, fair: null, bad: null },
-      total: 0,
-      notes: "",
-    };
-
-    for (const item of typeItems) {
-      const condition = conditionOf(item);
-      row.byCondition[condition] = item;
-      row.total += item.quantity;
-      if (item.notes) row.notes = item.notes;
-    }
-
-    map.set(key, row);
-  }
-
-  return MATERIAL_ORDER.flatMap((itemType) =>
-    [...map.values()].filter((row) => row.itemType === itemType)
-  );
 }
 
 function AdminInventory() {
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [sheetOpen, setSheetOpen] = useState(false);
   const [medicalNotes, setMedicalNotes] = useState("");
-  const [rowToClear, setRowToClear] = useState<MatrixRow | null>(null);
   const [draft, setDraft] = useState({
     itemType: "board" as "board" | "wetsuit",
     size: "",
@@ -163,38 +69,33 @@ function AdminInventory() {
     }
   }
 
-  const rows = useMemo(() => buildMatrixRows(items), [items]);
+  const summary = useMemo(() => {
+    const count = (types: InventoryItemType[]) =>
+      items
+        .filter((item) => types.includes(item.itemType))
+        .reduce((sum, item) => sum + item.quantity, 0);
 
-  const totals = useMemo(() => {
-    const byCondition = { good: 0, fair: 0, bad: 0 };
-    let total = 0;
-
-    for (const item of items) {
-      byCondition[conditionOf(item)] += item.quantity;
-      total += item.quantity;
-    }
-
-    return { ...byCondition, total };
+    return {
+      boards: count(["board"]),
+      wetsuits: count(["wetsuit"]),
+      lycras: count(["lycra_coach", "lycra_student"]),
+      leash: count(["leash"]),
+      accessories: count(["flags", "medical_kit"]),
+      total: items.reduce((sum, item) => sum + item.quantity, 0),
+    };
   }, [items]);
 
-  async function updateCell(
-    row: MatrixRow,
-    condition: InventoryCondition,
-    quantity: number
-  ) {
-    const existing = row.byCondition[condition];
-    const notes =
-      row.itemType === "medical_kit" ? medicalNotes : existing?.notes || "";
-
+  async function handleChangeQuantity(options: {
+    itemType: InventoryItemType;
+    size: string | null;
+    condition: InventoryCondition;
+    quantity: number;
+    existingId?: string;
+  }) {
     try {
-      await setInventoryQuantity({
-        itemType: row.itemType,
-        size: row.size,
-        condition,
-        quantity,
-        existingId: existing?.id,
-        notes,
-      });
+      const notes =
+        options.itemType === "medical_kit" ? medicalNotes : undefined;
+      await setInventoryQuantity({ ...options, notes });
       await loadData();
     } catch (error) {
       console.error(error);
@@ -237,10 +138,10 @@ function AdminInventory() {
         quantity: "1",
         condition: "good",
       }));
-      toast.success("Linha adicionada ao inventário.");
+      toast.success("Tamanho adicionado. Abre a folha para ver a tabela.");
     } catch (error) {
       console.error(error);
-      toast.error("Erro ao adicionar material.");
+      toast.error("Erro ao adicionar tamanho.");
     }
   }
 
@@ -278,24 +179,6 @@ function AdminInventory() {
     }
   }
 
-  async function confirmClearRow() {
-    if (!rowToClear) return;
-
-    try {
-      const toDelete = CONDITIONS.map(
-        (condition) => rowToClear.byCondition[condition]
-      ).filter((item): item is InventoryItem => Boolean(item));
-
-      await Promise.all(toDelete.map((item) => deleteInventoryItem(item.id)));
-      setRowToClear(null);
-      await loadData();
-      toast.success("Linha removida.");
-    } catch (error) {
-      console.error(error);
-      toast.error("Erro ao limpar linha.");
-    }
-  }
-
   const sizeSuggestions =
     draft.itemType === "board"
       ? BOARD_SIZE_SUGGESTIONS
@@ -307,8 +190,7 @@ function AdminInventory() {
         <p className="page-eyebrow">Gestão</p>
         <h1 className="page-title">Inventário</h1>
         <p className="page-description">
-          Materiais nas linhas, estado nas colunas. Edita as quantidades
-          diretamente na tabela.
+          Abre a folha para ver todo o material por classe, tamanho e estado.
         </p>
       </header>
 
@@ -316,99 +198,46 @@ function AdminInventory() {
         <p className="muted">A carregar inventário...</p>
       ) : (
         <>
+          <section className="card section-card inventory-open-card">
+            <div className="inventory-open-copy">
+              <span className="admin-section-kicker">Folha</span>
+              <h2>Material da escola</h2>
+              <p className="muted">
+                Pranchas, fatos, licras, leash e acessórios — com quantidades
+                Bom, Razoável e Mau.
+              </p>
+            </div>
+            <button
+              type="button"
+              className="primary-btn inventory-open-btn"
+              onClick={() => setSheetOpen(true)}
+            >
+              Ver inventário
+            </button>
+          </section>
+
           <div className="stats-grid">
             <div className="card stat-card">
-              <span className="stat-label">Total</span>
-              <strong className="stat-number">{totals.total}</strong>
+              <span className="stat-label">Pranchas</span>
+              <strong className="stat-number">{summary.boards}</strong>
             </div>
             <div className="card stat-card">
-              <span className="stat-label">Bom</span>
-              <strong className="stat-number">{totals.good}</strong>
+              <span className="stat-label">Fatos</span>
+              <strong className="stat-number">{summary.wetsuits}</strong>
             </div>
             <div className="card stat-card">
-              <span className="stat-label">Razoável</span>
-              <strong className="stat-number">{totals.fair}</strong>
+              <span className="stat-label">Licras</span>
+              <strong className="stat-number">{summary.lycras}</strong>
             </div>
             <div className="card stat-card">
-              <span className="stat-label">Mau</span>
-              <strong className="stat-number">{totals.bad}</strong>
+              <span className="stat-label">Leash</span>
+              <strong className="stat-number">{summary.leash}</strong>
+            </div>
+            <div className="card stat-card">
+              <span className="stat-label">Acessórios</span>
+              <strong className="stat-number">{summary.accessories}</strong>
             </div>
           </div>
-
-          <section className="card section-card inventory-section">
-            <div className="admin-section-heading">
-              <div>
-                <span className="admin-section-kicker">Material</span>
-                <h2>Tabela de inventário</h2>
-              </div>
-            </div>
-
-            <div className="table-scroll">
-              <table className="data-table inventory-matrix-table">
-                <thead>
-                  <tr>
-                    <th>Material</th>
-                    <th>Tamanho</th>
-                    <th>Bom</th>
-                    <th>Razoável</th>
-                    <th>Mau</th>
-                    <th>Total</th>
-                    <th>Ações</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((row) => (
-                    <tr key={row.key}>
-                      <td data-label="Material" className="data-table-primary">
-                        <strong>{row.materialLabel}</strong>
-                      </td>
-                      <td data-label="Tamanho">{row.sizeLabel}</td>
-                      {CONDITIONS.map((condition) => {
-                        const cell = row.byCondition[condition];
-                        return (
-                          <td
-                            key={condition}
-                            data-label={INVENTORY_CONDITION_LABELS[condition]}
-                          >
-                            <input
-                              className="inventory-qty-input"
-                              type="number"
-                              min={0}
-                              defaultValue={cell?.quantity ?? 0}
-                              key={`${row.key}-${condition}-${cell?.id || "new"}-${cell?.quantity ?? 0}`}
-                              onBlur={(event) => {
-                                const next = Number(event.target.value);
-                                if (!Number.isFinite(next)) return;
-                                if (next === (cell?.quantity ?? 0)) return;
-                                updateCell(row, condition, next);
-                              }}
-                            />
-                          </td>
-                        );
-                      })}
-                      <td data-label="Total">
-                        <strong>{row.total}</strong>
-                      </td>
-                      <td data-label="Ações">
-                        {SIZED_TYPES.has(row.itemType) ? (
-                          <button
-                            type="button"
-                            className="danger-btn compact-btn"
-                            disabled={row.total === 0}
-                            onClick={() => setRowToClear(row)}
-                          >
-                            Limpar
-                          </button>
-                        ) : (
-                          <span className="muted">—</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </section>
 
           <section className="card section-card inventory-section">
             <div className="admin-section-heading">
@@ -431,7 +260,7 @@ function AdminInventory() {
                   }
                 >
                   <option value="board">Prancha</option>
-                  <option value="wetsuit">Fato de surf</option>
+                  <option value="wetsuit">Fato</option>
                 </select>
               </FormField>
 
@@ -495,7 +324,7 @@ function AdminInventory() {
                 className="primary-btn"
                 onClick={addSizedRow}
               >
-                Adicionar à tabela
+                Adicionar tamanho
               </button>
             </div>
           </section>
@@ -530,17 +359,11 @@ function AdminInventory() {
         </>
       )}
 
-      {rowToClear && (
-        <ConfirmDialog
-          title="Limpar linha"
-          message={`Remover ${rowToClear.materialLabel} ${rowToClear.sizeLabel} do inventário?`}
-          consequences={[
-            "As quantidades Bom, Razoável e Mau desta linha são apagadas.",
-          ]}
-          confirmText="Limpar"
-          cancelText="Cancelar"
-          onConfirm={confirmClearRow}
-          onCancel={() => setRowToClear(null)}
+      {sheetOpen && (
+        <InventorySheet
+          items={items}
+          onClose={() => setSheetOpen(false)}
+          onChangeQuantity={handleChangeQuantity}
         />
       )}
     </div>
