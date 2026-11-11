@@ -34,6 +34,13 @@ type MonthBucket = {
 
 type PanelMode = "view" | "create" | "edit";
 
+type NumberDrafts = {
+  month: string;
+  year: string;
+  effort: string;
+  attendance: string;
+};
+
 function resultText(result: MonthlyEvaluation["goalResult"]) {
   if (result === "completed") return "Cumprido";
   if (result === "progress") return "Em progresso";
@@ -44,6 +51,34 @@ function statusLabel(status: MonthlyEvaluation["status"]) {
   if (status === "sent") return "Enviada";
   if (status === "finalized") return "Finalizada";
   return "Rascunho";
+}
+
+function numberDraftsFromEvaluation(evaluation: MonthlyEvaluation): NumberDrafts {
+  return {
+    month: String(evaluation.month),
+    year: String(evaluation.year),
+    effort: String(evaluation.effort),
+    attendance: String(evaluation.attendance),
+  };
+}
+
+function clampInt(raw: string, min: number, max: number, fallback: number) {
+  const parsed = Number(raw.trim());
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.min(max, Math.max(min, Math.round(parsed)));
+}
+
+function applyNumberDrafts(
+  evaluation: MonthlyEvaluation,
+  drafts: NumberDrafts
+): MonthlyEvaluation {
+  return {
+    ...evaluation,
+    month: clampInt(drafts.month, 1, 12, evaluation.month || 1),
+    year: clampInt(drafts.year, 2020, 2100, evaluation.year || new Date().getFullYear()),
+    effort: clampInt(drafts.effort, 1, 5, evaluation.effort || 1),
+    attendance: clampInt(drafts.attendance, 0, 100, evaluation.attendance || 0),
+  };
 }
 
 function AdminEvaluations({ user }: Props) {
@@ -59,6 +94,9 @@ function AdminEvaluations({ user }: Props) {
   const [search, setSearch] = useState("");
   const [panelMode, setPanelMode] = useState<PanelMode>("view");
   const [form, setForm] = useState<MonthlyEvaluation>(emptyEvaluation(user.id));
+  const [numberDrafts, setNumberDrafts] = useState<NumberDrafts>(() =>
+    numberDraftsFromEvaluation(emptyEvaluation(user.id))
+  );
   const [evaluationToDelete, setEvaluationToDelete] =
     useState<MonthlyEvaluation | null>(null);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
@@ -207,12 +245,14 @@ function AdminEvaluations({ user }: Props) {
     );
     if (teste) draft.studentId = teste.id;
     setForm(draft);
+    setNumberDrafts(numberDraftsFromEvaluation(draft));
     setShareUrl(null);
     setPanelMode("create");
   }
 
   function startEdit(evaluation: MonthlyEvaluation) {
     setForm({ ...evaluation });
+    setNumberDrafts(numberDraftsFromEvaluation(evaluation));
     setShareUrl(null);
     setPanelMode("edit");
   }
@@ -234,13 +274,16 @@ function AdminEvaluations({ user }: Props) {
 
     try {
       setSaving(true);
+      const withNumbers = applyNumberDrafts(form, numberDrafts);
+      setForm(withNumbers);
+      setNumberDrafts(numberDraftsFromEvaluation(withNumbers));
       const next: MonthlyEvaluation = {
-        ...form,
-        technicalGoal: form.technicalGoal.trim(),
-        coachComment: form.coachComment.trim(),
-        nextGoal: form.nextGoal.trim(),
-        status: form.status === "sent" ? "sent" : "draft",
-        coachId: form.coachId || user.id,
+        ...withNumbers,
+        technicalGoal: withNumbers.technicalGoal.trim(),
+        coachComment: withNumbers.coachComment.trim(),
+        nextGoal: withNumbers.nextGoal.trim(),
+        status: withNumbers.status === "sent" ? "sent" : "draft",
+        coachId: withNumbers.coachId || user.id,
       };
       await saveEvaluation(next);
       await loadData();
@@ -269,13 +312,16 @@ function AdminEvaluations({ user }: Props) {
 
       // Ensure latest draft exists before send.
       if (panelMode === "create" || panelMode === "edit") {
+        const withNumbers = applyNumberDrafts(form, numberDrafts);
+        setForm(withNumbers);
+        setNumberDrafts(numberDraftsFromEvaluation(withNumbers));
         const draft: MonthlyEvaluation = {
-          ...form,
-          technicalGoal: form.technicalGoal.trim(),
-          coachComment: form.coachComment.trim(),
-          nextGoal: form.nextGoal.trim(),
+          ...withNumbers,
+          technicalGoal: withNumbers.technicalGoal.trim(),
+          coachComment: withNumbers.coachComment.trim(),
+          nextGoal: withNumbers.nextGoal.trim(),
           status: "draft",
-          coachId: form.coachId || user.id,
+          coachId: withNumbers.coachId || user.id,
         };
         if (!draft.studentId || !draft.technicalGoal) {
           toast.error("Preenche aluno e objetivo técnico.");
@@ -397,14 +443,20 @@ function AdminEvaluations({ user }: Props) {
 
           <FormField label="Mês">
             <input
-              type="number"
-              min={1}
-              max={12}
-              value={form.month}
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              value={numberDrafts.month}
               onChange={(e) =>
-                setForm((current) => ({
+                setNumberDrafts((current) => ({
                   ...current,
-                  month: Number(e.target.value) || 1,
+                  month: e.target.value.replace(/[^\d]/g, ""),
+                }))
+              }
+              onBlur={() =>
+                setNumberDrafts((current) => ({
+                  ...current,
+                  month: String(clampInt(current.month, 1, 12, form.month || 1)),
                 }))
               }
             />
@@ -412,14 +464,27 @@ function AdminEvaluations({ user }: Props) {
 
           <FormField label="Ano">
             <input
-              type="number"
-              min={2020}
-              max={2100}
-              value={form.year}
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              value={numberDrafts.year}
               onChange={(e) =>
-                setForm((current) => ({
+                setNumberDrafts((current) => ({
                   ...current,
-                  year: Number(e.target.value) || current.year,
+                  year: e.target.value.replace(/[^\d]/g, ""),
+                }))
+              }
+              onBlur={() =>
+                setNumberDrafts((current) => ({
+                  ...current,
+                  year: String(
+                    clampInt(
+                      current.year,
+                      2020,
+                      2100,
+                      form.year || new Date().getFullYear()
+                    )
+                  ),
                 }))
               }
             />
@@ -427,14 +492,22 @@ function AdminEvaluations({ user }: Props) {
 
           <FormField label="Empenho (1-5)">
             <input
-              type="number"
-              min={1}
-              max={5}
-              value={form.effort}
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              value={numberDrafts.effort}
               onChange={(e) =>
-                setForm((current) => ({
+                setNumberDrafts((current) => ({
                   ...current,
-                  effort: Math.min(5, Math.max(1, Number(e.target.value) || 1)),
+                  effort: e.target.value.replace(/[^\d]/g, ""),
+                }))
+              }
+              onBlur={() =>
+                setNumberDrafts((current) => ({
+                  ...current,
+                  effort: String(
+                    clampInt(current.effort, 1, 5, form.effort || 1)
+                  ),
                 }))
               }
             />
@@ -442,16 +515,21 @@ function AdminEvaluations({ user }: Props) {
 
           <FormField label="Presença (%)">
             <input
-              type="number"
-              min={0}
-              max={100}
-              value={form.attendance}
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              value={numberDrafts.attendance}
               onChange={(e) =>
-                setForm((current) => ({
+                setNumberDrafts((current) => ({
                   ...current,
-                  attendance: Math.min(
-                    100,
-                    Math.max(0, Number(e.target.value) || 0)
+                  attendance: e.target.value.replace(/[^\d]/g, ""),
+                }))
+              }
+              onBlur={() =>
+                setNumberDrafts((current) => ({
+                  ...current,
+                  attendance: String(
+                    clampInt(current.attendance, 0, 100, form.attendance || 0)
                   ),
                 }))
               }
