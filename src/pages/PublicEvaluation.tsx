@@ -16,6 +16,12 @@ function resultText(result: SharedEvaluation["goalResult"]) {
   return "Continuar";
 }
 
+function resultTone(result: SharedEvaluation["goalResult"]) {
+  if (result === "completed") return "is-success";
+  if (result === "progress") return "is-progress";
+  return "is-continue";
+}
+
 function PublicEvaluation({ token }: Props) {
   const [evaluation, setEvaluation] = useState<SharedEvaluation | null>(null);
   const [loading, setLoading] = useState(true);
@@ -54,54 +60,103 @@ function PublicEvaluation({ token }: Props) {
 
   return (
     <div className="public-evaluation-page">
-      <div className="public-evaluation-card">
-        <div className="public-evaluation-brand">
-          <img src={logo} alt="NextGeneration Surf School" />
-          <div>
-            <p className="page-eyebrow">NextGeneration Surf School</p>
-            <h1>Avaliação mensal</h1>
+      <div className="public-evaluation-atmosphere" aria-hidden="true" />
+
+      <article className="public-evaluation-sheet">
+        <header className="public-evaluation-header">
+          <div className="public-evaluation-logo-wrap">
+            <img
+              src={logo}
+              alt="NextGeneration Surf School"
+              className="public-evaluation-logo"
+            />
           </div>
-        </div>
+          <div className="public-evaluation-heading">
+            <p className="public-evaluation-brand-name">
+              NextGeneration Surf School
+            </p>
+            <h1>Avaliação mensal</h1>
+            {evaluation ? (
+              <p className="public-evaluation-period">
+                {formatMonthYear(evaluation.month, evaluation.year)}
+              </p>
+            ) : null}
+          </div>
+        </header>
 
         {loading ? (
-          <p className="muted">A carregar avaliação...</p>
+          <p className="public-evaluation-status">A carregar avaliação...</p>
         ) : error ? (
-          <p className="muted">{error}</p>
+          <p className="public-evaluation-status">{error}</p>
         ) : evaluation ? (
-          <div className="evaluation-detail-card public-evaluation-detail">
-            <p>
-              <strong>Aluno:</strong> {evaluation.studentName}
-            </p>
-            <p>
-              <strong>Treinador:</strong> {evaluation.coachName}
-            </p>
-            <p>
-              <strong>Período:</strong>{" "}
-              {formatMonthYear(evaluation.month, evaluation.year)}
-            </p>
-            <p>
-              <strong>Empenho:</strong> {evaluation.effort}/5
-            </p>
-            <p>
-              <strong>Presença:</strong> {evaluation.attendance}%
-            </p>
-            <p>
-              <strong>Objetivo técnico:</strong>{" "}
-              {evaluation.technicalGoal || "—"}
-            </p>
-            <p>
-              <strong>Resultado:</strong> {resultText(evaluation.goalResult)}
-            </p>
-            <p>
-              <strong>Comentário do treinador:</strong>{" "}
-              {evaluation.coachComment || "—"}
-            </p>
-            <p>
-              <strong>Próximo objetivo:</strong> {evaluation.nextGoal || "—"}
-            </p>
-          </div>
+          <>
+            <section className="public-evaluation-identity">
+              <div>
+                <span className="public-evaluation-label">Aluno</span>
+                <strong className="public-evaluation-student">
+                  {evaluation.studentName}
+                </strong>
+              </div>
+              <div>
+                <span className="public-evaluation-label">Treinador</span>
+                <p>{evaluation.coachName}</p>
+              </div>
+            </section>
+
+            <section className="public-evaluation-metrics" aria-label="Indicadores">
+              <div className="public-evaluation-metric">
+                <span className="public-evaluation-label">Empenho</span>
+                <strong>
+                  {evaluation.effort}
+                  <span>/5</span>
+                </strong>
+              </div>
+              <div className="public-evaluation-metric">
+                <span className="public-evaluation-label">Presença</span>
+                <strong>
+                  {evaluation.attendance}
+                  <span>%</span>
+                </strong>
+              </div>
+              <div className="public-evaluation-metric">
+                <span className="public-evaluation-label">Resultado</span>
+                <strong
+                  className={`public-evaluation-result ${resultTone(
+                    evaluation.goalResult
+                  )}`}
+                >
+                  {resultText(evaluation.goalResult)}
+                </strong>
+              </div>
+            </section>
+
+            <section className="public-evaluation-body">
+              <div className="public-evaluation-block">
+                <span className="public-evaluation-label">Objetivo técnico</span>
+                <p>{evaluation.technicalGoal || "—"}</p>
+              </div>
+
+              <div className="public-evaluation-block">
+                <span className="public-evaluation-label">
+                  Comentário do treinador
+                </span>
+                <p className="public-evaluation-comment">
+                  {evaluation.coachComment || "—"}
+                </p>
+              </div>
+
+              <div className="public-evaluation-block is-next">
+                <span className="public-evaluation-label">Próximo objetivo</span>
+                <p>{evaluation.nextGoal || "—"}</p>
+              </div>
+            </section>
+
+            <footer className="public-evaluation-footer">
+              <p>Documento partilhado pela NextGeneration Surf School</p>
+            </footer>
+          </>
         ) : null}
-      </div>
+      </article>
     </div>
   );
 }
