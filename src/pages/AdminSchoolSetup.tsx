@@ -80,11 +80,14 @@ function AdminSchoolSetup() {
 
   return (
     <div className="dashboard-page">
-      <h1 className="page-title">Setup da escola</h1>
-      <p className="muted admin-home-intro">
-        Importa os alunos dos grupos fixos e cria as contas dos treinadores.
-        O login de cada treinador é o <strong>nome</strong> + password.
-      </p>
+      <header className="page-header">
+        <p className="page-eyebrow">Ferramentas</p>
+        <h1 className="page-title">Importação</h1>
+        <p className="page-description">
+          Arranque da escola: importar alunos dos grupos fixos e criar contas
+          de treinadores. Login = <strong>nome</strong> + password.
+        </p>
+      </header>
 
       <section className="card section-card">
         <div className="coach-section-title">

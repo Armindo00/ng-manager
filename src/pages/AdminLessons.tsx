@@ -107,11 +107,11 @@ function AdminLessons() {
   return (
     <div className="dashboard-page">
       <header className="page-header">
-        <p className="page-eyebrow">Planeamento</p>
+        <p className="page-eyebrow">Operação</p>
         <h1 className="page-title">Calendário</h1>
         <p className="page-description">
-          Grupos fixos planeados e treinos registados. Um grupo passa a
-          registado quando alguém marca presenças em Hoje.
+          Escala semanal e sessões registadas pelos treinadores. As presenças
+          marcam-se em Hoje.
         </p>
       </header>
 
@@ -121,7 +121,7 @@ function AdminLessons() {
         <>
           <div className="stats-grid">
             <div className="card stat-card">
-              <span className="stat-label">Planeados no mês</span>
+              <span className="stat-label">Na escala (por registar)</span>
               <strong className="stat-number">{monthStats.planned}</strong>
             </div>
             <div className="card stat-card">
@@ -140,7 +140,7 @@ function AdminLessons() {
               fixedTrainings={fixedTrainings}
               selectedDate={selectedDate}
               onSelectDay={handleSelectDay}
-              title="Grupos fixos e treinos registados"
+              title="Escala e treinos registados"
             />
           </div>
 

@@ -274,13 +274,13 @@ function AdminVans() {
 
   return (
     <div>
-      <h1 className="page-title">Carrinhas</h1>
-
-      <p className="muted workflow-help">
-        Gere as carrinhas da escola, regista inspeções, revisões e outras
-        responsabilidades. As tarefas em atraso ou próximas aparecem em destaque
-        para o admin não perder prazos.
-      </p>
+      <header className="page-header">
+        <p className="page-eyebrow">Gestão</p>
+        <h1 className="page-title">Carrinhas</h1>
+        <p className="page-description">
+          Frota, inspeções e revisões. Tarefas em atraso aparecem em destaque.
+        </p>
+      </header>
 
       {loading ? (
         <p className="muted">A carregar carrinhas...</p>

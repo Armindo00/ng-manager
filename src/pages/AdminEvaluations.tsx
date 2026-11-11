@@ -200,12 +200,13 @@ function AdminEvaluations() {
 
   return (
     <div>
-      <h1 className="page-title">Avaliações</h1>
-
-      <p className="muted workflow-help">
-        Consulta todas as avaliações mensais dos alunos. Seleciona o mês na
-        lista e depois o aluno para ver o detalhe.
-      </p>
+      <header className="page-header">
+        <p className="page-eyebrow">Gestão</p>
+        <h1 className="page-title">Avaliações</h1>
+        <p className="page-description">
+          Avaliações mensais por aluno. Escolhe o mês e abre a ficha.
+        </p>
+      </header>
 
       {loading ? (
         <p className="muted">A carregar avaliações...</p>

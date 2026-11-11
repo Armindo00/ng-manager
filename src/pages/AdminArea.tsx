@@ -114,20 +114,6 @@ function AdminArea() {
     setCreatingNew(true);
   }
 
-  function getAccessStatus(studentId: string) {
-    const access = accessMap.get(studentId);
-
-    if (!access) {
-      return { label: "Sem acesso", className: "access-status missing" };
-    }
-
-    if (access.blocked) {
-      return { label: "Bloqueado", className: "access-status blocked" };
-    }
-
-    return { label: "Ativo", className: "access-status active" };
-  }
-
   async function saveStudent() {
     if (!name || !phone || !email || !level || !monthlyLimit) {
       toast.error("Preenche os campos obrigatórios.");
@@ -223,8 +209,8 @@ function AdminArea() {
     return (
       <>
         <p className="muted">
-          Ao criar um aluno, a aplicação usa o email como utilizador e gera
-          automaticamente uma password de acesso.
+          Ficha do aluno para presenças, avaliações e mensalidades. Sem acesso
+          à app — só treinadores e administração.
         </p>
 
         <div className="form-fields-grid">
@@ -312,12 +298,13 @@ function AdminArea() {
 
   return (
     <div>
-      <h1 className="page-title">Alunos</h1>
-
-      <p className="muted workflow-help">
-        Seleciona um aluno na lista para ver a ficha. Para desistências ou saídas,
-        usa <strong>Bloquear</strong> — o registo e histórico mantêm-se.
-      </p>
+      <header className="page-header">
+        <p className="page-eyebrow">Pessoas</p>
+        <h1 className="page-title">Alunos</h1>
+        <p className="page-description">
+          Fichas para presenças, avaliações e pagamentos. Sem login de aluno.
+        </p>
+      </header>
 
       {loading && <p className="muted">A carregar alunos...</p>}
 
@@ -342,25 +329,16 @@ function AdminArea() {
               }
               empty={<p className="muted">Nenhum aluno encontrado.</p>}
             >
-              {filteredStudents.map((student) => {
-                const accessStatus = getAccessStatus(student.id);
-
-                return (
-                  <SelectionListItem
-                    key={student.id}
-                    active={detailStudent?.id === student.id && !showForm}
-                    onClick={() => openStudent(student)}
-                    title={student.name}
-                    subtitle={student.email}
-                    meta={`${student.level} · ${student.monthlyLimit} treinos/mês`}
-                    badge={
-                      <span className={accessStatus.className}>
-                        {accessStatus.label}
-                      </span>
-                    }
-                  />
-                );
-              })}
+              {filteredStudents.map((student) => (
+                <SelectionListItem
+                  key={student.id}
+                  active={detailStudent?.id === student.id && !showForm}
+                  onClick={() => openStudent(student)}
+                  title={student.name}
+                  subtitle={student.email}
+                  meta={`${student.level} · ${student.monthlyLimit} treinos/mês`}
+                />
+              ))}
             </SelectionList>
           }
           detail={
@@ -382,9 +360,6 @@ function AdminArea() {
                     >
                       Eliminar
                     </button>
-                    <span className="muted student-access-disabled-note">
-                      Acesso de alunos desativado
-                    </span>
                   </div>
                 }
               >
@@ -407,7 +382,6 @@ function AdminArea() {
           message={`Tens a certeza que pretendes eliminar o registo de ${studentToDelete.name}?`}
           consequences={[
             "O registo do aluno é apagado permanentemente da base de dados.",
-            "O acesso à app é removido, se existir.",
             "O histórico em treinos e avaliações pode deixar de estar associado a este aluno.",
             "Esta ação não pode ser desfeita.",
           ]}

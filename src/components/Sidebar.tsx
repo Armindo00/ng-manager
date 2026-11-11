@@ -4,8 +4,6 @@ import {
   LayoutDashboard,
   Users,
   UserCircle,
-  UsersRound,
-  Repeat,
   Calendar,
   CreditCard,
   Package,
@@ -38,9 +36,7 @@ const ADMIN_MANAGEMENT_SECTIONS = new Set([
   "setup",
   "students",
   "coaches",
-  "groups",
   "fixed-trainings",
-  "recurring",
   "lessons",
   "inventory",
   "vans",
@@ -152,8 +148,8 @@ function Sidebar({ user, activeSection, onChangeSection, onLogout }: Props) {
               {item(LayoutDashboard, "Hoje", "my-dashboard")}
               {item(CalendarDays, "Grupos fixos", "my-lessons")}
               {item(Clapperboard, "Os meus treinos", "my-activity")}
-              <div className="nav-section-label">Gestão</div>
-              {item(Shield, "Painel admin", "dashboard")}
+              <div className="nav-section-label">Administração</div>
+              {item(Shield, "Visão geral", "dashboard")}
             </nav>
           )}
 
@@ -166,30 +162,30 @@ function Sidebar({ user, activeSection, onChangeSection, onLogout }: Props) {
                 <span className="nav-icon">
                   <ArrowLeft size={18} strokeWidth={2} />
                 </span>
-                <span>Voltar às presenças</span>
+                <span>Voltar a Hoje</span>
               </button>
 
-              <div className="nav-section-label">Escola</div>
-              {item(LayoutDashboard, "Painel", "dashboard")}
-              {item(Wrench, "Setup", "setup")}
+              <div className="nav-section-label">Resumo</div>
+              {item(LayoutDashboard, "Visão geral", "dashboard")}
+
+              <div className="nav-section-label">Pessoas</div>
               {item(Users, "Alunos", "students")}
               {item(UserCircle, "Treinadores", "coaches")}
 
-              <div className="nav-section-label">Operação</div>
+              <div className="nav-section-label">Escala</div>
               {item(CalendarDays, "Grupos fixos", "fixed-trainings")}
               {item(Calendar, "Calendário", "lessons")}
-              {item(BarChart3, "Treinos / mês", "coach-activity")}
-              {item(Package, "Inventário", "inventory")}
+              {item(BarChart3, "Relatório mensal", "coach-activity")}
 
-              <div className="nav-section-label">Financeiro & follow-up</div>
+              <div className="nav-section-label">Gestão</div>
               {item(CreditCard, "Pagamentos", "payments")}
               {item(Star, "Avaliações", "evaluations")}
               {item(CalendarClock, "Compensações", "compensations")}
+              {item(Package, "Inventário", "inventory")}
               {item(Truck, "Carrinhas", "vans")}
 
-              <div className="nav-section-label">Avançado</div>
-              {item(UsersRound, "Grupos (DB)", "groups")}
-              {item(Repeat, "Horários", "recurring")}
+              <div className="nav-section-label">Ferramentas</div>
+              {item(Wrench, "Importação", "setup")}
             </nav>
           )}
 

@@ -127,7 +127,13 @@ function AdminPayments() {
 
   return (
     <div>
-      <h1 className="page-title">Pagamentos</h1>
+      <header className="page-header">
+        <p className="page-eyebrow">Gestão</p>
+        <h1 className="page-title">Pagamentos</h1>
+        <p className="page-description">
+          Regista mensalidades e acompanha o que está em falta.
+        </p>
+      </header>
 
       <div className="card section-card">
         <h2>Novo pagamento</h2>

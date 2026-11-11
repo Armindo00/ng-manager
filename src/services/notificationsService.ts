@@ -20,12 +20,15 @@ export async function getNotifications(user: User): Promise<Notification[]> {
       getPayments(),
     ]);
 
-    const draftLessons = lessons.filter((lesson) => lesson.status === "draft").length;
+    const today = getTodayDate();
+    const openToday = lessons.filter(
+      (lesson) => lesson.date === today && lesson.status !== "finished"
+    ).length;
 
-    if (draftLessons > 0) {
+    if (openToday > 0) {
       notifications.push({
-        id: "draft-lessons",
-        text: `${draftLessons} treino(s) por publicar`,
+        id: "open-today",
+        text: `${openToday} treino(s) abertos hoje`,
       });
     }
 
@@ -52,9 +55,11 @@ export async function getNotifications(user: User): Promise<Notification[]> {
 
   if (user.role === "coach") {
     const lessons = await getLessons();
-
     const coachLessons = lessons.filter(
-      (lesson) => lesson.coachId === user.id && lesson.status !== "draft"
+      (lesson) =>
+        lesson.coachId === user.id ||
+        (lesson.secondaryCoachName || "").toLowerCase() ===
+          user.name.trim().toLowerCase()
     );
 
     const today = getTodayDate();

@@ -182,8 +182,7 @@ function AdminFixedTrainings() {
         <p className="page-eyebrow">Escala</p>
         <h1 className="page-title">Grupos fixos</h1>
         <p className="page-description">
-          Edita a escala semanal. As alterações refletem-se em Hoje, Grupos
-          fixos e no Calendário.
+          Escala semanal editável. Reflete-se em Hoje e no Calendário.
         </p>
       </header>
 

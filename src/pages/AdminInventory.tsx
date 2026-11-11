@@ -424,7 +424,7 @@ function AdminInventory() {
   return (
     <div className="dashboard-page">
       <header className="page-header">
-        <p className="page-eyebrow">Material</p>
+        <p className="page-eyebrow">Gestão</p>
         <h1 className="page-title">Inventário</h1>
         <p className="page-description">
           Pranchas e fatos por tamanho e estado. Edita quantidades diretamente
