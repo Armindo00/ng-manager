@@ -45,11 +45,13 @@ function Login({ onLogin }: Props) {
       }
 
       // Let the JWT settle before reading app_users (avoids first-login races).
-      await new Promise((resolve) => setTimeout(resolve, 0));
+      await new Promise((resolve) => setTimeout(resolve, 50));
 
-      const result = await resolveAppUserFromEmail(authEmail, { retries: 3 });
+      const result = await resolveAppUserFromEmail(authEmail, { retries: 5 });
 
       if (!result.ok) {
+        // Keep the Auth session only for blocked/student messaging; otherwise
+        // sign out so the form can retry cleanly.
         await supabase.auth.signOut();
         toast.error(result.message);
         return;
