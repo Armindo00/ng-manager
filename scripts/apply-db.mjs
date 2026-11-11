@@ -22,6 +22,7 @@ const APPLY_ORDER = [
   "inventory-wetsuit-condition.sql",
   "inventory-condition-matrix.sql",
   "evaluations-share.sql",
+  "login-resolve.sql",
 ];
 
 if (!token) {

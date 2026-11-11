@@ -26,7 +26,18 @@ function Login({ onLogin }: Props) {
     setLoading(true);
 
     try {
-      const email = resolveLoginEmail(loginName);
+      // Prefer DB lookup so admin can sign in with "Armindo" (not only email),
+      // and coaches keep signing in with their display name.
+      let email = "";
+      const { data: resolvedEmail } = await supabase.rpc(
+        "resolve_login_identifier",
+        { p_login: loginName }
+      );
+      if (typeof resolvedEmail === "string" && resolvedEmail.includes("@")) {
+        email = resolvedEmail;
+      } else {
+        email = resolveLoginEmail(loginName);
+      }
 
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
@@ -87,7 +98,7 @@ function Login({ onLogin }: Props) {
         <div className="login-card">
           <h2>Entrar</h2>
           <p className="login-subtitle">
-            Usa o teu nome de treinador e a password da escola.
+            Usa o teu nome (ex: Mindo ou Armindo) e a password da escola.
           </p>
 
           <div className="login-actions">
@@ -95,7 +106,7 @@ function Login({ onLogin }: Props) {
               Nome
               <input
                 type="text"
-                placeholder="Ex: Mindo"
+                placeholder="Ex: Mindo ou Armindo"
                 autoComplete="username"
                 value={loginName}
                 onChange={(e) => setLoginName(e.target.value)}
