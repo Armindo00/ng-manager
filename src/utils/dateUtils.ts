@@ -148,12 +148,17 @@ export function getLisbonMonthParts(date = new Date()) {
 }
 
 export function formatMonthName(year: number, month: number) {
-  return new Date(Date.UTC(year, month - 1, 1, 12))
-    .toLocaleDateString("pt-PT", {
+  const raw = new Date(Date.UTC(year, month - 1, 1, 12)).toLocaleDateString(
+    "pt-PT",
+    {
       month: "long",
       year: "numeric",
       timeZone: TIMEZONE,
-    });
+    }
+  );
+
+  const normalized = raw.toLocaleLowerCase("pt-PT");
+  return normalized.charAt(0).toUpperCase() + normalized.slice(1);
 }
 
 export function buildMonthDate(year: number, month: number, day: number) {
