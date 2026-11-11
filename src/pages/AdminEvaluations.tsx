@@ -300,7 +300,7 @@ function AdminEvaluations({ user }: Props) {
         toast.success(`Avaliação enviada para ${result.studentEmail}.`);
       } else if (result.emailReason === "missing_student_email") {
         toast.error("O aluno não tem email. Copia o link para partilhar.");
-      } else if (result.emailReason === "missing_resend_key") {
+      } else if (result.studentEmail) {
         toast.success(
           "Avaliação finalizada. Usa Abrir email ou copia o link para enviar."
         );

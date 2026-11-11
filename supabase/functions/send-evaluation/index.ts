@@ -120,15 +120,20 @@ Deno.serve(async (request) => {
     const appOrigin =
       Deno.env.get("APP_ORIGIN") ?? "https://ng-manager.vercel.app";
 
+    const jwt = authHeader.replace(/^Bearer\s+/i, "").trim();
+    if (!jwt) {
+      return jsonResponse({ error: "Sessão inválida." }, 401);
+    }
+
     const userClient = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } },
+      global: { headers: { Authorization: `Bearer ${jwt}` } },
     });
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
     const {
       data: { user },
       error: userError,
-    } = await userClient.auth.getUser();
+    } = await userClient.auth.getUser(jwt);
 
     if (userError || !user?.email) {
       return jsonResponse({ error: "Sessão inválida." }, 401);
