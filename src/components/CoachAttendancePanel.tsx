@@ -3,10 +3,10 @@ import toast from "react-hot-toast";
 import type { Lesson, Student } from "../types";
 import type { LessonCompensation } from "../types/compensation";
 import { updateLesson } from "../services/lessonsService";
+import { getLessons } from "../services/lessonsService";
 import {
   addCompensationStudentToLesson,
   clearOpenCompensationForMissedLesson,
-  countOpenCompensations,
   getCompensations,
   markStudentForCompensation,
 } from "../services/compensationsService";
@@ -20,18 +20,33 @@ type Props = {
   onSaved: () => void;
 };
 
+function formatMissedLessonLabel(lesson: Lesson | undefined) {
+  if (!lesson) return "treino anterior";
+  const date = new Date(`${lesson.date}T12:00:00`).toLocaleDateString("pt-PT", {
+    day: "numeric",
+    month: "short",
+  });
+  return `${date}${lesson.groupName ? ` · ${lesson.groupName}` : ""}`;
+}
+
 function CoachAttendancePanel({ lesson, students, onSaved }: Props) {
   const [studentSearch, setStudentSearch] = useState("");
   const [saving, setSaving] = useState(false);
   const [compensations, setCompensations] = useState<LessonCompensation[]>([]);
+  const [allLessons, setAllLessons] = useState<Lesson[]>([]);
 
   useEffect(() => {
-    loadCompensations();
+    loadSideData();
   }, [lesson.id]);
 
-  async function loadCompensations() {
+  async function loadSideData() {
     try {
-      setCompensations(await getCompensations());
+      const [compensationsData, lessonsData] = await Promise.all([
+        getCompensations(),
+        getLessons(),
+      ]);
+      setCompensations(compensationsData);
+      setAllLessons(lessonsData);
     } catch (error) {
       console.error(error);
     }
@@ -45,7 +60,8 @@ function CoachAttendancePanel({ lesson, students, onSaved }: Props) {
     [students, lesson.bookedStudentIds]
   );
 
-  const makeupIdsForLesson = useMemo(() => {
+  /** Alunos deste treino que vão compensar noutro dia. */
+  const owedMakeupIds = useMemo(() => {
     return new Set(
       compensations
         .filter(
@@ -57,23 +73,57 @@ function CoachAttendancePanel({ lesson, students, onSaved }: Props) {
     );
   }, [compensations, lesson.id]);
 
-  const compensationCandidates = useMemo(() => {
-    const byStudent = new Map<string, number>();
+  /** Alunos que estão neste treino a compensar uma falta anterior. */
+  const compensatingHere = useMemo(() => {
+    const map = new Map<string, LessonCompensation>();
+    for (const item of compensations) {
+      if (
+        item.compensationLessonId === lesson.id &&
+        (item.status === "scheduled" || item.status === "completed")
+      ) {
+        map.set(item.studentId, item);
+      }
+    }
+    return map;
+  }, [compensations, lesson.id]);
 
-    for (const student of students) {
-      if (lesson.bookedStudentIds.includes(student.id)) continue;
-      const count = countOpenCompensations(compensations, student.id);
-      if (count > 0) byStudent.set(student.id, count);
+  const compensationCandidates = useMemo(() => {
+    const byStudent = new Map<string, { count: number; oldest: LessonCompensation }>();
+
+    for (const item of compensations) {
+      if (lesson.bookedStudentIds.includes(item.studentId)) continue;
+      if (item.missedLessonId === lesson.id) continue;
+      if (item.status !== "pending" && item.status !== "approved") continue;
+
+      const existing = byStudent.get(item.studentId);
+      if (!existing) {
+        byStudent.set(item.studentId, { count: 1, oldest: item });
+        continue;
+      }
+
+      existing.count += 1;
+      if (item.createdAt < existing.oldest.createdAt) {
+        existing.oldest = item;
+      }
     }
 
     return [...byStudent.entries()]
-      .map(([studentId, count]) => ({
-        student: students.find((item) => item.id === studentId)!,
-        count,
+      .map(([studentId, info]) => ({
+        student: students.find((item) => item.id === studentId),
+        count: info.count,
+        oldest: info.oldest,
       }))
-      .filter((item) => item.student)
+      .filter(
+        (
+          item
+        ): item is {
+          student: Student;
+          count: number;
+          oldest: LessonCompensation;
+        } => Boolean(item.student)
+      )
       .sort((a, b) => a.student.name.localeCompare(b.student.name, "pt"));
-  }, [students, compensations, lesson.bookedStudentIds]);
+  }, [students, compensations, lesson.bookedStudentIds, lesson.id]);
 
   const filteredCompensationCandidates = useMemo(() => {
     const query = studentSearch.trim().toLowerCase();
@@ -110,9 +160,16 @@ function CoachAttendancePanel({ lesson, students, onSaved }: Props) {
   const canEdit = canMarkAttendance(lesson) && lesson.status !== "draft";
 
   function getStatus(studentId: string): AttendanceStatus {
-    if (makeupIdsForLesson.has(studentId)) return "makeup";
+    if (owedMakeupIds.has(studentId)) return "makeup";
     if (lesson.presentStudentIds.includes(studentId)) return "present";
     return "absent";
+  }
+
+  function getCompensatingLabel(studentId: string) {
+    const link = compensatingHere.get(studentId);
+    if (!link) return null;
+    const missed = allLessons.find((item) => item.id === link.missedLessonId);
+    return formatMissedLessonLabel(missed);
   }
 
   async function saveLesson(nextLesson: Lesson, successMessage: string) {
@@ -122,7 +179,7 @@ function CoachAttendancePanel({ lesson, students, onSaved }: Props) {
       setSaving(true);
       await updateLesson(nextLesson);
       toast.success(successMessage);
-      await loadCompensations();
+      await loadSideData();
       onSaved();
     } catch (error) {
       console.error(error);
@@ -142,7 +199,7 @@ function CoachAttendancePanel({ lesson, students, onSaved }: Props) {
       if (status === "makeup") {
         await markStudentForCompensation(lesson, studentId);
         toast.success("Aluno enviado para compensações.");
-        await loadCompensations();
+        await loadSideData();
         onSaved();
         return;
       }
@@ -163,7 +220,7 @@ function CoachAttendancePanel({ lesson, students, onSaved }: Props) {
       toast.success(
         status === "present" ? "Presença marcada." : "Falta marcada."
       );
-      await loadCompensations();
+      await loadSideData();
       onSaved();
     } catch (error) {
       console.error(error);
@@ -193,10 +250,19 @@ function CoachAttendancePanel({ lesson, students, onSaved }: Props) {
 
     try {
       setSaving(true);
-      await addCompensationStudentToLesson(lesson, studentId, compensations);
-      toast.success("Aluno de compensação adicionado ao treino.");
+      const result = await addCompensationStudentToLesson(
+        lesson,
+        studentId,
+        compensations
+      );
+      const missed = allLessons.find(
+        (item) => item.id === result.compensation.missedLessonId
+      );
+      toast.success(
+        `Registado a compensar: ${formatMissedLessonLabel(missed)}.`
+      );
       setStudentSearch("");
-      await loadCompensations();
+      await loadSideData();
       onSaved();
     } catch (error) {
       console.error(error);
@@ -213,8 +279,11 @@ function CoachAttendancePanel({ lesson, students, onSaved }: Props) {
   const presentCount = bookedStudents.filter(
     (student) => getStatus(student.id) === "present"
   ).length;
-  const makeupCount = bookedStudents.filter(
+  const owedMakeupCount = bookedStudents.filter(
     (student) => getStatus(student.id) === "makeup"
+  ).length;
+  const compensatingHereCount = bookedStudents.filter((student) =>
+    compensatingHere.has(student.id)
   ).length;
 
   return (
@@ -229,8 +298,13 @@ function CoachAttendancePanel({ lesson, students, onSaved }: Props) {
       ) : (
         <p className="muted">
           Presentes: {presentCount}/{bookedStudents.length}
-          {makeupCount > 0 ? ` · ${makeupCount} a compensar` : ""}. Opções:
-          Presente, Falta ou Compensa noutro treino.
+          {owedMakeupCount > 0
+            ? ` · ${owedMakeupCount} a compensar noutro treino`
+            : ""}
+          {compensatingHereCount > 0
+            ? ` · ${compensatingHereCount} em compensação neste treino`
+            : ""}
+          .
         </p>
       )}
 
@@ -240,19 +314,30 @@ function CoachAttendancePanel({ lesson, students, onSaved }: Props) {
         ) : (
           bookedStudents.map((student) => {
             const status = getStatus(student.id);
+            const compensatingLabel = getCompensatingLabel(student.id);
+            const isCompensatingHere = Boolean(compensatingLabel);
 
             return (
               <div
                 className={`lesson-student-row ${
-                  status === "present"
-                    ? "present"
-                    : status === "makeup"
-                      ? "makeup"
-                      : "absent"
+                  isCompensatingHere
+                    ? "compensating"
+                    : status === "present"
+                      ? "present"
+                      : status === "makeup"
+                        ? "makeup"
+                        : "absent"
                 }`}
                 key={student.id}
               >
-                <span className="lesson-student-name">{student.name}</span>
+                <div className="lesson-student-main">
+                  <span className="lesson-student-name">{student.name}</span>
+                  {compensatingLabel && (
+                    <span className="lesson-compensation-tag">
+                      A compensar · {compensatingLabel}
+                    </span>
+                  )}
+                </div>
 
                 {canEdit ? (
                   <div className="attendance-actions">
@@ -280,26 +365,30 @@ function CoachAttendancePanel({ lesson, students, onSaved }: Props) {
                     >
                       Falta
                     </button>
-                    <button
-                      type="button"
-                      className={
-                        status === "makeup"
-                          ? "attendance-btn makeup active"
-                          : "attendance-btn makeup"
-                      }
-                      disabled={saving}
-                      onClick={() => setAttendance(student.id, "makeup")}
-                    >
-                      Compensa noutro treino
-                    </button>
+                    {!isCompensatingHere && (
+                      <button
+                        type="button"
+                        className={
+                          status === "makeup"
+                            ? "attendance-btn makeup active"
+                            : "attendance-btn makeup"
+                        }
+                        disabled={saving}
+                        onClick={() => setAttendance(student.id, "makeup")}
+                      >
+                        Compensa noutro treino
+                      </button>
+                    )}
                   </div>
                 ) : (
                   <strong className="attendance-readonly">
-                    {status === "present"
-                      ? "Presente"
-                      : status === "makeup"
-                        ? "Compensa noutro treino"
-                        : "Falta / por marcar"}
+                    {isCompensatingHere
+                      ? `A compensar · ${compensatingLabel}`
+                      : status === "present"
+                        ? "Presente"
+                        : status === "makeup"
+                          ? "Compensa noutro treino"
+                          : "Falta / por marcar"}
                   </strong>
                 )}
               </div>
@@ -315,30 +404,40 @@ function CoachAttendancePanel({ lesson, students, onSaved }: Props) {
               <div className="compensation-add-heading">
                 <strong>Da lista de compensações</strong>
                 <span className="muted">
-                  {compensationCandidates.length} aluno
-                  {compensationCandidates.length === 1 ? "" : "s"} com treinos a
-                  compensar
+                  Ao adicionar, fica registado neste treino como compensação.
                 </span>
               </div>
 
               <div className="compensation-add-list">
-                {filteredCompensationCandidates.map(({ student, count }) => (
-                  <button
-                    type="button"
-                    className="compensation-add-row"
-                    key={student.id}
-                    disabled={saving}
-                    onClick={() => addFromCompensation(student.id)}
-                  >
-                    <span>
-                      <strong>{student.name}</strong>
-                      <small>
-                        {count} treino{count === 1 ? "" : "s"} a compensar
-                      </small>
-                    </span>
-                    <span className="compensation-add-action">Adicionar</span>
-                  </button>
-                ))}
+                {filteredCompensationCandidates.map(
+                  ({ student, count, oldest }) => {
+                    const missed = allLessons.find(
+                      (item) => item.id === oldest.missedLessonId
+                    );
+                    return (
+                      <button
+                        type="button"
+                        className="compensation-add-row"
+                        key={student.id}
+                        disabled={saving}
+                        onClick={() => addFromCompensation(student.id)}
+                      >
+                        <span>
+                          <strong>{student.name}</strong>
+                          <small>
+                            {count} treino{count === 1 ? "" : "s"} a compensar
+                            {missed
+                              ? ` · próximo: ${formatMissedLessonLabel(missed)}`
+                              : ""}
+                          </small>
+                        </span>
+                        <span className="compensation-add-action">
+                          Registar compensação
+                        </span>
+                      </button>
+                    );
+                  }
+                )}
               </div>
             </div>
           )}
