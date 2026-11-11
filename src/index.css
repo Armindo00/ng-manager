@@ -1865,8 +1865,34 @@ textarea:focus {
   background: #fffbeb;
 }
 
+.lesson-student-row.compensating {
+  border-color: #93c5fd;
+  background: #eff6ff;
+}
+
+.lesson-student-main {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
 .lesson-student-name {
   font-weight: 600;
+}
+
+.lesson-compensation-tag {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  max-width: 100%;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #dbeafe;
+  color: #1d4ed8;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.3;
 }
 
 .attendance-actions {

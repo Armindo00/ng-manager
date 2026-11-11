@@ -942,6 +942,16 @@ textarea:focus {
   background: #fffaf6;
 }
 
+.lesson-student-row.compensating {
+  border-color: #9ec9c3;
+  background: #f0faf8;
+}
+
+.lesson-compensation-tag {
+  background: var(--brand-soft);
+  color: var(--brand-ink);
+}
+
 .attendance-btn.makeup.active {
   border-color: #c2410c;
   background: #fff1eb;
