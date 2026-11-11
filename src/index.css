@@ -422,128 +422,11 @@ textarea:focus {
   padding: 16px;
 }
 
-/* CALENDAR */
-
-.calendar-month {
-  margin: 6px 0 20px;
-  color: #64748b;
-  text-transform: capitalize;
-}
-
-.calendar-grid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 12px;
-}
-
-.calendar-header span {
-  text-align: center;
-  font-weight: 700;
-  color: #64748b;
-  padding-bottom: 8px;
-}
-
-.calendar-day {
-  min-height: 120px;
-  border: 1px solid #e2e8f0;
-  border-radius: 16px;
-  padding: 10px;
-  background: white;
-}
-
-.calendar-day strong {
-  display: block;
-  margin-bottom: 10px;
-}
-
-.calendar-dots {
-  display: flex;
-  gap: 4px;
-  flex-wrap: wrap;
-}
-
-.calendar-dots span {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #115e59;
-}
-
-.calendar-today {
-  border-color: #0d9488;
-  background: #f0faf8;
-}
-
-.calendar-selected {
-  border-color: #115e59;
-  background: #e6f5f3;
-  box-shadow: inset 0 0 0 2px #bfdbfe;
-}
-
-.calendar-has-lessons:not(.calendar-selected) {
-  background: #fafafa;
-}
-
-.calendar-title-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-  margin-bottom: 4px;
-}
-
-.calendar-title-row h2 {
-  margin: 0;
-}
-
-.calendar-nav {
-  display: flex;
-  gap: 8px;
-}
-
-.calendar-legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 14px;
-  margin-top: 16px;
-  font-size: 12px;
-  color: #64748b;
-}
-
-.calendar-legend span {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.legend-dot {
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-}
-
-.calendar-dots span.dot-published,
-.legend-dot.dot-published {
-  background: #115e59;
-}
-
-.calendar-dots span.dot-finished,
-.legend-dot.dot-finished {
-  background: #94a3b8;
-}
+/* CALENDAR — layout shell; visual system lives in professional.css */
 
 .calendar-dots span.dot-draft,
 .legend-dot.dot-draft {
   background: #f59e0b;
-}
-
-.calendar-dots span.dot-planned,
-.legend-dot.dot-planned {
-  background: #94a3b8;
-  opacity: 0.85;
-  box-shadow: inset 0 0 0 1px #64748b;
 }
 
 .calendar-dots span.dot-confirmed,
@@ -1185,44 +1068,7 @@ textarea:focus {
     padding: 18px;
   }
 
-  .calendar-card h2 {
-    font-size: 24px;
-    line-height: 1.15;
-  }
-
-  .calendar-month {
-    font-size: 21px;
-    margin-bottom: 18px;
-  }
-
-  .calendar-grid {
-    gap: 6px;
-  }
-
-  .calendar-header span {
-    font-size: 12px;
-  }
-
-  .calendar-day {
-    min-height: 50px;
-    padding: 6px;
-    border-radius: 14px;
-  }
-
-  .calendar-day strong {
-    font-size: 14px;
-    margin-bottom: 4px;
-  }
-
-  .calendar-dots {
-    justify-content: center;
-    gap: 3px;
-  }
-
-  .calendar-dots span {
-    width: 6px;
-    height: 6px;
-  }
+  /* calendar mobile styles live in professional.css */
 
   .form-row {
     flex-direction: column;
@@ -1514,16 +1360,6 @@ textarea:focus {
     text-align: left;
   }
 
-  .calendar-month {
-    text-align: left;
-    font-size: 18px;
-  }
-
-  .calendar-day {
-    aspect-ratio: 1;
-    min-height: 0;
-  }
-
   .mobile-menu-backdrop {
     backdrop-filter: blur(6px);
   }
@@ -1569,10 +1405,13 @@ textarea:focus {
     margin-right: auto !important;
   }
 
-  .dashboard-row .section-card h2,
-  .calendar-card h2 {
+  .dashboard-row .section-card h2 {
     text-align: center !important;
     justify-content: center !important;
+  }
+
+  .calendar-card h2 {
+    text-align: left !important;
   }
 
   .lesson-preview {
@@ -2284,23 +2123,6 @@ textarea:focus {
     align-items: flex-start;
   }
 }
-.calendar-day {
-  cursor: pointer;
-}
-
-.calendar-day:disabled {
-  cursor: default;
-  opacity: 0.45;
-}
-
-.calendar-more {
-  display: block;
-  margin-top: 2px;
-  font-size: 11px;
-  color: #0f766e;
-  font-weight: 800;
-}
-
 .calendar-day-lessons-list {
   display: grid;
   gap: 12px;

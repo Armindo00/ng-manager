@@ -22,6 +22,16 @@ type Props = {
   includePlanned?: boolean;
 };
 
+const WEEKDAYS = [
+  { label: "Seg", short: "S" },
+  { label: "Ter", short: "T" },
+  { label: "Qua", short: "Q" },
+  { label: "Qui", short: "Q" },
+  { label: "Sex", short: "S" },
+  { label: "Sáb", short: "S" },
+  { label: "Dom", short: "D" },
+] as const;
+
 function LessonsCalendar({
   lessons,
   fixedTrainings = [],
@@ -62,6 +72,10 @@ function LessonsCalendar({
 
     for (let day = 1; day <= daysInMonthCount; day++) {
       monthCells.push(day);
+    }
+
+    while (monthCells.length % 7 !== 0) {
+      monthCells.push(null);
     }
 
     const today = getTodayDate();
@@ -109,61 +123,72 @@ function LessonsCalendar({
 
   return (
     <div className="card section-card calendar-card">
-      <div className="calendar-title-row">
-        <h2>{title}</h2>
-
-        <div className="calendar-nav">
-          <button type="button" className="compact-btn" onClick={goToPreviousMonth}>
-            ←
-          </button>
-          <button type="button" className="compact-btn" onClick={goToCurrentMonth}>
-            Hoje
-          </button>
-          <button type="button" className="compact-btn" onClick={goToNextMonth}>
-            →
-          </button>
+      <div className="calendar-header-bar">
+        <div>
+          <span className="admin-section-kicker">Calendário</span>
+          <h2>{title}</h2>
         </div>
       </div>
 
-      <h3 className="calendar-month">{monthName}</h3>
+      <div className="calendar-toolbar">
+        <button
+          type="button"
+          className="compact-btn calendar-nav-btn"
+          onClick={goToPreviousMonth}
+          aria-label="Mês anterior"
+        >
+          ←
+        </button>
 
-      <div className="calendar-grid calendar-header">
-        <span className="calendar-weekday" data-short="S">
-          Seg
-        </span>
-        <span className="calendar-weekday" data-short="T">
-          Ter
-        </span>
-        <span className="calendar-weekday" data-short="Q">
-          Qua
-        </span>
-        <span className="calendar-weekday" data-short="Q">
-          Qui
-        </span>
-        <span className="calendar-weekday" data-short="S">
-          Sex
-        </span>
-        <span className="calendar-weekday" data-short="S">
-          Sáb
-        </span>
-        <span className="calendar-weekday" data-short="D">
-          Dom
-        </span>
+        <div className="calendar-toolbar-center">
+          <h3 className="calendar-month">{monthName}</h3>
+          <button
+            type="button"
+            className="compact-btn calendar-today-btn"
+            onClick={goToCurrentMonth}
+          >
+            Hoje
+          </button>
+        </div>
+
+        <button
+          type="button"
+          className="compact-btn calendar-nav-btn"
+          onClick={goToNextMonth}
+          aria-label="Mês seguinte"
+        >
+          →
+        </button>
       </div>
 
-      <div className="calendar-grid">
+      <div className="calendar-grid calendar-weekdays" aria-hidden>
+        {WEEKDAYS.map((weekday) => (
+          <span
+            className="calendar-weekday"
+            data-short={weekday.short}
+            key={weekday.label}
+          >
+            {weekday.label}
+          </span>
+        ))}
+      </div>
+
+      <div className="calendar-grid calendar-days">
         {cells.map((day, index) => {
           const dayEntries = day ? entriesForDay(day) : [];
           const date = day ? getDateForDay(day) : "";
           const hasEntries = dayEntries.length > 0;
           const isToday = day !== null && day === todayDay;
           const isSelected = Boolean(selectedDate && date === selectedDate);
+          const visibleDots = dayEntries.slice(0, hasEntries && dayEntries.length > 3 ? 2 : 3);
+          const extraCount = Math.max(0, dayEntries.length - visibleDots.length);
 
           return (
             <button
               type="button"
               className={[
                 "calendar-day",
+                !day ? "calendar-day-empty" : "",
                 isToday ? "calendar-today" : "",
                 isSelected ? "calendar-selected" : "",
                 hasEntries ? "calendar-has-lessons" : "",
@@ -172,33 +197,36 @@ function LessonsCalendar({
                 .join(" ")}
               key={index}
               disabled={!day}
+              aria-label={day ? `Dia ${day}` : undefined}
+              aria-pressed={isSelected}
               onClick={() => {
                 if (day) onSelectDay(dayEntries, date);
               }}
             >
-              {day && (
+              {day ? (
                 <>
-                  <strong>{day}</strong>
+                  <span className="calendar-day-number">{day}</span>
 
-                  {hasEntries && (
-                    <div className="calendar-dots">
-                      {dayEntries.slice(0, 3).map((entry) => (
-                        <span
-                          key={entry.id}
-                          className={getEntryDotClass(entry)}
-                          title={entry.title}
-                        />
-                      ))}
-                    </div>
-                  )}
-
-                  {dayEntries.length > 3 && (
-                    <small className="calendar-more">
-                      +{dayEntries.length - 3}
-                    </small>
+                  {hasEntries ? (
+                    <span className="calendar-day-meta">
+                      <span className="calendar-dots">
+                        {visibleDots.map((entry) => (
+                          <span
+                            key={entry.id}
+                            className={getEntryDotClass(entry)}
+                            title={entry.title}
+                          />
+                        ))}
+                      </span>
+                      {extraCount > 0 ? (
+                        <span className="calendar-more">+{extraCount}</span>
+                      ) : null}
+                    </span>
+                  ) : (
+                    <span className="calendar-day-meta calendar-day-meta-empty" />
                   )}
                 </>
-              )}
+              ) : null}
             </button>
           );
         })}
