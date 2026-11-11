@@ -33,11 +33,12 @@ type SheetRow = {
 type DraftMap = Record<string, number>;
 
 type Props = {
+  mode: "view" | "edit";
   items: InventoryItem[];
   medicalNotes: string;
-  saving: boolean;
+  saving?: boolean;
   onClose: () => void;
-  onSave: (payload: {
+  onSave?: (payload: {
     changes: Array<{
       itemType: InventoryItemType;
       size: string | null;
@@ -166,12 +167,14 @@ function classRows(
 }
 
 function InventorySheet({
+  mode,
   items,
   medicalNotes: initialNotes,
-  saving,
+  saving = false,
   onClose,
   onSave,
 }: Props) {
+  const isEdit = mode === "edit";
   const [activeClass, setActiveClass] = useState<ClassId>("boards");
   const [draft, setDraft] = useState(() => buildDraft(items));
   const [notes, setNotes] = useState(initialNotes);
@@ -198,13 +201,14 @@ function InventorySheet({
   );
 
   const dirty = useMemo(() => {
+    if (!isEdit) return false;
     const baseline = buildDraft(items);
     const keys = new Set([...Object.keys(baseline), ...Object.keys(draft)]);
     for (const key of keys) {
       if ((baseline[key] || 0) !== (draft[key] || 0)) return true;
     }
     return notes.trim() !== initialNotes.trim();
-  }, [draft, items, notes, initialNotes]);
+  }, [isEdit, draft, items, notes, initialNotes]);
 
   function getQty(row: SheetRow, condition: InventoryCondition) {
     return draft[cellKey(row.itemType, row.size, condition)] ?? 0;
@@ -270,6 +274,8 @@ function InventorySheet({
   }
 
   async function handleSave() {
+    if (!onSave) return;
+
     const baseline = buildDraft(items);
     const keys = new Set([...Object.keys(baseline), ...Object.keys(draft)]);
     const changes: Array<{
@@ -310,18 +316,29 @@ function InventorySheet({
     await onSave({ changes, medicalNotes: notes });
   }
 
-  const showAddSize = activeClass === "boards" || activeClass === "wetsuits";
+  const showAddSize =
+    isEdit && (activeClass === "boards" || activeClass === "wetsuits");
 
   return (
     <div className="inventory-sheet-backdrop" role="dialog" aria-modal="true">
-      <div className="inventory-sheet inventory-sheet-editor">
+      <div
+        className={
+          isEdit
+            ? "inventory-sheet inventory-sheet-editor"
+            : "inventory-sheet inventory-sheet-viewer"
+        }
+      >
         <header className="inventory-sheet-header">
           <div>
-            <p className="inventory-sheet-kicker">Atualizar inventário</p>
+            <p className="inventory-sheet-kicker">
+              {isEdit ? "Editar inventário" : "Ver inventário"}
+            </p>
             <h2>Folha de material</h2>
           </div>
           <div className="inventory-sheet-header-actions">
-            {dirty && <span className="inventory-sheet-dirty">Por guardar</span>}
+            {isEdit && dirty && (
+              <span className="inventory-sheet-dirty">Por guardar</span>
+            )}
             <button
               type="button"
               className="compact-btn"
@@ -330,14 +347,16 @@ function InventorySheet({
             >
               Fechar
             </button>
-            <button
-              type="button"
-              className="primary-btn"
-              onClick={handleSave}
-              disabled={saving || !dirty}
-            >
-              {saving ? "A guardar..." : "Guardar alterações"}
-            </button>
+            {isEdit && (
+              <button
+                type="button"
+                className="primary-btn"
+                onClick={handleSave}
+                disabled={saving || !dirty}
+              >
+                {saving ? "A guardar..." : "Guardar alterações"}
+              </button>
+            )}
           </div>
         </header>
 
@@ -360,8 +379,15 @@ function InventorySheet({
 
         <div className="inventory-sheet-body">
           <p className="inventory-sheet-help">
-            Edita as quantidades nas células. As alterações só ficam gravadas
-            quando carregares em <strong>Guardar alterações</strong>.
+            {isEdit ? (
+              <>
+                Edita as quantidades nas células. As alterações só ficam
+                gravadas quando carregares em{" "}
+                <strong>Guardar alterações</strong>.
+              </>
+            ) : (
+              <>Consulta o material por classe, tamanho e estado.</>
+            )}
           </p>
 
           <div className="inventory-sheet-table-wrap">
@@ -385,16 +411,22 @@ function InventorySheet({
                     <td className="inventory-sheet-label">{row.label}</td>
                     {CONDITIONS.map((condition) => (
                       <td key={condition}>
-                        <input
-                          className="inventory-sheet-cell"
-                          type="number"
-                          min={0}
-                          aria-label={`${row.label} ${INVENTORY_CONDITION_LABELS[condition]}`}
-                          value={getQty(row, condition)}
-                          onChange={(event) =>
-                            setQty(row, condition, event.target.value)
-                          }
-                        />
+                        {isEdit ? (
+                          <input
+                            className="inventory-sheet-cell"
+                            type="number"
+                            min={0}
+                            aria-label={`${row.label} ${INVENTORY_CONDITION_LABELS[condition]}`}
+                            value={getQty(row, condition)}
+                            onChange={(event) =>
+                              setQty(row, condition, event.target.value)
+                            }
+                          />
+                        ) : (
+                          <span className="inventory-sheet-value">
+                            {getQty(row, condition)}
+                          </span>
+                        )}
                       </td>
                     ))}
                     <td className="inventory-sheet-total">{rowTotal(row)}</td>
@@ -445,12 +477,18 @@ function InventorySheet({
             <div className="inventory-sheet-notes">
               <label>
                 Notas do kit médico
-                <textarea
-                  rows={3}
-                  value={notes}
-                  onChange={(event) => setNotes(event.target.value)}
-                  placeholder="Validade, conteúdo em falta, etc."
-                />
+                {isEdit ? (
+                  <textarea
+                    rows={3}
+                    value={notes}
+                    onChange={(event) => setNotes(event.target.value)}
+                    placeholder="Validade, conteúdo em falta, etc."
+                  />
+                ) : (
+                  <p className="inventory-sheet-notes-readonly">
+                    {notes.trim() || "Sem notas."}
+                  </p>
+                )}
               </label>
             </div>
           )}

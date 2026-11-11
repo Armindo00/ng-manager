@@ -12,10 +12,12 @@ import {
   setInventoryQuantity,
 } from "../services/inventoryService";
 
+type SheetMode = "view" | "edit";
+
 function AdminInventory() {
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [sheetOpen, setSheetOpen] = useState(false);
+  const [sheetMode, setSheetMode] = useState<SheetMode | null>(null);
   const [saving, setSaving] = useState(false);
   const [medicalNotes, setMedicalNotes] = useState("");
 
@@ -127,8 +129,7 @@ function AdminInventory() {
         <p className="page-eyebrow">Gestão</p>
         <h1 className="page-title">Inventário</h1>
         <p className="page-description">
-          Resumo do material. Para atualizar quantidades e estados, abre a
-          folha.
+          Consulta o material ou edita quantidades e estados na folha.
         </p>
       </header>
 
@@ -138,20 +139,29 @@ function AdminInventory() {
         <>
           <section className="card section-card inventory-open-card">
             <div className="inventory-open-copy">
-              <span className="admin-section-kicker">Atualizar</span>
-              <h2>Folha de inventário</h2>
+              <span className="admin-section-kicker">Folha</span>
+              <h2>Material da escola</h2>
               <p className="muted">
-                Uma tabela por classe — Pranchas, Fatos, Licras, Leash e
-                Acessórios — com Bom, Razoável e Mau.
+                Pranchas, Fatos, Licras, Leash e Acessórios — com Bom, Razoável
+                e Mau.
               </p>
             </div>
-            <button
-              type="button"
-              className="primary-btn inventory-open-btn"
-              onClick={() => setSheetOpen(true)}
-            >
-              Atualizar inventário
-            </button>
+            <div className="inventory-open-actions">
+              <button
+                type="button"
+                className="compact-btn inventory-open-btn"
+                onClick={() => setSheetMode("view")}
+              >
+                Ver inventário
+              </button>
+              <button
+                type="button"
+                className="primary-btn inventory-open-btn"
+                onClick={() => setSheetMode("edit")}
+              >
+                Editar inventário
+              </button>
+            </div>
           </section>
 
           <div className="stats-grid">
@@ -183,16 +193,17 @@ function AdminInventory() {
         </>
       )}
 
-      {sheetOpen && (
+      {sheetMode && (
         <InventorySheet
+          mode={sheetMode}
           items={items}
           medicalNotes={medicalNotes}
           saving={saving}
           onClose={() => {
             if (saving) return;
-            setSheetOpen(false);
+            setSheetMode(null);
           }}
-          onSave={handleSave}
+          onSave={sheetMode === "edit" ? handleSave : undefined}
         />
       )}
     </div>
