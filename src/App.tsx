@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Toaster } from "react-hot-toast";
 import toast from "react-hot-toast";
 import type { User } from "./types";
@@ -23,11 +23,8 @@ import Sidebar from "./components/Sidebar";
 import Topbar from "./components/Topbar";
 
 import { supabase } from "./services/supabase";
-import {
-  getUserByEmail,
-  isUserBlocked,
-  requiresPasswordChange,
-} from "./services/usersService";
+import { resolveAppUserFromEmail } from "./services/sessionService";
+import { requiresPasswordChange } from "./services/usersService";
 import ChangePassword from "./pages/ChangePassword";
 
 type AdminSection =
@@ -51,9 +48,16 @@ type CoachSection = "dashboard" | "lessons" | "activity";
 
 function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [authReady, setAuthReady] = useState(false);
   const [coachSection, setCoachSection] = useState<CoachSection>("dashboard");
   const [activeSection, setActiveSection] =
     useState<AdminSection>("my-dashboard");
+  const resolveSeq = useRef(0);
+  const currentUserRef = useRef<User | null>(null);
+
+  useEffect(() => {
+    currentUserRef.current = currentUser;
+  }, [currentUser]);
 
   useEffect(() => {
     if (!currentUser) return;
@@ -62,87 +66,98 @@ function App() {
   }, [currentUser]);
 
   useEffect(() => {
-    restoreSession();
+    let mounted = true;
+
+    async function applySession(
+      email: string | undefined,
+      source: "initial" | "signed_in" | "token_refreshed"
+    ) {
+      const seq = ++resolveSeq.current;
+
+      if (!email) {
+        if (mounted && seq === resolveSeq.current) {
+          setCurrentUser(null);
+          setAuthReady(true);
+        }
+        return;
+      }
+
+      const result = await resolveAppUserFromEmail(email);
+
+      if (!mounted || seq !== resolveSeq.current) return;
+
+      if (result.ok) {
+        setCurrentUser(result.user);
+        setAuthReady(true);
+        return;
+      }
+
+      if (result.reason === "blocked" || result.reason === "student") {
+        toast.error(result.message);
+        await supabase.auth.signOut();
+        if (mounted && seq === resolveSeq.current) {
+          setCurrentUser(null);
+          setAuthReady(true);
+        }
+        return;
+      }
+
+      // Race after sign-in used to signOut here and kick valid logins back
+      // to the form. Keep an already-resolved Login user; otherwise show login.
+      if (source === "token_refreshed" && !currentUserRef.current) {
+        toast.error(result.message);
+        await supabase.auth.signOut();
+      }
+
+      if (mounted && seq === resolveSeq.current) {
+        if (!currentUserRef.current) {
+          setCurrentUser(null);
+        }
+        setAuthReady(true);
+      }
+    }
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === "SIGNED_OUT" || !session?.user?.email) {
-        setCurrentUser(null);
-        return;
-      }
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      // Defer Supabase queries out of the auth callback (avoids client deadlock).
+      setTimeout(() => {
+        if (!mounted) return;
 
-      if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
-        try {
-          const appUser = await getUserByEmail(session.user.email);
-
-          if (isUserBlocked(appUser)) {
-            await supabase.auth.signOut();
-            setCurrentUser(null);
-            toast.error("Conta bloqueada. Contacta a escola.");
-            return;
-          }
-
-          if (appUser.role === "student") {
-            await supabase.auth.signOut();
-            setCurrentUser(null);
-            toast.error(
-              "O acesso de alunos está desativado. Contacta a escola."
-            );
-            return;
-          }
-
-          setCurrentUser(appUser);
-        } catch (error) {
-          console.error(error);
-          await supabase.auth.signOut();
-          setCurrentUser(null);
-          toast.error("Sessão inválida. Volta a iniciar sessão.");
+        if (event === "INITIAL_SESSION") {
+          void applySession(session?.user?.email, "initial");
+          return;
         }
-      }
+
+        if (event === "SIGNED_OUT") {
+          resolveSeq.current += 1;
+          setCurrentUser(null);
+          setAuthReady(true);
+          return;
+        }
+
+        if (event === "SIGNED_IN") {
+          void applySession(session?.user?.email, "signed_in");
+          return;
+        }
+
+        if (event === "TOKEN_REFRESHED") {
+          void applySession(session?.user?.email, "token_refreshed");
+        }
+      }, 0);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
-  async function restoreSession() {
-    const { data, error } = await supabase.auth.getUser();
-
-    if (error || !data.user?.email) {
-      if (error) {
-        await supabase.auth.signOut();
-      }
-      return;
-    }
-
-    try {
-      const appUser = await getUserByEmail(data.user.email);
-
-      if (isUserBlocked(appUser)) {
-        await supabase.auth.signOut();
-        setCurrentUser(null);
-        toast.error("Conta bloqueada. Contacta a escola.");
-        return;
-      }
-
-      if (appUser.role === "student") {
-        await supabase.auth.signOut();
-        setCurrentUser(null);
-        toast.error("O acesso de alunos está desativado. Contacta a escola.");
-        return;
-      }
-
-      setCurrentUser(appUser);
-    } catch (sessionError) {
-      console.error(sessionError);
-      await supabase.auth.signOut();
-      setCurrentUser(null);
-    }
-  }
-
   async function logout() {
+    resolveSeq.current += 1;
     await supabase.auth.signOut();
     setCurrentUser(null);
+    setAuthReady(true);
   }
 
   function handleChangeSection(section: string) {
@@ -160,6 +175,21 @@ function App() {
 
     if (currentUser.role === "admin") return activeSection;
     return coachSection;
+  }
+
+  if (!authReady) {
+    return (
+      <>
+        <Toaster position="top-right" />
+        <div className="login-page">
+          <div className="login-form-panel" style={{ gridColumn: "1 / -1" }}>
+            <div className="login-card">
+              <p className="muted">A preparar sessão...</p>
+            </div>
+          </div>
+        </div>
+      </>
+    );
   }
 
   if (!currentUser) {

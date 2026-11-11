@@ -2,7 +2,7 @@ import { useState } from "react";
 import toast from "react-hot-toast";
 import type { User } from "../types";
 import { supabase } from "../services/supabase";
-import { getUserByEmail, isUserBlocked } from "../services/usersService";
+import { resolveAppUserFromEmail } from "../services/sessionService";
 import { resolveLoginEmail } from "../utils/usernameAuth";
 import AppVersion from "../components/AppVersion";
 import logo from "../assets/logo next.jpeg";
@@ -21,7 +21,7 @@ function Login({ onLogin }: Props) {
   const [loading, setLoading] = useState(false);
 
   async function login() {
-    if (!loginName || !password) return;
+    if (!loginName || !password || loading) return;
 
     setLoading(true);
 
@@ -38,34 +38,24 @@ function Login({ onLogin }: Props) {
         return;
       }
 
-      if (!data.user?.email) {
+      const authEmail = data.user?.email || data.session?.user?.email;
+      if (!authEmail) {
         toast.error("Utilizador sem conta válida.");
         return;
       }
 
-      try {
-        const appUser = await getUserByEmail(data.user.email);
+      // Let the JWT settle before reading app_users (avoids first-login races).
+      await new Promise((resolve) => setTimeout(resolve, 0));
 
-        if (isUserBlocked(appUser)) {
-          await supabase.auth.signOut();
-          toast.error("Conta bloqueada. Contacta a escola.");
-          return;
-        }
+      const result = await resolveAppUserFromEmail(authEmail, { retries: 3 });
 
-        if (appUser.role === "student") {
-          await supabase.auth.signOut();
-          toast.error(
-            "O acesso de alunos está desativado. Contacta a escola."
-          );
-          return;
-        }
-
-        onLogin(appUser);
-      } catch (loginError) {
-        console.error(loginError);
+      if (!result.ok) {
         await supabase.auth.signOut();
-        toast.error("Este utilizador ainda não tem permissões na aplicação.");
+        toast.error(result.message);
+        return;
       }
+
+      onLogin(result.user);
     } catch (error) {
       console.error(error);
       toast.error("Erro ao iniciar sessão.");
