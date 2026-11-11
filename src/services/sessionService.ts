@@ -19,7 +19,7 @@ export async function resolveAppUserFromEmail(
   email: string,
   options?: { retries?: number }
 ): Promise<SessionResolveResult> {
-  const retries = options?.retries ?? 2;
+  const retries = options?.retries ?? 3;
   let lastError: unknown;
 
   for (let attempt = 0; attempt <= retries; attempt += 1) {
@@ -46,7 +46,7 @@ export async function resolveAppUserFromEmail(
     } catch (error) {
       lastError = error;
       if (attempt < retries) {
-        await wait(120 * (attempt + 1));
+        await wait(150 * (attempt + 1));
       }
     }
   }

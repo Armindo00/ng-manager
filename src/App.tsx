@@ -82,7 +82,17 @@ function App() {
         return;
       }
 
-      const result = await resolveAppUserFromEmail(email);
+      // Login.tsx already resolved the user for this sign-in. Do not race it.
+      if (source === "signed_in" && currentUserRef.current) {
+        if (mounted && seq === resolveSeq.current) {
+          setAuthReady(true);
+        }
+        return;
+      }
+
+      const result = await resolveAppUserFromEmail(email, {
+        retries: source === "initial" ? 4 : 3,
+      });
 
       if (!mounted || seq !== resolveSeq.current) return;
 
@@ -102,17 +112,21 @@ function App() {
         return;
       }
 
-      // Race after sign-in used to signOut here and kick valid logins back
-      // to the form. Keep an already-resolved Login user; otherwise show login.
-      if (source === "token_refreshed" && !currentUserRef.current) {
+      // Never kick out an already-authenticated app user on a transient miss.
+      if (currentUserRef.current) {
+        if (mounted && seq === resolveSeq.current) {
+          setAuthReady(true);
+        }
+        return;
+      }
+
+      if (source === "token_refreshed" || source === "initial") {
         toast.error(result.message);
         await supabase.auth.signOut();
       }
 
       if (mounted && seq === resolveSeq.current) {
-        if (!currentUserRef.current) {
-          setCurrentUser(null);
-        }
+        setCurrentUser(null);
         setAuthReady(true);
       }
     }
@@ -153,8 +167,16 @@ function App() {
     };
   }, []);
 
+  function handleLogin(user: User) {
+    // Sync ref immediately so a racing SIGNED_IN handler does not clear the user.
+    currentUserRef.current = user;
+    setCurrentUser(user);
+    setAuthReady(true);
+  }
+
   async function logout() {
     resolveSeq.current += 1;
+    currentUserRef.current = null;
     await supabase.auth.signOut();
     setCurrentUser(null);
     setAuthReady(true);
@@ -192,11 +214,11 @@ function App() {
     );
   }
 
-  if (!currentUser) {
+      if (!currentUser) {
     return (
       <>
         <Toaster position="top-right" />
-        <Login onLogin={setCurrentUser} />
+        <Login onLogin={handleLogin} />
       </>
     );
   }
