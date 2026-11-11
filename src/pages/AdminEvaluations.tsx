@@ -241,7 +241,7 @@ function AdminEvaluations() {
                   toolbar={
                     <input
                       className="search-input"
-                      placeholder="🔍 Pesquisar aluno..."
+                      placeholder="Pesquisar aluno..."
                       value={search}
                       onChange={(e) => setSearch(e.target.value)}
                     />

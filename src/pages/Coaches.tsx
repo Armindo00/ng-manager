@@ -281,7 +281,7 @@ function Coaches() {
       </header>
 
       {loading ? (
-        <p>A carregar...</p>
+        <p className="muted">A carregar treinadores...</p>
       ) : (
         <MasterDetailLayout
           showDetail={creatingNew || Boolean(selectedCoach)}

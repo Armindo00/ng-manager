@@ -211,25 +211,23 @@ function CoachDashboard({ user }: Props) {
   }
 
   return (
-    <div className="coach-dashboard-page">
-      <div className="coach-dashboard-heading">
-        <div>
-          <span className="coach-dashboard-kicker">Presenças · {formatTodayLabel()}</span>
-          <h1 className="page-title">Treinos de hoje</h1>
-        </div>
-        <p>
+    <div className="coach-dashboard-page dashboard-page">
+      <header className="page-header">
+        <p className="page-eyebrow">Presenças · {formatTodayLabel()}</p>
+        <h1 className="page-title">Treinos de hoje</h1>
+        <p className="page-description">
           Escolhe o grupo que deste. Qualquer treinador pode registar estes
           grupos e podes indicar um segundo treinador na mesma sessão.
         </p>
-      </div>
+      </header>
 
       <section className="card section-card">
-        <div className="coach-section-title">
+        <div className="admin-section-heading">
           <div>
-            <span>Hoje</span>
+            <span className="admin-section-kicker">Hoje</span>
             <h2>Grupos de hoje</h2>
           </div>
-          <strong>{todayGroups.length}</strong>
+          <span className="coach-count-chip">{todayGroups.length}</span>
         </div>
 
         {todayGroups.length === 0 ? (

@@ -5,8 +5,8 @@ type Props = {
 
 function Toast({ message, type = "success" }: Props) {
   return (
-    <div className={"toast toast-" + type}>
-      {type === "success" ? "✅" : "❌"} {message}
+    <div className={"toast toast-" + type} role="status">
+      {message}
     </div>
   );
 }

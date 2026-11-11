@@ -11,14 +11,19 @@ type Props = {
   evaluations?: MonthlyEvaluation[];
 };
 
+const TABS = [
+  { id: "dados", label: "Dados" },
+  { id: "treinos", label: "Treinos" },
+  { id: "avaliacoes", label: "Avaliações" },
+  { id: "pagamentos", label: "Pagamentos" },
+] as const;
+
 function StudentProfileTabs({
   student,
   lessons,
   evaluations = [],
 }: Props) {
-  const [activeTab, setActiveTab] = useState<
-    "dados" | "treinos" | "avaliacoes" | "pagamentos"
-  >("dados");
+  const [activeTab, setActiveTab] = useState<(typeof TABS)[number]["id"]>("dados");
 
   const studentEvaluations = evaluations
     .filter((evaluation) => evaluation.studentId === student.id)
@@ -34,28 +39,25 @@ function StudentProfileTabs({
   }
 
   return (
-    <div>
+    <div className="student-profile-tabs">
       <StudentProfileStats student={student} lessons={lessons} />
 
-      <div className="student-tabs">
-        <button className={activeTab === "dados" ? "tab active" : "tab"} onClick={() => setActiveTab("dados")}>
-          👤 Dados
-        </button>
-
-        <button className={activeTab === "treinos" ? "tab active" : "tab"} onClick={() => setActiveTab("treinos")}>
-          📅 Treinos
-        </button>
-
-        <button className={activeTab === "avaliacoes" ? "tab active" : "tab"} onClick={() => setActiveTab("avaliacoes")}>
-          📝 Avaliações
-        </button>
-
-        <button className={activeTab === "pagamentos" ? "tab active" : "tab"} onClick={() => setActiveTab("pagamentos")}>
-          💳 Pagamentos
-        </button>
+      <div className="student-tabs" role="tablist" aria-label="Secções do aluno">
+        {TABS.map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            role="tab"
+            aria-selected={activeTab === tab.id}
+            className={activeTab === tab.id ? "tab active" : "tab"}
+            onClick={() => setActiveTab(tab.id)}
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
 
-      <div style={{ marginTop: 24 }}>
+      <div className="student-tab-panel" role="tabpanel">
         {activeTab === "dados" && <StudentProfileCard student={student} />}
 
         {activeTab === "treinos" && (
@@ -63,15 +65,20 @@ function StudentProfileTabs({
         )}
 
         {activeTab === "avaliacoes" && (
-          <div>
-            <h3>📝 Avaliações</h3>
+          <div className="student-history">
+            <div className="admin-section-heading">
+              <div>
+                <span className="admin-section-kicker">Acompanhamento</span>
+                <h2>Avaliações</h2>
+              </div>
+            </div>
 
             {studentEvaluations.length === 0 && (
               <p className="muted">Ainda não existem avaliações para este aluno.</p>
             )}
 
             {studentEvaluations.map((evaluation) => (
-              <div className="student-history-row" key={evaluation.id}>
+              <article className="student-history-row" key={evaluation.id}>
                 <div>
                   <strong>
                     {evaluation.month}/{evaluation.year}
@@ -86,7 +93,7 @@ function StudentProfileTabs({
                   <p>Comentário: {evaluation.coachComment}</p>
                   <p>Próximo objetivo: {evaluation.nextGoal}</p>
                 </div>
-              </div>
+              </article>
             ))}
           </div>
         )}

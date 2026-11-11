@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import type { Student } from "../types";
 import { getStudents } from "../services/studentsService";
@@ -125,8 +125,22 @@ function AdminPayments() {
     return "Pendente";
   }
 
+  const stats = useMemo(() => {
+    const pending = payments.filter((payment) => payment.status === "pending");
+    const paid = payments.filter((payment) => payment.status === "paid");
+    const pendingAmount = pending.reduce((sum, payment) => sum + payment.amount, 0);
+    const paidAmount = paid.reduce((sum, payment) => sum + payment.amount, 0);
+
+    return {
+      pending: pending.length,
+      paid: paid.length,
+      pendingAmount,
+      paidAmount,
+    };
+  }, [payments]);
+
   return (
-    <div>
+    <div className="dashboard-page">
       <header className="page-header">
         <p className="page-eyebrow">Gestão</p>
         <h1 className="page-title">Pagamentos</h1>
@@ -135,8 +149,32 @@ function AdminPayments() {
         </p>
       </header>
 
+      <div className="stats-grid">
+        <div className="card stat-card">
+          <span className="stat-label">Pendentes</span>
+          <strong className="stat-number">{stats.pending}</strong>
+        </div>
+        <div className="card stat-card">
+          <span className="stat-label">Pagos</span>
+          <strong className="stat-number">{stats.paid}</strong>
+        </div>
+        <div className="card stat-card">
+          <span className="stat-label">Valor pendente</span>
+          <strong className="stat-number small">{stats.pendingAmount}€</strong>
+        </div>
+        <div className="card stat-card">
+          <span className="stat-label">Valor recebido</span>
+          <strong className="stat-number small">{stats.paidAmount}€</strong>
+        </div>
+      </div>
+
       <div className="card section-card">
-        <h2>Novo pagamento</h2>
+        <div className="admin-section-heading">
+          <div>
+            <span className="admin-section-kicker">Registo</span>
+            <h2>Novo pagamento</h2>
+          </div>
+        </div>
 
         <div className="form-fields-grid">
           <FormField label="Aluno">
@@ -215,7 +253,12 @@ function AdminPayments() {
       </div>
 
       <div className="card section-card">
-        <h2>Histórico de pagamentos</h2>
+        <div className="admin-section-heading">
+          <div>
+            <span className="admin-section-kicker">Histórico</span>
+            <h2>Pagamentos</h2>
+          </div>
+        </div>
 
         <table className="data-table">
           <thead>
@@ -275,7 +318,7 @@ function AdminPayments() {
 
       {paymentToDelete && (
         <ConfirmDialog
-          title="⚠️ Eliminar pagamento"
+          title="Eliminar pagamento"
           message={
             "Tens a certeza que pretendes eliminar o pagamento de " +
             getStudentName(paymentToDelete.studentId) +

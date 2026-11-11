@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Bell } from "lucide-react";
 
 type Notification = {
   id: string;
@@ -37,10 +38,13 @@ function NotificationBell({ notifications }: Props) {
   return (
     <div className="notification-wrapper" ref={wrapperRef}>
       <button
+        type="button"
         className="notification-bell"
+        aria-label="Notificações"
+        aria-expanded={open}
         onClick={() => setOpen((current) => !current)}
       >
-        <span className="bell-icon">🔔</span>
+        <Bell size={18} strokeWidth={2.2} />
 
         {notifications.length > 0 && (
           <span className="notification-count">{notifications.length}</span>

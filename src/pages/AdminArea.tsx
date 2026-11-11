@@ -318,7 +318,7 @@ function AdminArea() {
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                   <input
                     className="search-input"
-                    placeholder="🔍 Pesquisar..."
+                    placeholder="Pesquisar aluno..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                   />

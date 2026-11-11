@@ -33,14 +33,19 @@ function StudentPaymentHistory({ student }: Props) {
 
   return (
     <div className="student-payment-history">
-      <h3>💳 Histórico de pagamentos</h3>
+      <div className="admin-section-heading">
+        <div>
+          <span className="admin-section-kicker">Financeiro</span>
+          <h2>Pagamentos</h2>
+        </div>
+      </div>
 
       {payments.length === 0 && (
         <p className="muted">Ainda não existem pagamentos para este aluno.</p>
       )}
 
       {payments.map((payment) => (
-        <div className="payment-history-row" key={payment.id}>
+        <article className="student-history-row payment-history-row" key={payment.id}>
           <div>
             <strong>
               {payment.month}/{payment.year}
@@ -56,7 +61,7 @@ function StudentPaymentHistory({ student }: Props) {
               </span>
             </p>
           </div>
-        </div>
+        </article>
       ))}
     </div>
   );
