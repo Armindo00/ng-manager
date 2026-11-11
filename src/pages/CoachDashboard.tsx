@@ -214,13 +214,12 @@ function CoachDashboard({ user }: Props) {
     <div className="coach-dashboard-page">
       <div className="coach-dashboard-heading">
         <div>
-          <span className="coach-dashboard-kicker">Registar treino</span>
-          <h1 className="page-title">Olá, {user.name}</h1>
+          <span className="coach-dashboard-kicker">Presenças · {formatTodayLabel()}</span>
+          <h1 className="page-title">Treinos de hoje</h1>
         </div>
         <p>
-          {formatTodayLabel()}. Escolhe o grupo que deste — qualquer treinador
-          pode dar estes grupos, e podes registar 2 treinadores na mesma
-          sessão.
+          Escolhe o grupo que deste. Qualquer treinador pode registar estes
+          grupos e podes indicar um segundo treinador na mesma sessão.
         </p>
       </div>
 

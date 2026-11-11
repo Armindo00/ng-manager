@@ -106,12 +106,14 @@ function AdminLessons() {
 
   return (
     <div className="dashboard-page">
-      <h1 className="page-title">Calendário</h1>
-      <p className="workflow-help">
-        Mostra os <strong>grupos fixos</strong> planeados e os treinos já
-        registados pelos treinadores. Um grupo planeado passa a registado
-        quando alguém marca presenças em <strong>Hoje</strong>.
-      </p>
+      <header className="page-header">
+        <p className="page-eyebrow">Planeamento</p>
+        <h1 className="page-title">Calendário</h1>
+        <p className="page-description">
+          Grupos fixos planeados e treinos registados. Um grupo passa a
+          registado quando alguém marca presenças em Hoje.
+        </p>
+      </header>
 
       {loading ? (
         <p className="muted">A carregar calendário...</p>

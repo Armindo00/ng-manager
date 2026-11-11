@@ -12,14 +12,13 @@ type Props = {
 };
 
 function roleLabel(role: User["role"]) {
-  if (role === "admin") return "Admin / Treinador";
+  if (role === "admin") return "Administração";
   if (role === "coach") return "Treinador";
   return "Aluno";
 }
 
 function Topbar({ user }: Props) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
-
   const today = formatTodayLabel();
 
   useEffect(() => {
@@ -39,13 +38,12 @@ function Topbar({ user }: Props) {
     <header className="topbar">
       <div className="topbar-copy">
         <p className="topbar-date">{today}</p>
-        <h2>Olá, {user.name}</h2>
+        <h2>{user.name}</h2>
         <span className="topbar-role-chip">{roleLabel(user.role)}</span>
       </div>
 
       <div className="topbar-actions">
         <NotificationBell notifications={notifications} />
-
         <span className="topbar-avatar" title={user.name}>
           {user.name.charAt(0).toUpperCase()}
         </span>

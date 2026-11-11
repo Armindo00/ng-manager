@@ -83,10 +83,13 @@ function AdminCoachActivity() {
 
   return (
     <div className="dashboard-page">
-      <h1 className="page-title">Treinos por treinador</h1>
-      <p className="muted admin-home-intro">
-        Totais mensais: treinos concluídos na água + videoanálises registadas.
-      </p>
+      <header className="page-header">
+        <p className="page-eyebrow">Relatório mensal</p>
+        <h1 className="page-title">Treinos por treinador</h1>
+        <p className="page-description">
+          Totais do mês: água concluída + videoanálises registadas.
+        </p>
+      </header>
 
       <div className="form-row" style={{ alignItems: "center", gap: "0.75rem" }}>
         <button type="button" className="compact-btn" onClick={() => changeMonth(-1)}>
