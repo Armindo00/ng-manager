@@ -23,9 +23,9 @@ body,
 
 body {
   margin: 0;
-  font-family: Inter, Arial, sans-serif;
-  background: #f4f7fb;
-  color: #0f172a;
+  font-family: Manrope, system-ui, sans-serif;
+  background: #edf2f6;
+  color: #10233a;
   overflow-x: hidden;
   overscroll-behavior-x: none;
   touch-action: pan-y;
@@ -42,7 +42,7 @@ button {
 }
 
 button:hover {
-  transform: translateY(-1px);
+  transform: none;
 }
 
 input,

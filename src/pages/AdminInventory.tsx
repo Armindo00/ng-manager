@@ -423,11 +423,14 @@ function AdminInventory() {
 
   return (
     <div className="dashboard-page">
-      <h1 className="page-title">Inventário</h1>
-      <p className="workflow-help">
-        Tabela completa do material: pranchas e fatos por <strong>tamanho</strong>{" "}
-        e <strong>estado</strong>. Edita as quantidades diretamente nas células.
-      </p>
+      <header className="page-header">
+        <p className="page-eyebrow">Material</p>
+        <h1 className="page-title">Inventário</h1>
+        <p className="page-description">
+          Pranchas e fatos por tamanho e estado. Edita quantidades diretamente
+          na tabela.
+        </p>
+      </header>
 
       {loading ? (
         <p className="muted">A carregar inventário...</p>

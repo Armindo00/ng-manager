@@ -157,10 +157,13 @@ function CoachActivity({ user }: Props) {
 
   return (
     <div className="dashboard-page">
-      <h1 className="page-title">Os meus treinos</h1>
-      <p className="muted admin-home-intro">
-        Vê quantos treinos deste no mês e regista sessões de videoanálise.
-      </p>
+      <header className="page-header">
+        <p className="page-eyebrow">Atividade</p>
+        <h1 className="page-title">Os meus treinos</h1>
+        <p className="page-description">
+          Totais do mês: treinos na água + videoanálises registadas.
+        </p>
+      </header>
 
       <div className="form-row" style={{ alignItems: "center", gap: "0.75rem" }}>
         <button type="button" className="compact-btn" onClick={() => changeMonth(-1)}>

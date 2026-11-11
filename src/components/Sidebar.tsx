@@ -51,7 +51,7 @@ const ADMIN_MANAGEMENT_SECTIONS = new Set([
 ]);
 
 function roleLabel(role: User["role"]) {
-  if (role === "admin") return "Admin / Treinador";
+  if (role === "admin") return "Administração";
   if (role === "coach") return "Treinador";
   return "Aluno";
 }
@@ -148,10 +148,12 @@ function Sidebar({ user, activeSection, onChangeSection, onLogout }: Props) {
 
           {user.role === "admin" && !adminInManagement && (
             <nav className="sidebar-nav">
+              <div className="nav-section-label">Dia a dia</div>
               {item(LayoutDashboard, "Hoje", "my-dashboard")}
               {item(CalendarDays, "Grupos fixos", "my-lessons")}
               {item(Clapperboard, "Os meus treinos", "my-activity")}
-              {item(Shield, "Admin", "dashboard")}
+              <div className="nav-section-label">Gestão</div>
+              {item(Shield, "Painel admin", "dashboard")}
             </nav>
           )}
 
@@ -167,18 +169,24 @@ function Sidebar({ user, activeSection, onChangeSection, onLogout }: Props) {
                 <span>Voltar às presenças</span>
               </button>
 
-              {item(LayoutDashboard, "Painel admin", "dashboard")}
-              {item(Wrench, "Setup escola", "setup")}
+              <div className="nav-section-label">Escola</div>
+              {item(LayoutDashboard, "Painel", "dashboard")}
+              {item(Wrench, "Setup", "setup")}
               {item(Users, "Alunos", "students")}
               {item(UserCircle, "Treinadores", "coaches")}
+
+              <div className="nav-section-label">Operação</div>
               {item(CalendarDays, "Grupos fixos", "fixed-trainings")}
               {item(Calendar, "Calendário", "lessons")}
               {item(BarChart3, "Treinos / mês", "coach-activity")}
               {item(Package, "Inventário", "inventory")}
+
+              <div className="nav-section-label">Financeiro & follow-up</div>
               {item(CreditCard, "Pagamentos", "payments")}
               {item(Star, "Avaliações", "evaluations")}
               {item(CalendarClock, "Compensações", "compensations")}
               {item(Truck, "Carrinhas", "vans")}
+
               <div className="nav-section-label">Avançado</div>
               {item(UsersRound, "Grupos (DB)", "groups")}
               {item(Repeat, "Horários", "recurring")}
@@ -187,6 +195,7 @@ function Sidebar({ user, activeSection, onChangeSection, onLogout }: Props) {
 
           {user.role === "coach" && (
             <nav className="sidebar-nav">
+              <div className="nav-section-label">Dia a dia</div>
               {item(LayoutDashboard, "Hoje", "dashboard")}
               {item(CalendarDays, "Grupos fixos", "lessons")}
               {item(Clapperboard, "Os meus treinos", "activity")}

@@ -79,23 +79,23 @@ function Login({ onLogin }: Props) {
       <div className="login-brand-panel">
         <div className="login-brand-content">
           <div className="login-brand-logo">
-            <img src={logo} alt="NextGeneration" />
+            <img src={logo} alt="NextGeneration Surf School" />
           </div>
 
           <p className="login-kicker">NextGeneration Surf School</p>
           <h1>NG Manager</h1>
           <p className="login-brand-text">
-            O treinador escolhe o grupo que deu, marca presenças e faltas, e
-            pode registar até 2 treinadores na mesma sessão.
+            Gestão de treinos, presenças e operação da escola — feita para o
+            dia a dia na praia.
           </p>
         </div>
       </div>
 
       <div className="login-form-panel">
         <div className="login-card">
-          <h2>Entrar na conta</h2>
+          <h2>Entrar</h2>
           <p className="login-subtitle">
-            Usa o teu nome de treinador e a password.
+            Usa o teu nome de treinador e a password da escola.
           </p>
 
           <div className="login-actions">
@@ -132,7 +132,7 @@ function Login({ onLogin }: Props) {
               onClick={login}
               disabled={loading}
             >
-              {loading ? "A entrar..." : "Entrar"}
+              {loading ? "A entrar..." : "Entrar na conta"}
             </button>
           </div>
 

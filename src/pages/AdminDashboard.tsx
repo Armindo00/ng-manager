@@ -127,11 +127,14 @@ function AdminDashboard({ onChangeSection }: Props) {
 
   return (
     <div className="dashboard-page">
-      <h1 className="page-title">Administração</h1>
-      <p className="muted admin-home-intro">
-        Visão geral da escola. O dia a dia dos treinadores corre em{" "}
-        <strong>Hoje</strong> com os grupos fixos.
-      </p>
+      <header className="page-header">
+        <p className="page-eyebrow">Gestão da escola</p>
+        <h1 className="page-title">Painel admin</h1>
+        <p className="page-description">
+          Visão geral e atalhos. O dia a dia de presenças continua em{" "}
+          <strong>Hoje</strong>.
+        </p>
+      </header>
 
       {loading ? (
         <p className="muted">A carregar dashboard...</p>

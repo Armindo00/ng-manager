@@ -1,44 +1,87 @@
-/* NG Manager — professional design layer */
+/* =============================================================================
+   NG Manager — design system profissional
+   Direção: coastal slate + teal, tipografia Manrope, UI sóbria e organizada
+   ============================================================================= */
 
 :root {
-  --font-sans: "Plus Jakarta Sans", Inter, system-ui, sans-serif;
-  --color-bg: #eef2f7;
-  --color-surface: #ffffff;
-  --color-text: #0f172a;
-  --color-text-secondary: #475569;
-  --color-text-muted: #64748b;
-  --color-border: #e2e8f0;
-  --color-primary: #0369a1;
-  --color-primary-hover: #0284c7;
-  --color-primary-soft: #e0f2fe;
-  --color-sidebar: #0c1222;
-  --color-sidebar-elevated: #151d32;
-  --radius-md: 14px;
-  --radius-lg: 18px;
-  --radius-xl: 22px;
-  --shadow-sm: 0 4px 14px rgba(15, 23, 42, 0.06);
-  --shadow-md: 0 10px 30px rgba(15, 23, 42, 0.08);
+  --font-sans: "Manrope", "Plus Jakarta Sans", system-ui, sans-serif;
+
+  --ink: #10233a;
+  --ink-soft: #3d5168;
+  --muted: #6b7c8f;
+  --line: #d7e0ea;
+  --line-strong: #c2cedb;
+  --surface: #ffffff;
+  --surface-soft: #f5f8fb;
+  --bg: #edf2f6;
+  --bg-accent: #e7eef4;
+
+  --brand: #0f766e;
+  --brand-hover: #0d9488;
+  --brand-ink: #115e59;
+  --brand-soft: #e6f5f3;
+  --brand-deep: #0b3d4a;
+
+  --sidebar: #0b1f2a;
+  --sidebar-elevated: #123040;
+  --sidebar-text: #9eb0bf;
+  --sidebar-text-strong: #f3f7fa;
+
+  --danger: #c2410c;
+  --danger-soft: #fff1eb;
+  --warning: #b45309;
+  --success: #15803d;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+
+  --shadow-sm: 0 1px 2px rgba(16, 35, 58, 0.04), 0 8px 20px rgba(16, 35, 58, 0.04);
+  --shadow-md: 0 10px 28px rgba(16, 35, 58, 0.08);
+
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-text: var(--ink);
+  --color-text-secondary: var(--ink-soft);
+  --color-text-muted: var(--muted);
+  --color-border: var(--line);
+  --color-primary: var(--brand);
+  --color-primary-hover: var(--brand-hover);
+  --color-primary-soft: var(--brand-soft);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-elevated: var(--sidebar-elevated);
 }
 
+/* Base */
 body {
   font-family: var(--font-sans);
-  background: var(--color-bg);
+  background:
+    radial-gradient(1200px 500px at 0% -10%, rgba(15, 118, 110, 0.08), transparent 55%),
+    radial-gradient(900px 420px at 100% 0%, rgba(11, 61, 74, 0.06), transparent 50%),
+    var(--bg);
+  color: var(--ink);
   -webkit-font-smoothing: antialiased;
 }
 
 button {
   font-family: inherit;
-  font-weight: 600;
-  transition: background 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+button:hover {
+  transform: none;
 }
 
 button:hover:not(:disabled) {
-  transform: none;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+  box-shadow: none;
 }
 
 button:disabled {
-  opacity: 0.6;
+  opacity: 0.55;
   cursor: not-allowed;
 }
 
@@ -49,7 +92,18 @@ textarea {
   margin: 0;
   font-family: inherit;
   font-size: 14px;
-  border-color: var(--color-border);
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 11px 12px;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.14);
 }
 
 .field-label {
@@ -57,100 +111,213 @@ textarea {
   flex-direction: column;
   gap: 6px;
   font-size: 13px;
-  font-weight: 600;
-  color: var(--color-text-secondary);
+  font-weight: 650;
+  color: var(--ink-soft);
 }
 
-.card {
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-sm);
-  border-color: var(--color-border);
+.main-content {
+  padding: 28px 28px 40px;
 }
 
+/* Buttons */
 .primary-btn {
-  background: var(--color-primary);
+  background: var(--brand);
+  color: white;
+  border-radius: var(--radius-md);
+  padding: 11px 16px;
 }
 
 .primary-btn:hover:not(:disabled) {
-  background: var(--color-primary-hover);
+  background: var(--brand-hover);
+}
+
+.danger-btn {
+  background: var(--danger);
+  color: white;
+  border-radius: var(--radius-md);
+}
+
+.compact-btn {
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  font-size: 13px;
+}
+
+.compact-btn:hover:not(:disabled) {
+  border-color: var(--line-strong);
+  background: var(--surface-soft);
+}
+
+/* Surfaces */
+.card,
+.section-card,
+.stat-card,
+.login-card,
+.calendar-card,
+.coach-session-card,
+.admin-module-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-sm);
+}
+
+.card,
+.section-card,
+.stat-card,
+.calendar-card {
+  border-radius: var(--radius-lg);
+}
+
+.section-card {
+  margin-top: 20px;
+  padding: 22px;
+}
+
+.card {
+  padding: 20px 22px;
+}
+
+/* Page structure */
+.page-header {
+  margin-bottom: 22px;
+}
+
+.page-eyebrow {
+  margin: 0 0 6px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--brand-ink);
 }
 
 .page-title {
-  font-size: 28px;
+  margin: 0;
+  font-size: 30px;
   font-weight: 800;
-  margin-bottom: 8px;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.035em;
+  color: var(--ink);
+  line-height: 1.15;
+}
+
+.page-description,
+.page-header + .workflow-help,
+.admin-home-intro,
+.coach-area-intro {
+  margin: 8px 0 0;
+  max-width: 62ch;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.55;
 }
 
 .workflow-help {
-  background: var(--color-primary-soft);
-  border: 1px solid #bae6fd;
-  border-radius: var(--radius-lg);
-  padding: 14px 18px;
+  margin-top: 12px;
+  margin-bottom: 20px;
+  background: var(--brand-soft);
+  border: 1px solid #c7e8e3;
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
   font-size: 14px;
-  color: var(--color-text-secondary);
+  color: var(--ink-soft);
+}
+
+.muted {
+  color: var(--muted);
 }
 
 /* Sidebar */
 .sidebar {
-  width: 272px;
-  background: var(--color-sidebar);
-  padding: 24px 18px;
-  border-right-color: rgba(255, 255, 255, 0.06);
+  width: 268px;
+  background:
+    linear-gradient(180deg, rgba(15, 118, 110, 0.12), transparent 28%),
+    var(--sidebar);
+  padding: 22px 16px;
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.sidebar-header {
+  gap: 12px;
+  margin-bottom: 22px;
+  align-items: center;
 }
 
 .logo-circle {
-  width: 56px;
-  height: 56px;
-  border-radius: 16px;
-  padding: 4px;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  padding: 3px;
+  background: white;
+  box-shadow: none;
 }
 
 .brand {
-  font-size: 18px;
+  margin: 0;
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--sidebar-text-strong);
 }
 
 .role-label {
-  color: #94a3b8;
+  margin: 2px 0 0;
+  color: var(--sidebar-text);
+  font-size: 13px;
   font-weight: 500;
 }
 
 .user-role {
   display: inline-block;
-  margin-top: 6px;
+  margin-top: 8px;
   padding: 3px 8px;
-  border-radius: 999px;
-  background: rgba(56, 189, 248, 0.15);
-  color: #7dd3fc;
+  border-radius: var(--radius-sm);
+  background: rgba(15, 118, 110, 0.18);
+  color: #9fd8d1;
   font-size: 10px;
+  font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
 .sidebar-nav {
-  gap: 4px;
+  gap: 2px;
+}
+
+.nav-section-label {
+  margin: 18px 10px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #6f8494;
 }
 
 .nav-item {
-  color: #94a3b8;
-  padding: 11px 12px;
+  color: var(--sidebar-text);
+  padding: 10px 12px;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 550;
   border-radius: var(--radius-md);
+  gap: 10px;
 }
 
 .nav-icon {
   width: 20px;
-  align-items: center;
+  color: inherit;
+  opacity: 0.9;
 }
 
 .nav-item:hover {
-  background: var(--color-sidebar-elevated);
-  color: white;
+  background: var(--sidebar-elevated);
+  color: var(--sidebar-text-strong);
 }
 
 .nav-item.active {
-  background: var(--color-primary);
+  background: rgba(15, 118, 110, 0.92);
+  color: white;
   box-shadow: none;
 }
 
@@ -159,43 +326,65 @@ textarea {
   align-items: center;
   justify-content: center;
   gap: 8px;
+  width: 100%;
   background: transparent;
-  color: #94a3b8;
+  color: var(--sidebar-text);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  font-size: 14px;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  padding: 11px 12px;
 }
 
 .logout-btn:hover {
-  background: rgba(239, 68, 68, 0.12);
-  color: #fca5a5;
+  background: rgba(194, 65, 12, 0.14);
+  color: #fdba8c;
+  border-color: rgba(253, 186, 140, 0.25);
+}
+
+.sidebar-version,
+.app-version {
+  color: #6f8494;
 }
 
 /* Topbar */
 .topbar {
-  border: 1px solid var(--color-border);
-  box-shadow: var(--shadow-sm);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 20px;
+  margin-bottom: 22px;
+  border: 1px solid var(--line);
   border-radius: var(--radius-lg);
-  margin-bottom: 24px;
-}
-
-.topbar h2 {
-  font-size: 22px;
-  font-weight: 800;
-  letter-spacing: -0.02em;
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(10px);
+  box-shadow: var(--shadow-sm);
 }
 
 .topbar-date {
-  font-size: 13px;
-  font-weight: 500;
+  margin: 0 0 2px;
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  text-transform: capitalize;
+  color: var(--muted);
+}
+
+.topbar h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--ink);
 }
 
 .topbar-role-chip {
   display: inline-block;
-  margin-top: 8px;
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: var(--color-primary-soft);
-  color: var(--color-primary);
+  margin-top: 6px;
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  background: var(--brand-soft);
+  color: var(--brand-ink);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.04em;
@@ -203,45 +392,221 @@ textarea {
 }
 
 .topbar-avatar {
-  width: 42px;
-  height: 42px;
-  font-size: 15px;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--brand-deep);
+  color: white;
+  font-size: 14px;
   font-weight: 700;
-  background: var(--color-primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
-/* Stats */
+/* Stats & modules */
+.stats-grid {
+  gap: 12px;
+}
+
 .stat-card {
-  border: 1px solid var(--color-border);
+  padding: 16px 18px;
 }
 
 .stat-label {
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
 }
 
 .stat-number {
-  font-size: 30px;
+  display: block;
+  margin-top: 6px;
+  font-size: 28px;
   font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+}
+
+.stat-number.small {
+  font-size: 18px;
+}
+
+.admin-module-grid {
+  gap: 12px;
+  margin-bottom: 22px;
+}
+
+.admin-module-card {
+  border-radius: var(--radius-md);
+  padding: 16px;
+  box-shadow: none;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.admin-module-card:hover {
+  border-color: #9ec9c3;
+  background: #f8fbfb;
+}
+
+.admin-module-card strong {
+  font-size: 15px;
+  font-weight: 750;
+  color: var(--ink);
+}
+
+.admin-module-card span {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.admin-module-card-secondary {
+  opacity: 1;
+  background: var(--surface-soft);
+  border-style: solid;
+}
+
+/* Tables */
+.data-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.data-table th {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  background: var(--surface-soft);
+  border-bottom: 1px solid var(--line);
+}
+
+.data-table td {
+  border-bottom: 1px solid var(--line);
+  color: var(--ink);
+}
+
+.inventory-qty-input {
+  width: 84px;
+  text-align: center;
+  border-radius: var(--radius-sm);
+}
+
+/* Coach session cards */
+.coach-session-card {
+  border-radius: var(--radius-md);
+  box-shadow: none;
+  cursor: pointer;
+}
+
+.coach-session-card:hover {
+  border-color: #9ec9c3;
+}
+
+.coach-session-card.selected {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 2px rgba(15, 118, 110, 0.16);
+}
+
+.coach-session-card-status {
+  border-radius: var(--radius-sm);
+  background: var(--surface-soft);
+  color: var(--ink-soft);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.coach-session-card-status.ready {
+  background: var(--brand-soft);
+  color: var(--brand-ink);
+}
+
+.coach-session-card-status.status-finished {
+  background: #e8edf2;
+  color: var(--muted);
+}
+
+.coach-dashboard-kicker {
+  color: var(--brand-ink);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 12px;
+}
+
+.coach-dashboard-heading > p {
+  color: var(--muted);
+  max-width: 60ch;
+}
+
+/* Calendar */
+.calendar-card h2 {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.calendar-month {
+  text-transform: capitalize;
+  color: var(--ink-soft);
+}
+
+.calendar-day {
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+}
+
+.calendar-today {
+  border-color: var(--brand);
+}
+
+.calendar-selected {
+  background: var(--brand-soft);
+}
+
+.calendar-dots span.dot-planned,
+.legend-dot.dot-planned {
+  background: #c5d0db;
+  box-shadow: inset 0 0 0 1px #7f92a5;
+}
+
+.calendar-dots span.dot-published,
+.legend-dot.dot-published {
+  background: var(--brand);
+}
+
+.calendar-dots span.dot-finished,
+.legend-dot.dot-finished {
+  background: #94a3b8;
 }
 
 /* Login */
 .login-page {
+  min-height: 100vh;
+  min-height: 100dvh;
   display: grid;
-  grid-template-columns: 1.1fr 1fr;
-  background: var(--color-bg);
+  grid-template-columns: 1.15fr 0.85fr;
+  background: var(--bg);
   align-items: stretch;
 }
 
 .login-brand-panel {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 48px;
-  background: linear-gradient(145deg, #0c1222 0%, #0f2744 45%, #0369a1 100%);
-  color: white;
   position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-start;
+  padding: 48px;
   overflow: hidden;
+  color: white;
+  background:
+    linear-gradient(160deg, rgba(11, 31, 42, 0.55) 10%, rgba(11, 61, 74, 0.82) 55%, rgba(15, 118, 110, 0.88) 100%),
+    radial-gradient(1000px 600px at 10% 20%, rgba(255, 255, 255, 0.12), transparent 50%),
+    linear-gradient(145deg, #0b1f2a, #0f766e);
 }
 
 .login-brand-panel::before {
@@ -249,20 +614,27 @@ textarea {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(circle at 20% 20%, rgba(56, 189, 248, 0.18), transparent 40%),
-    radial-gradient(circle at 80% 70%, rgba(14, 165, 233, 0.12), transparent 35%);
+    linear-gradient(to top, rgba(11, 31, 42, 0.55), transparent 45%),
+    repeating-linear-gradient(
+      -18deg,
+      transparent,
+      transparent 18px,
+      rgba(255, 255, 255, 0.02) 18px,
+      rgba(255, 255, 255, 0.02) 19px
+    );
   pointer-events: none;
 }
 
 .login-brand-content {
   position: relative;
-  max-width: 420px;
+  z-index: 1;
+  max-width: 480px;
 }
 
 .login-brand-logo {
-  width: 88px;
-  height: 88px;
-  border-radius: 20px;
+  width: 96px;
+  height: 96px;
+  border-radius: 18px;
   background: white;
   padding: 8px;
   margin-bottom: 28px;
@@ -278,24 +650,26 @@ textarea {
 .login-brand-panel .login-kicker {
   margin: 0 0 10px;
   font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
+  font-weight: 750;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: #7dd3fc;
+  color: #9fd8d1;
 }
 
 .login-brand-panel h1 {
-  margin: 0 0 14px;
-  font-size: 40px;
+  margin: 0 0 12px;
+  font-size: clamp(40px, 5vw, 56px);
   font-weight: 800;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.04em;
+  line-height: 0.98;
 }
 
 .login-brand-text {
   margin: 0;
+  max-width: 36ch;
   font-size: 16px;
-  line-height: 1.6;
-  color: #cbd5e1;
+  line-height: 1.55;
+  color: rgba(243, 247, 250, 0.86);
 }
 
 .login-form-panel {
@@ -303,248 +677,63 @@ textarea {
   align-items: center;
   justify-content: center;
   padding: 32px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.55), transparent),
+    var(--bg);
 }
 
 .login-card {
   width: 100%;
   max-width: 400px;
   border-radius: var(--radius-xl);
-  padding: 36px;
+  padding: 32px;
   box-shadow: var(--shadow-md);
-  border: 1px solid var(--color-border);
 }
 
 .login-card h2 {
   margin: 0 0 6px;
   font-size: 24px;
   font-weight: 800;
+  letter-spacing: -0.03em;
 }
 
 .login-subtitle {
   margin: 0 0 24px;
-  color: var(--color-text-muted);
+  color: var(--muted);
   font-size: 14px;
+  line-height: 1.5;
 }
 
 .login-actions {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
 }
 
 .login-submit-btn {
   width: 100%;
+  margin-top: 4px;
   padding: 13px;
 }
 
-.mobile-menu-btn {
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--radius-md);
-  background: var(--color-primary);
+/* Layout helpers */
+.fixed-trainings-layout {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.95fr) minmax(320px, 1.05fr);
+  gap: 18px;
+  align-items: start;
 }
 
-/* Login: sem barra do menu mobile */
-.login-page {
-  min-height: 100vh;
-  min-height: 100dvh;
+.fixed-trainings-day h3 {
+  margin: 0 0 10px;
+  font-size: 14px;
+  font-weight: 750;
+  color: var(--ink-soft);
 }
 
-/* Calendários — telemóvel */
-@media (max-width: 768px) {
-  .calendar-card {
-    padding: 14px 10px;
-    margin-top: 0;
-    overflow: hidden;
-  }
-
-  .calendar-card.section-card {
-    margin-top: 16px;
-  }
-
-  .calendar-title-row {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 10px;
-  }
-
-  .calendar-title-row h2 {
-    font-size: 18px;
-    text-align: left;
-  }
-
-  .calendar-nav {
-    justify-content: space-between;
-  }
-
-  .calendar-nav .compact-btn {
-    flex: 1;
-    min-height: 40px;
-    padding: 8px 10px;
-    font-size: 13px;
-  }
-
-  .calendar-month {
-    margin: 4px 0 12px;
-    font-size: 18px;
-    text-align: left;
-  }
-
-  .calendar-grid {
-    gap: 4px;
-    width: 100%;
-  }
-
-  .calendar-header span,
-  .calendar-weekday {
-    font-size: 10px;
-    font-weight: 700;
-    padding-bottom: 4px;
-  }
-
-  .calendar-weekday {
-    font-size: 0;
-    line-height: 1;
-  }
-
-  .calendar-weekday::before {
-    content: attr(data-short);
-    font-size: 10px;
-    font-weight: 700;
-    color: #64748b;
-  }
-
-  .calendar-day {
-    min-height: 0;
-    aspect-ratio: 1;
-    padding: 4px 2px;
-    border-radius: 10px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-start;
-  }
-
-  .calendar-day strong {
-    font-size: 12px;
-    margin-bottom: 4px;
-    line-height: 1;
-  }
-
-  .calendar-dots {
-    gap: 2px;
-    justify-content: center;
-  }
-
-  .calendar-dots span {
-    width: 5px;
-    height: 5px;
-  }
-
-  .calendar-dots span:nth-child(n + 3) {
-    display: none;
-  }
-
-  .calendar-more {
-    font-size: 9px;
-    line-height: 1;
-    margin-top: 2px;
-  }
-
-  .calendar-legend {
-    gap: 8px 12px;
-    margin-top: 12px;
-    font-size: 11px;
-    justify-content: flex-start;
-  }
-
-  .legend-dot {
-    width: 8px;
-    height: 8px;
-  }
-
-  .lessons-calendar-layout {
-    grid-template-columns: 1fr;
-    gap: 16px;
-  }
-
-  .calendar-day-panel {
-    padding: 16px;
-  }
-
-  .calendar-day-panel h2 {
-    font-size: 18px;
-    line-height: 1.3;
-  }
-
-  .calendar-day-section {
-    margin-top: 16px;
-  }
-
-  .calendar-day-section h3 {
-    font-size: 15px;
-  }
-
-  .calendar-wrapper {
-    width: 100%;
-    overflow: hidden;
-  }
-
-  .main-content .page-title {
-    font-size: 24px;
-    margin-bottom: 12px;
-  }
-}
-
-@media (max-width: 380px) {
-  .calendar-grid {
-    gap: 3px;
-  }
-
-  .calendar-day strong {
-    font-size: 11px;
-  }
-
-  .calendar-card {
-    padding: 12px 8px;
-  }
-}
-
-@media (max-width: 900px) {
-  .login-page {
-    grid-template-columns: 1fr;
-  }
-
-  .login-brand-panel {
-    padding: 32px 24px;
-  }
-
-  .login-brand-panel h1 {
-    font-size: 28px;
-  }
-
-  .login-form-panel {
-    padding: 24px 16px 40px;
-  }
-}
-
-/* Admin / calendar polish */
-.nav-section-label {
-  margin: 16px 8px 6px;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: #64748b;
-}
-
-.admin-module-card-secondary {
-  opacity: 0.82;
-  border-style: dashed;
-}
-
-.admin-module-card-secondary:hover {
-  opacity: 1;
+.table-scroll {
+  width: 100%;
+  overflow-x: auto;
 }
 
 .calendar-entry-actions {
@@ -560,60 +749,61 @@ textarea {
   align-self: center;
 }
 
-.calendar-dots span.dot-planned,
-.legend-dot.dot-planned {
-  background: #cbd5e1;
-  box-shadow: inset 0 0 0 1px #64748b;
-}
-
-.coach-session-card-static {
-  cursor: default;
-}
-
-.coach-session-card-static:hover {
-  border-color: #e2e8f0;
-}
-
-.coach-session-card.selected {
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 2px rgba(3, 105, 161, 0.15);
-}
-
-.fixed-trainings-layout {
-  display: grid;
-  grid-template-columns: minmax(280px, 0.95fr) minmax(320px, 1.05fr);
-  gap: 20px;
-  align-items: start;
-}
-
-.fixed-trainings-day {
-  margin-bottom: 18px;
-}
-
-.fixed-trainings-day h3 {
-  margin: 0 0 10px;
-  font-size: 15px;
-}
-
-.table-scroll {
-  width: 100%;
-  overflow-x: auto;
-}
-
-.inventory-qty-input {
-  width: 88px;
-  max-width: 100%;
-  margin: 0;
-  text-align: center;
-}
-
-.inventory-matrix-table td,
-.inventory-matrix-table th {
-  vertical-align: middle;
+.mobile-menu-btn {
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  background: var(--brand);
+  color: white;
 }
 
 @media (max-width: 900px) {
+  .login-page {
+    grid-template-columns: 1fr;
+  }
+
+  .login-brand-panel {
+    min-height: 42vh;
+    padding: 28px 24px 32px;
+    align-items: flex-end;
+  }
+
+  .login-brand-panel h1 {
+    font-size: 36px;
+  }
+
+  .login-form-panel {
+    padding: 24px 16px 40px;
+  }
+
   .fixed-trainings-layout {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .app-layout::before {
+    background: var(--bg);
+  }
+
+  .main-content {
+    padding: 140px 16px 28px;
+  }
+
+  .page-title,
+  .main-content .page-title {
+    font-size: 26px;
+  }
+
+  .topbar {
+    padding: 14px 16px;
+  }
+
+  .topbar h2 {
+    font-size: 18px;
+  }
+
+  .calendar-card {
+    padding: 14px 10px;
   }
 }

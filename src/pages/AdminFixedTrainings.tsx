@@ -178,12 +178,14 @@ function AdminFixedTrainings() {
 
   return (
     <div className="dashboard-page">
-      <h1 className="page-title">Grupos fixos</h1>
-      <p className="workflow-help">
-        Edita a escala semanal da escola. Estas alterações aparecem em{" "}
-        <strong>Hoje</strong>, <strong>Grupos fixos</strong> e no{" "}
-        <strong>Calendário</strong>.
-      </p>
+      <header className="page-header">
+        <p className="page-eyebrow">Escala</p>
+        <h1 className="page-title">Grupos fixos</h1>
+        <p className="page-description">
+          Edita a escala semanal. As alterações refletem-se em Hoje, Grupos
+          fixos e no Calendário.
+        </p>
+      </header>
 
       {loading ? (
         <p className="muted">A carregar grupos...</p>
