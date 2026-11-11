@@ -6,7 +6,9 @@ import { COMPENSATION_STATUS_LABELS } from "../types/compensation";
 import { getStudents } from "../services/studentsService";
 import { getLessons } from "../services/lessonsService";
 import {
+  countOpenCompensations,
   getCompensations,
+  isOpenCompensation,
   saveCompensation,
   scheduleCompensation,
   syncCompletedCompensations,
@@ -33,13 +35,25 @@ function formatDateLabel(date: string | null) {
   });
 }
 
+type StudentBucket = {
+  studentId: string;
+  name: string;
+  openCount: number;
+  items: LessonCompensation[];
+};
+
 function AdminCompensations() {
   const [compensations, setCompensations] = useState<LessonCompensation[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<"active" | "all">("active");
-  const [selectedCompensationId, setSelectedCompensationId] = useState<string | null>(null);
+  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(
+    null
+  );
+  const [selectedCompensationId, setSelectedCompensationId] = useState<
+    string | null
+  >(null);
   const [selectedLessonId, setSelectedLessonId] = useState("");
   const [adminNotesDraft, setAdminNotesDraft] = useState("");
   const [saving, setSaving] = useState(false);
@@ -60,12 +74,6 @@ function AdminCompensations() {
       setCompensations(compensationsData);
       setStudents(studentsData);
       setLessons(lessonsData);
-      setSelectedCompensationId((current) => {
-        if (current && compensationsData.some((item) => item.id === current)) {
-          return current;
-        }
-        return compensationsData[0]?.id ?? null;
-      });
     } catch (error) {
       console.error(error);
       toast.error(
@@ -78,22 +86,64 @@ function AdminCompensations() {
 
   const today = getTodayDate();
 
-  const visibleCompensations = useMemo(() => {
-    const sorted = [...compensations].sort((a, b) =>
-      b.createdAt.localeCompare(a.createdAt)
-    );
+  const studentBuckets = useMemo(() => {
+    const map = new Map<string, StudentBucket>();
 
-    if (statusFilter === "all") return sorted;
+    for (const item of compensations) {
+      if (statusFilter === "active" && !isOpenCompensation(item)) continue;
 
-    return sorted.filter((item) =>
-      ["pending", "approved", "scheduled"].includes(item.status)
-    );
-  }, [compensations, statusFilter]);
+      const existing = map.get(item.studentId);
+      if (existing) {
+        existing.items.push(item);
+        continue;
+      }
+
+      map.set(item.studentId, {
+        studentId: item.studentId,
+        name:
+          students.find((student) => student.id === item.studentId)?.name ||
+          "Aluno",
+        openCount: 0,
+        items: [item],
+      });
+    }
+
+    for (const bucket of map.values()) {
+      bucket.openCount = countOpenCompensations(
+        compensations,
+        bucket.studentId
+      );
+      bucket.items.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    }
+
+    return [...map.values()].sort((a, b) => {
+      if (b.openCount !== a.openCount) return b.openCount - a.openCount;
+      return a.name.localeCompare(b.name, "pt");
+    });
+  }, [compensations, students, statusFilter]);
+
+  const selectedBucket =
+    studentBuckets.find((bucket) => bucket.studentId === selectedStudentId) ??
+    null;
 
   const selectedCompensation =
-    visibleCompensations.find((item) => item.id === selectedCompensationId) ??
-    compensations.find((item) => item.id === selectedCompensationId) ??
+    selectedBucket?.items.find((item) => item.id === selectedCompensationId) ??
+    selectedBucket?.items[0] ??
     null;
+
+  useEffect(() => {
+    if (!selectedBucket) {
+      setSelectedCompensationId(null);
+      return;
+    }
+
+    setSelectedCompensationId((current) => {
+      if (current && selectedBucket.items.some((item) => item.id === current)) {
+        return current;
+      }
+      return selectedBucket.items[0]?.id ?? null;
+    });
+  }, [selectedBucket?.studentId, selectedBucket?.items]);
 
   useEffect(() => {
     if (selectedCompensation) {
@@ -104,16 +154,15 @@ function AdminCompensations() {
 
   const stats = useMemo(() => {
     return {
-      pending: compensations.filter((item) => item.status === "pending").length,
-      approved: compensations.filter((item) => item.status === "approved").length,
-      scheduled: compensations.filter((item) => item.status === "scheduled").length,
-      completed: compensations.filter((item) => item.status === "completed").length,
+      studentsWithOpen: studentBuckets.filter((bucket) => bucket.openCount > 0)
+        .length,
+      open: compensations.filter((item) => isOpenCompensation(item)).length,
+      scheduled: compensations.filter((item) => item.status === "scheduled")
+        .length,
+      completed: compensations.filter((item) => item.status === "completed")
+        .length,
     };
-  }, [compensations]);
-
-  function getStudentName(studentId: string) {
-    return students.find((student) => student.id === studentId)?.name || "Aluno";
-  }
+  }, [compensations, studentBuckets]);
 
   function getLessonLabel(lessonId: string | null) {
     if (!lessonId) return "—";
@@ -139,12 +188,16 @@ function AdminCompensations() {
   async function handleApprove(compensation: LessonCompensation) {
     try {
       setSaving(true);
-      await updateCompensationStatus(compensation, "approved", compensation.adminNotes);
+      await updateCompensationStatus(
+        compensation,
+        "approved",
+        compensation.adminNotes
+      );
       await loadData();
-      toast.success("Justificação aprovada. Podes agendar a compensação.");
+      toast.success("Compensação pronta a agendar.");
     } catch (error) {
       console.error(error);
-      toast.error("Erro ao aprovar justificação.");
+      toast.error("Erro ao aprovar.");
     } finally {
       setSaving(false);
     }
@@ -153,12 +206,16 @@ function AdminCompensations() {
   async function handleReject(compensation: LessonCompensation) {
     try {
       setSaving(true);
-      await updateCompensationStatus(compensation, "rejected", compensation.adminNotes);
+      await updateCompensationStatus(
+        compensation,
+        "rejected",
+        compensation.adminNotes
+      );
       await loadData();
-      toast.success("Justificação rejeitada.");
+      toast.success("Compensação rejeitada.");
     } catch (error) {
       console.error(error);
-      toast.error("Erro ao rejeitar justificação.");
+      toast.error("Erro ao rejeitar.");
     } finally {
       setSaving(false);
     }
@@ -195,7 +252,11 @@ function AdminCompensations() {
   async function handleComplete(compensation: LessonCompensation) {
     try {
       setSaving(true);
-      await updateCompensationStatus(compensation, "completed", compensation.adminNotes);
+      await updateCompensationStatus(
+        compensation,
+        "completed",
+        compensation.adminNotes
+      );
       await loadData();
       toast.success("Compensação marcada como concluída.");
     } catch (error) {
@@ -222,7 +283,9 @@ function AdminCompensations() {
 
   function renderStatus(compensation: LessonCompensation) {
     return (
-      <span className={`compensation-status compensation-status-${compensation.status}`}>
+      <span
+        className={`compensation-status compensation-status-${compensation.status}`}
+      >
         {COMPENSATION_STATUS_LABELS[compensation.status]}
       </span>
     );
@@ -234,14 +297,11 @@ function AdminCompensations() {
     return (
       <>
         <p>
-          <strong>Atleta:</strong> {getStudentName(compensation.studentId)}
-        </p>
-        <p>
           <strong>Treino perdido:</strong>{" "}
           {getLessonLabel(compensation.missedLessonId)}
         </p>
         <p>
-          <strong>Justificação:</strong> {compensation.reason}
+          <strong>Motivo:</strong> {compensation.reason}
         </p>
         <p>
           <strong>Estado:</strong> {renderStatus(compensation)}
@@ -273,7 +333,10 @@ function AdminCompensations() {
         {(compensation.status === "approved" ||
           compensation.status === "pending") && (
           <div className="compensation-schedule-form" style={{ marginTop: 20 }}>
-            <FormField label="Treino de compensação" htmlFor="compensation-lesson">
+            <FormField
+              label="Treino de compensação"
+              htmlFor="compensation-lesson"
+            >
               <select
                 id="compensation-lesson"
                 value={selectedLessonId}
@@ -288,12 +351,6 @@ function AdminCompensations() {
                 ))}
               </select>
             </FormField>
-
-            {scheduleOptions.length === 0 && (
-              <p className="muted workflow-help">
-                Não há treinos publicados futuros disponíveis para este atleta.
-              </p>
-            )}
           </div>
         )}
 
@@ -348,7 +405,8 @@ function AdminCompensations() {
         <p className="page-eyebrow">Gestão</p>
         <h1 className="page-title">Compensações</h1>
         <p className="page-description">
-          Valida faltas justificadas e agenda a reposição.
+          Alunos com treinos a compensar. Os treinadores também podem
+          adicioná-los diretamente em Hoje.
         </p>
       </header>
 
@@ -356,73 +414,107 @@ function AdminCompensations() {
         <p className="muted">A carregar compensações...</p>
       ) : (
         <>
-          {stats.pending > 0 && (
-            <div className="van-alert van-alert-danger">
-              <strong>{stats.pending} pedido(s) por validar.</strong> Revê as
-              justificações dos atletas.
-            </div>
-          )}
-
           <div className="stats-grid">
-            <div className="card">
-              <span className="stat-label">Por validar</span>
-              <strong className="stat-number">{stats.pending}</strong>
+            <div className="card stat-card">
+              <span className="stat-label">Alunos a compensar</span>
+              <strong className="stat-number">{stats.studentsWithOpen}</strong>
             </div>
-            <div className="card">
-              <span className="stat-label">A agendar</span>
-              <strong className="stat-number">{stats.approved}</strong>
+            <div className="card stat-card">
+              <span className="stat-label">Treinos em aberto</span>
+              <strong className="stat-number">{stats.open}</strong>
             </div>
-            <div className="card">
-              <span className="stat-label">Agendadas</span>
+            <div className="card stat-card">
+              <span className="stat-label">Já agendados</span>
               <strong className="stat-number">{stats.scheduled}</strong>
             </div>
-            <div className="card">
-              <span className="stat-label">Compensadas</span>
+            <div className="card stat-card">
+              <span className="stat-label">Compensados</span>
               <strong className="stat-number">{stats.completed}</strong>
             </div>
           </div>
 
           <MasterDetailLayout
-            showDetail={Boolean(selectedCompensation)}
+            showDetail={Boolean(selectedBucket)}
             list={
               <SelectionList
-                title="Lista de compensações"
+                title="Alunos"
                 toolbar={
                   <FormField label="Filtrar">
                     <select
                       value={statusFilter}
                       onChange={(e) => {
                         setStatusFilter(e.target.value as "active" | "all");
-                        setSelectedCompensationId(null);
+                        setSelectedStudentId(null);
                       }}
                     >
                       <option value="active">Em aberto</option>
-                      <option value="all">Todas</option>
+                      <option value="all">Todos</option>
                     </select>
                   </FormField>
                 }
                 empty={<p className="muted">Sem compensações para mostrar.</p>}
               >
-                {visibleCompensations.map((compensation) => (
+                {studentBuckets.map((bucket) => (
                   <SelectionListItem
-                    key={compensation.id}
-                    active={compensation.id === selectedCompensationId}
-                    onClick={() => setSelectedCompensationId(compensation.id)}
-                    title={getStudentName(compensation.studentId)}
-                    subtitle={compensation.reason}
-                    meta={getLessonLabel(compensation.missedLessonId)}
-                    badge={renderStatus(compensation)}
+                    key={bucket.studentId}
+                    active={bucket.studentId === selectedStudentId}
+                    onClick={() => setSelectedStudentId(bucket.studentId)}
+                    title={bucket.name}
+                    subtitle={
+                      bucket.openCount > 0
+                        ? `${bucket.openCount} treino${
+                            bucket.openCount === 1 ? "" : "s"
+                          } a compensar`
+                        : "Sem treinos em aberto"
+                    }
+                    meta={`${bucket.items.length} registo${
+                      bucket.items.length === 1 ? "" : "s"
+                    }`}
+                    badge={
+                      bucket.openCount > 0 ? (
+                        <span className="compensation-count-badge">
+                          {bucket.openCount}
+                        </span>
+                      ) : undefined
+                    }
                   />
                 ))}
               </SelectionList>
             }
             detail={
-              selectedCompensation ? (
-                <DetailPanel title="Detalhe da compensação">
-                  {renderCompensationDetail(selectedCompensation)}
+              selectedBucket ? (
+                <DetailPanel
+                  title={selectedBucket.name}
+                  actions={
+                    <span className="muted">
+                      {selectedBucket.openCount} treino
+                      {selectedBucket.openCount === 1 ? "" : "s"} a compensar
+                    </span>
+                  }
+                >
+                  <div className="compensation-student-items">
+                    {selectedBucket.items.map((item) => (
+                      <button
+                        type="button"
+                        key={item.id}
+                        className={
+                          item.id === selectedCompensation?.id
+                            ? "compensation-item-chip active"
+                            : "compensation-item-chip"
+                        }
+                        onClick={() => setSelectedCompensationId(item.id)}
+                      >
+                        <span>{getLessonLabel(item.missedLessonId)}</span>
+                        {renderStatus(item)}
+                      </button>
+                    ))}
+                  </div>
+
+                  {selectedCompensation &&
+                    renderCompensationDetail(selectedCompensation)}
                 </DetailPanel>
               ) : (
-                <DetailPanelEmpty message="Seleciona uma compensação da lista." />
+                <DetailPanelEmpty message="Seleciona um aluno da lista." />
               )
             }
           />

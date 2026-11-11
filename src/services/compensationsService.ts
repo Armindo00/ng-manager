@@ -14,6 +14,12 @@ type DbCompensation = {
   created_at: string;
 };
 
+export const OPEN_COMPENSATION_STATUSES: CompensationStatus[] = [
+  "pending",
+  "approved",
+  "scheduled",
+];
+
 function fromDb(row: DbCompensation): LessonCompensation {
   return {
     id: row.id,
@@ -37,6 +43,19 @@ function toDb(compensation: LessonCompensation) {
     status: compensation.status,
     admin_notes: compensation.adminNotes,
   };
+}
+
+export function isOpenCompensation(compensation: LessonCompensation) {
+  return OPEN_COMPENSATION_STATUSES.includes(compensation.status);
+}
+
+export function countOpenCompensations(
+  compensations: LessonCompensation[],
+  studentId: string
+) {
+  return compensations.filter(
+    (item) => item.studentId === studentId && isOpenCompensation(item)
+  ).length;
 }
 
 export async function declineLessonWithCompensation(
@@ -87,25 +106,83 @@ export async function createCompensation(input: {
   studentId: string;
   missedLessonId: string;
   reason: string;
+  status?: CompensationStatus;
 }) {
+  const { data: existingRows, error: existingError } = await supabase
+    .from("lesson_compensations")
+    .select("*")
+    .eq("student_id", input.studentId)
+    .eq("missed_lesson_id", input.missedLessonId)
+    .limit(1);
+
+  if (existingError) throw existingError;
+
+  const existing = existingRows?.[0]
+    ? fromDb(existingRows[0] as DbCompensation)
+    : null;
+
   const compensation: LessonCompensation = {
-    id: crypto.randomUUID(),
+    id: existing?.id || crypto.randomUUID(),
     studentId: input.studentId,
     missedLessonId: input.missedLessonId,
-    compensationLessonId: null,
+    compensationLessonId: existing?.compensationLessonId || null,
     reason: input.reason.trim(),
-    status: "pending",
-    adminNotes: "",
-    createdAt: new Date().toISOString(),
+    status: input.status || existing?.status || "pending",
+    adminNotes: existing?.adminNotes || "",
+    createdAt: existing?.createdAt || new Date().toISOString(),
   };
 
   const { error } = await supabase
     .from("lesson_compensations")
-    .upsert(toDb(compensation), { onConflict: "student_id,missed_lesson_id" });
+    .upsert(toDb(compensation));
 
   if (error) throw error;
 
   return compensation;
+}
+
+export async function markStudentForCompensation(
+  lesson: Lesson,
+  studentId: string
+) {
+  const nextLesson: Lesson = {
+    ...lesson,
+    presentStudentIds: lesson.presentStudentIds.filter((id) => id !== studentId),
+  };
+
+  await updateLesson(nextLesson);
+
+  await createCompensation({
+    studentId,
+    missedLessonId: lesson.id,
+    reason: "Compensação noutro treino (marcada pelo treinador)",
+    status: "approved",
+  });
+
+  return nextLesson;
+}
+
+export async function clearOpenCompensationForMissedLesson(
+  studentId: string,
+  missedLessonId: string
+) {
+  const { data, error } = await supabase
+    .from("lesson_compensations")
+    .select("*")
+    .eq("student_id", studentId)
+    .eq("missed_lesson_id", missedLessonId)
+    .in("status", ["pending", "approved"]);
+
+  if (error) throw error;
+
+  for (const row of data || []) {
+    const { error: deleteError } = await supabase
+      .from("lesson_compensations")
+      .delete()
+      .eq("id", row.id);
+
+    if (deleteError) throw deleteError;
+  }
 }
 
 export async function saveCompensation(compensation: LessonCompensation) {
@@ -132,25 +209,62 @@ export async function scheduleCompensation(
   compensation: LessonCompensation,
   lesson: Lesson
 ) {
-  if (lesson.bookedStudentIds.includes(compensation.studentId)) {
-    await saveCompensation({
-      ...compensation,
-      compensationLessonId: lesson.id,
-      status: "scheduled",
+  if (!lesson.bookedStudentIds.includes(compensation.studentId)) {
+    await updateLesson({
+      ...lesson,
+      bookedStudentIds: [...lesson.bookedStudentIds, compensation.studentId],
     });
-    return;
   }
-
-  await updateLesson({
-    ...lesson,
-    bookedStudentIds: [...lesson.bookedStudentIds, compensation.studentId],
-  });
 
   await saveCompensation({
     ...compensation,
     compensationLessonId: lesson.id,
     status: "scheduled",
   });
+}
+
+/**
+ * Adds a student who owes makeup sessions into the current lesson,
+ * linking the oldest open compensation that is not yet scheduled.
+ */
+export async function addCompensationStudentToLesson(
+  lesson: Lesson,
+  studentId: string,
+  compensations: LessonCompensation[]
+) {
+  const open = compensations
+    .filter(
+      (item) =>
+        item.studentId === studentId &&
+        (item.status === "pending" || item.status === "approved") &&
+        item.missedLessonId !== lesson.id
+    )
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+
+  const target = open[0];
+  if (!target) {
+    throw new Error("Este aluno não tem compensações por agendar.");
+  }
+
+  const nextLesson: Lesson = {
+    ...lesson,
+    bookedStudentIds: lesson.bookedStudentIds.includes(studentId)
+      ? lesson.bookedStudentIds
+      : [...lesson.bookedStudentIds, studentId],
+    presentStudentIds: lesson.presentStudentIds.includes(studentId)
+      ? lesson.presentStudentIds
+      : [...lesson.presentStudentIds, studentId],
+  };
+
+  await updateLesson(nextLesson);
+
+  await saveCompensation({
+    ...target,
+    compensationLessonId: lesson.id,
+    status: "scheduled",
+  });
+
+  return { lesson: nextLesson, compensation: target };
 }
 
 export async function syncCompletedCompensations() {

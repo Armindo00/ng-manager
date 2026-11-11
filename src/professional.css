@@ -937,6 +937,27 @@ textarea:focus {
   color: var(--brand-ink);
 }
 
+.lesson-student-row.makeup {
+  border-color: #f0d7c4;
+  background: #fffaf6;
+}
+
+.attendance-btn.makeup.active {
+  border-color: #c2410c;
+  background: #fff1eb;
+  color: #9a3412;
+}
+
+.compensation-add-block {
+  border-color: #f0d7c4;
+  background: linear-gradient(180deg, #fffaf6, #fff);
+}
+
+.compensation-add-row:hover {
+  border-color: #e0b894;
+  background: #fff8f2;
+}
+
 .coach-session-card-status.status-finished {
   background: #e8edf2;
   color: var(--muted);
