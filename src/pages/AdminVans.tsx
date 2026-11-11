@@ -1,8 +1,15 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import ActionButtons from "../components/ActionButtons";
 import FormField from "../components/FormField";
 import ConfirmDialog from "../components/ConfirmDialog";
+import {
+  DetailPanel,
+  DetailPanelEmpty,
+  MasterDetailLayout,
+  SelectionList,
+  SelectionListItem,
+} from "../components/MasterDetailLayout";
 import type { Van, VanTask, VanTaskType } from "../types/van";
 import {
   VAN_TASK_STATUS_LABELS,
@@ -38,6 +45,10 @@ const emptyVan = (): Van => ({
   active: true,
 });
 
+type FleetFilter = "active" | "all";
+type TaskFilter = "open" | "all";
+type PanelMode = "view" | "create" | "edit";
+
 function formatDateLabel(date: string | null) {
   if (!date) return "—";
 
@@ -48,20 +59,30 @@ function formatDateLabel(date: string | null) {
   });
 }
 
+function vanSpecs(van: Van) {
+  return [
+    [van.brand, van.model, van.year].filter(Boolean).join(" "),
+    formatVanCapacity(van.capacity),
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}
+
 function AdminVans() {
   const [vans, setVans] = useState<Van[]>([]);
   const [tasks, setTasks] = useState<VanTask[]>([]);
   const [loading, setLoading] = useState(true);
-  const [editingVanId, setEditingVanId] = useState<string | null>(null);
+  const [fleetFilter, setFleetFilter] = useState<FleetFilter>("active");
+  const [taskFilter, setTaskFilter] = useState<TaskFilter>("open");
+  const [selectedVanId, setSelectedVanId] = useState<string | null>(null);
+  const [panelMode, setPanelMode] = useState<PanelMode>("view");
   const [vanForm, setVanForm] = useState<Van>(emptyVan());
-  const [taskFilter, setTaskFilter] = useState<"open" | "all">("open");
   const [vanToDelete, setVanToDelete] = useState<Van | null>(null);
   const [taskToDelete, setTaskToDelete] = useState<VanTask | null>(null);
-  const [taskFormHighlight, setTaskFormHighlight] = useState(false);
-  const taskFormRef = useRef<HTMLDivElement>(null);
+  const [savingVan, setSavingVan] = useState(false);
+  const [savingTask, setSavingTask] = useState(false);
 
   const [taskDraft, setTaskDraft] = useState({
-    vanId: "",
     title: "",
     taskType: "inspection" as VanTaskType,
     dueDate: "",
@@ -78,10 +99,6 @@ function AdminVans() {
       const [vansData, tasksData] = await Promise.all([getVans(), getVanTasks()]);
       setVans(vansData);
       setTasks(tasksData);
-
-      if (!taskDraft.vanId && vansData[0]) {
-        setTaskDraft((current) => ({ ...current, vanId: vansData[0].id }));
-      }
     } catch (error) {
       console.error(error);
       toast.error(
@@ -92,19 +109,9 @@ function AdminVans() {
     }
   }
 
-  const sortedTasks = useMemo(() => sortVanTasks(tasks), [tasks]);
-
-  const visibleTasks = useMemo(
-    () =>
-      taskFilter === "open"
-        ? sortedTasks.filter((task) => !task.completed)
-        : sortedTasks,
-    [sortedTasks, taskFilter]
-  );
+  const today = getTodayDate();
 
   const stats = useMemo(() => {
-    const today = getTodayDate();
-
     const openTasks = tasks.filter((task) => !task.completed);
     const overdue = openTasks.filter(
       (task) => getVanTaskStatus(task, today) === "overdue"
@@ -119,35 +126,102 @@ function AdminVans() {
       overdue: overdue.length,
       dueSoon: dueSoon.length,
     };
-  }, [tasks, vans]);
+  }, [tasks, today, vans]);
 
-  function resetVanForm() {
+  const urgentTasks = useMemo(
+    () =>
+      sortVanTasks(tasks).filter((task) => {
+        if (task.completed) return false;
+        const status = getVanTaskStatus(task, today);
+        return status === "overdue" || status === "due_soon";
+      }),
+    [tasks, today]
+  );
+
+  const visibleVans = useMemo(() => {
+    const filtered =
+      fleetFilter === "active" ? vans.filter((van) => van.active) : vans;
+
+    return [...filtered].sort((a, b) => {
+      const overdueA = tasks.filter(
+        (task) =>
+          task.vanId === a.id &&
+          !task.completed &&
+          getVanTaskStatus(task, today) === "overdue"
+      ).length;
+      const overdueB = tasks.filter(
+        (task) =>
+          task.vanId === b.id &&
+          !task.completed &&
+          getVanTaskStatus(task, today) === "overdue"
+      ).length;
+
+      if (overdueB !== overdueA) return overdueB - overdueA;
+      if (a.active !== b.active) return a.active ? -1 : 1;
+      return a.name.localeCompare(b.name, "pt");
+    });
+  }, [fleetFilter, tasks, today, vans]);
+
+  const selectedVan =
+    visibleVans.find((van) => van.id === selectedVanId) ??
+    vans.find((van) => van.id === selectedVanId) ??
+    null;
+
+  useEffect(() => {
+    if (panelMode !== "view") return;
+    if (!selectedVanId) return;
+    if (visibleVans.some((van) => van.id === selectedVanId)) return;
+    setSelectedVanId(visibleVans[0]?.id ?? null);
+  }, [panelMode, selectedVanId, visibleVans]);
+
+  const selectedVanTasks = useMemo(() => {
+    if (!selectedVan) return [];
+    const vanTasks = sortVanTasks(
+      tasks.filter((task) => task.vanId === selectedVan.id)
+    );
+    return taskFilter === "open"
+      ? vanTasks.filter((task) => !task.completed)
+      : vanTasks;
+  }, [selectedVan, taskFilter, tasks]);
+
+  function startCreateVan() {
     setVanForm(emptyVan());
-    setEditingVanId(null);
+    setPanelMode("create");
+    setSelectedVanId(null);
   }
 
-  function editVan(van: Van) {
+  function startEditVan(van: Van) {
     setVanForm({
       ...van,
       capacity: formatVanCapacity(van.capacity),
     });
-    setEditingVanId(van.id);
+    setPanelMode("edit");
+    setSelectedVanId(van.id);
   }
 
-  function startVanTask(van: Van, taskType: "inspection" | "revision") {
+  function cancelVanForm() {
+    setVanForm(emptyVan());
+    setPanelMode("view");
+  }
+
+  function selectVan(vanId: string) {
+    setSelectedVanId(vanId);
+    setPanelMode("view");
     setTaskDraft({
-      vanId: van.id,
+      title: "",
+      taskType: "inspection",
+      dueDate: "",
+      notes: "",
+    });
+  }
+
+  function startQuickTask(taskType: "inspection" | "revision") {
+    setTaskDraft({
       title: taskType === "inspection" ? "Inspeção periódica" : "Revisão",
       taskType,
       dueDate: "",
       notes: "",
     });
-    setTaskFormHighlight(true);
-    taskFormRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }
-
-  function clearTaskFormHighlight() {
-    setTaskFormHighlight(false);
   }
 
   async function saveVanForm() {
@@ -158,36 +232,43 @@ function AdminVans() {
 
     const van: Van = {
       ...vanForm,
-      id: editingVanId || crypto.randomUUID(),
+      id: panelMode === "edit" && selectedVanId ? selectedVanId : crypto.randomUUID(),
       name: vanForm.name.trim(),
       plate: vanForm.plate.trim().toUpperCase(),
       brand: vanForm.brand.trim(),
       model: vanForm.model.trim(),
       year: vanForm.year.trim(),
       capacity: formatVanCapacity(vanForm.capacity),
-      notes: "",
+      notes: vanForm.notes.trim(),
     };
 
     try {
+      setSavingVan(true);
       await saveVan(van);
-      resetVanForm();
       await loadData();
-      toast.success(editingVanId ? "Carrinha atualizada." : "Carrinha registada.");
+      setSelectedVanId(van.id);
+      setPanelMode("view");
+      setVanForm(emptyVan());
+      toast.success(panelMode === "edit" ? "Carrinha atualizada." : "Carrinha registada.");
     } catch (error) {
       console.error(error);
       toast.error("Erro ao guardar carrinha.");
+    } finally {
+      setSavingVan(false);
     }
   }
 
   async function addTask() {
-    if (!taskDraft.vanId || !taskDraft.title.trim() || !taskDraft.dueDate) {
-      toast.error("Preenche carrinha, tarefa e data limite.");
+    if (!selectedVan) return;
+
+    if (!taskDraft.title.trim() || !taskDraft.dueDate) {
+      toast.error("Preenche a descrição e a data limite.");
       return;
     }
 
     const task: VanTask = {
       id: crypto.randomUUID(),
-      vanId: taskDraft.vanId,
+      vanId: selectedVan.id,
       title: taskDraft.title.trim(),
       taskType: taskDraft.taskType,
       dueDate: taskDraft.dueDate,
@@ -197,19 +278,21 @@ function AdminVans() {
     };
 
     try {
+      setSavingTask(true);
       await saveVanTask(task);
-      setTaskDraft((current) => ({
-        ...current,
+      setTaskDraft({
         title: "",
+        taskType: "inspection",
         dueDate: "",
         notes: "",
-      }));
+      });
       await loadData();
-      setTaskFormHighlight(false);
       toast.success("Tarefa adicionada.");
     } catch (error) {
       console.error(error);
       toast.error("Erro ao guardar tarefa.");
+    } finally {
+      setSavingTask(false);
     }
   }
 
@@ -235,6 +318,10 @@ function AdminVans() {
 
     try {
       await deleteVan(vanToDelete.id);
+      if (selectedVanId === vanToDelete.id) {
+        setSelectedVanId(null);
+        setPanelMode("view");
+      }
       setVanToDelete(null);
       await loadData();
       toast.success("Carrinha eliminada.");
@@ -263,7 +350,7 @@ function AdminVans() {
   }
 
   function renderTaskStatus(task: VanTask) {
-    const status = getVanTaskStatus(task);
+    const status = getVanTaskStatus(task, today);
 
     return (
       <span className={`van-task-status van-task-status-${status}`}>
@@ -272,13 +359,360 @@ function AdminVans() {
     );
   }
 
+  function renderVanForm() {
+    return (
+      <DetailPanel
+        title={panelMode === "edit" ? "Editar carrinha" : "Nova carrinha"}
+        onBack={cancelVanForm}
+        actions={
+          <div className="detail-panel-actions">
+            <button className="compact-btn" onClick={cancelVanForm} disabled={savingVan}>
+              Cancelar
+            </button>
+            <button className="primary-btn" onClick={saveVanForm} disabled={savingVan}>
+              {savingVan
+                ? "A guardar..."
+                : panelMode === "edit"
+                  ? "Guardar alterações"
+                  : "Registar carrinha"}
+            </button>
+          </div>
+        }
+      >
+        <div className="form-fields-grid">
+          <FormField label="Nome da carrinha">
+            <input
+              placeholder="Ex: Carrinha azul"
+              value={vanForm.name}
+              onChange={(e) =>
+                setVanForm((current) => ({ ...current, name: e.target.value }))
+              }
+            />
+          </FormField>
+          <FormField label="Matrícula">
+            <input
+              placeholder="AA-00-BB"
+              value={vanForm.plate}
+              onChange={(e) =>
+                setVanForm((current) => ({ ...current, plate: e.target.value }))
+              }
+            />
+          </FormField>
+          <FormField label="Marca">
+            <input
+              placeholder="Ex: Opel"
+              value={vanForm.brand}
+              onChange={(e) =>
+                setVanForm((current) => ({ ...current, brand: e.target.value }))
+              }
+            />
+          </FormField>
+          <FormField label="Modelo">
+            <input
+              placeholder="Ex: Vivaro"
+              value={vanForm.model}
+              onChange={(e) =>
+                setVanForm((current) => ({ ...current, model: e.target.value }))
+              }
+            />
+          </FormField>
+          <FormField label="Ano">
+            <input
+              type="number"
+              min={1990}
+              max={2100}
+              placeholder="Ex: 2020"
+              value={vanForm.year}
+              onChange={(e) =>
+                setVanForm((current) => ({ ...current, year: e.target.value }))
+              }
+            />
+          </FormField>
+          <FormField label="Lotação">
+            <input
+              inputMode="numeric"
+              placeholder="Ex: 9"
+              value={vanForm.capacity}
+              onChange={(e) =>
+                setVanForm((current) => ({
+                  ...current,
+                  capacity: formatVanCapacity(e.target.value),
+                }))
+              }
+            />
+          </FormField>
+          <label className="van-active-toggle field-label">
+            <span>Estado</span>
+            <span className="van-active-toggle-control">
+              <input
+                type="checkbox"
+                checked={vanForm.active}
+                onChange={(e) =>
+                  setVanForm((current) => ({
+                    ...current,
+                    active: e.target.checked,
+                  }))
+                }
+              />
+              Ativa
+            </span>
+          </label>
+          <FormField label="Notas (opcional)">
+            <input
+              placeholder="Observações da frota"
+              value={vanForm.notes}
+              onChange={(e) =>
+                setVanForm((current) => ({ ...current, notes: e.target.value }))
+              }
+            />
+          </FormField>
+        </div>
+      </DetailPanel>
+    );
+  }
+
+  function renderVanDetail(van: Van) {
+    const vanTasks = tasks.filter((task) => task.vanId === van.id);
+    const openCount = vanTasks.filter((task) => !task.completed).length;
+    const overdueCount = vanTasks.filter(
+      (task) =>
+        !task.completed && getVanTaskStatus(task, today) === "overdue"
+    ).length;
+    const nextInspection = getNextTaskDate(vanTasks, "inspection");
+    const nextRevision = getNextTaskDate(vanTasks, "revision");
+    const specs = vanSpecs(van);
+
+    return (
+      <DetailPanel
+        title={van.name}
+        actions={
+          <div className="detail-panel-actions">
+            <ActionButtons
+              onEdit={() => startEditVan(van)}
+              onDelete={() => setVanToDelete(van)}
+            />
+          </div>
+        }
+      >
+        <div className="van-detail-identity">
+          <div>
+            <span className="admin-section-kicker">Matrícula</span>
+            <strong className="van-plate">{van.plate}</strong>
+          </div>
+          <div className="van-detail-meta">
+            {specs && <span>{specs}</span>}
+            <span className={van.active ? "van-state-active" : "van-state-inactive"}>
+              {van.active ? "Ativa" : "Inativa"}
+            </span>
+          </div>
+          {van.notes.trim() && <p className="muted van-detail-notes">{van.notes}</p>}
+        </div>
+
+        <div className="van-schedule-grid">
+          <div className="van-schedule-card">
+            <span className="stat-label">Próx. inspeção</span>
+            <strong>{formatDateLabel(nextInspection)}</strong>
+            <button
+              type="button"
+              className="compact-btn"
+              onClick={() => startQuickTask("inspection")}
+            >
+              Agendar inspeção
+            </button>
+          </div>
+          <div className="van-schedule-card">
+            <span className="stat-label">Próx. revisão</span>
+            <strong>{formatDateLabel(nextRevision)}</strong>
+            <button
+              type="button"
+              className="compact-btn"
+              onClick={() => startQuickTask("revision")}
+            >
+              Agendar revisão
+            </button>
+          </div>
+          <div className="van-schedule-card">
+            <span className="stat-label">Tarefas em aberto</span>
+            <strong>{openCount}</strong>
+            <span className="muted">
+              {overdueCount > 0
+                ? `${overdueCount} em atraso`
+                : "Sem atrasos"}
+            </span>
+          </div>
+        </div>
+
+        <section className="van-task-section">
+          <div className="admin-section-heading">
+            <div>
+              <span className="admin-section-kicker">Manutenção</span>
+              <h2>Tarefas desta carrinha</h2>
+            </div>
+            <FormField label="Mostrar">
+              <select
+                value={taskFilter}
+                onChange={(e) => setTaskFilter(e.target.value as TaskFilter)}
+              >
+                <option value="open">Em aberto</option>
+                <option value="all">Todas</option>
+              </select>
+            </FormField>
+          </div>
+
+          <div className="van-task-composer">
+            <div className="form-fields-grid">
+              <FormField label="Tipo">
+                <select
+                  value={taskDraft.taskType}
+                  onChange={(e) =>
+                    setTaskDraft((current) => ({
+                      ...current,
+                      taskType: e.target.value as VanTaskType,
+                      title:
+                        current.title.trim() ||
+                        VAN_TASK_TYPE_LABELS[e.target.value as VanTaskType],
+                    }))
+                  }
+                >
+                  {Object.entries(VAN_TASK_TYPE_LABELS).map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </FormField>
+              <FormField label="Descrição">
+                <input
+                  placeholder="Ex: Inspeção periódica"
+                  value={taskDraft.title}
+                  onChange={(e) =>
+                    setTaskDraft((current) => ({
+                      ...current,
+                      title: e.target.value,
+                    }))
+                  }
+                />
+              </FormField>
+              <FormField label="Data limite">
+                <input
+                  type="date"
+                  value={taskDraft.dueDate}
+                  onChange={(e) =>
+                    setTaskDraft((current) => ({
+                      ...current,
+                      dueDate: e.target.value,
+                    }))
+                  }
+                />
+              </FormField>
+              <FormField label="Notas">
+                <input
+                  placeholder="Opcional"
+                  value={taskDraft.notes}
+                  onChange={(e) =>
+                    setTaskDraft((current) => ({
+                      ...current,
+                      notes: e.target.value,
+                    }))
+                  }
+                />
+              </FormField>
+            </div>
+            <div className="form-fields-actions">
+              <button
+                className="primary-btn"
+                onClick={addTask}
+                disabled={savingTask}
+              >
+                {savingTask ? "A guardar..." : "Adicionar tarefa"}
+              </button>
+            </div>
+          </div>
+
+          <div className="van-task-list">
+            {selectedVanTasks.length === 0 ? (
+              <p className="muted">Sem tarefas para mostrar nesta carrinha.</p>
+            ) : (
+              selectedVanTasks.map((task) => (
+                <article key={task.id} className="van-task-row">
+                  <div className="van-task-row-main">
+                    <div className="van-task-row-title">
+                      <strong>{task.title}</strong>
+                      {renderTaskStatus(task)}
+                    </div>
+                    <span className="van-task-row-meta">
+                      {VAN_TASK_TYPE_LABELS[task.taskType]} ·{" "}
+                      {formatDateLabel(task.dueDate)}
+                    </span>
+                    {task.notes && (
+                      <span className="muted van-task-row-notes">{task.notes}</span>
+                    )}
+                  </div>
+                  <div className="student-row-actions">
+                    <button
+                      className="compact-btn"
+                      onClick={() => toggleTaskComplete(task)}
+                    >
+                      {task.completed ? "Reabrir" : "Concluir"}
+                    </button>
+                    <ActionButtons onDelete={() => setTaskToDelete(task)} />
+                  </div>
+                </article>
+              ))
+            )}
+          </div>
+        </section>
+      </DetailPanel>
+    );
+  }
+
+  function renderEmptyDetail() {
+    if (urgentTasks.length === 0) {
+      return (
+        <DetailPanelEmpty message="Seleciona uma carrinha à esquerda ou regista uma nova." />
+      );
+    }
+
+    return (
+      <DetailPanel title="Agenda da frota">
+        <p className="muted van-agenda-intro">
+          Tarefas em atraso ou a chegar nos próximos 14 dias. Seleciona a
+          carrinha para gerir.
+        </p>
+        <div className="van-task-list">
+          {urgentTasks.map((task) => (
+            <button
+              key={task.id}
+              type="button"
+              className="van-agenda-item"
+              onClick={() => selectVan(task.vanId)}
+            >
+              <div className="van-task-row-main">
+                <div className="van-task-row-title">
+                  <strong>{task.title}</strong>
+                  {renderTaskStatus(task)}
+                </div>
+                <span className="van-task-row-meta">
+                  {getVanName(task.vanId)} ·{" "}
+                  {VAN_TASK_TYPE_LABELS[task.taskType]} ·{" "}
+                  {formatDateLabel(task.dueDate)}
+                </span>
+              </div>
+            </button>
+          ))}
+        </div>
+      </DetailPanel>
+    );
+  }
+
   return (
-    <div>
+    <div className="dashboard-page">
       <header className="page-header">
         <p className="page-eyebrow">Gestão</p>
         <h1 className="page-title">Carrinhas</h1>
         <p className="page-description">
-          Frota, inspeções e revisões. Tarefas em atraso aparecem em destaque.
+          Frota ativa, inspeções e revisões — tudo por carrinha, com alertas em
+          destaque.
         </p>
       </header>
 
@@ -288,367 +722,109 @@ function AdminVans() {
         <>
           {stats.overdue > 0 && (
             <div className="van-alert van-alert-danger">
-              <strong>{stats.overdue} tarefa(s) em atraso.</strong> Verifica as
-              inspeções, revisões e manutenções pendentes.
+              <strong>
+                {stats.overdue} tarefa{stats.overdue === 1 ? "" : "s"} em atraso.
+              </strong>{" "}
+              Abre a carrinha correspondente e conclui ou reagenda.
             </div>
           )}
 
           <div className="stats-grid">
-            <div className="card">
+            <div className="card stat-card">
               <span className="stat-label">Carrinhas ativas</span>
               <strong className="stat-number">{stats.vans}</strong>
             </div>
-            <div className="card">
+            <div className="card stat-card">
               <span className="stat-label">Tarefas em aberto</span>
               <strong className="stat-number">{stats.openTasks}</strong>
             </div>
-            <div className="card">
+            <div className="card stat-card">
               <span className="stat-label">Em atraso</span>
               <strong className="stat-number">{stats.overdue}</strong>
             </div>
-            <div className="card">
+            <div className="card stat-card">
               <span className="stat-label">Próximas (14 dias)</span>
               <strong className="stat-number">{stats.dueSoon}</strong>
             </div>
           </div>
 
-          <div className="card section-card">
-            <h2>{editingVanId ? "Editar carrinha" : "Nova carrinha"}</h2>
-
-            <div className="form-fields-grid">
-              <FormField label="Nome da carrinha">
-                <input
-                  placeholder="Ex: Carrinha azul"
-                  value={vanForm.name}
-                  onChange={(e) =>
-                    setVanForm((current) => ({ ...current, name: e.target.value }))
-                  }
-                />
-              </FormField>
-              <FormField label="Matrícula">
-                <input
-                  placeholder="AA-00-BB"
-                  value={vanForm.plate}
-                  onChange={(e) =>
-                    setVanForm((current) => ({ ...current, plate: e.target.value }))
-                  }
-                />
-              </FormField>
-              <FormField label="Marca">
-                <input
-                  placeholder="Ex: Opel"
-                  value={vanForm.brand}
-                  onChange={(e) =>
-                    setVanForm((current) => ({ ...current, brand: e.target.value }))
-                  }
-                />
-              </FormField>
-              <FormField label="Modelo">
-                <input
-                  placeholder="Ex: Vivaro"
-                  value={vanForm.model}
-                  onChange={(e) =>
-                    setVanForm((current) => ({ ...current, model: e.target.value }))
-                  }
-                />
-              </FormField>
-              <FormField label="Ano">
-                <input
-                  type="number"
-                  min={1990}
-                  max={2100}
-                  placeholder="Ex: 2020"
-                  value={vanForm.year}
-                  onChange={(e) =>
-                    setVanForm((current) => ({ ...current, year: e.target.value }))
-                  }
-                />
-              </FormField>
-              <FormField label="Lotação">
-                <input
-                  inputMode="numeric"
-                  placeholder="Ex: 9"
-                  value={vanForm.capacity}
-                  onChange={(e) =>
-                    setVanForm((current) => ({
-                      ...current,
-                      capacity: formatVanCapacity(e.target.value),
-                    }))
-                  }
-                />
-              </FormField>
-              <label className="van-active-toggle field-label">
-                <span>Estado</span>
-                <span className="van-active-toggle-control">
-                  <input
-                    type="checkbox"
-                    checked={vanForm.active}
-                    onChange={(e) =>
-                      setVanForm((current) => ({
-                        ...current,
-                        active: e.target.checked,
-                      }))
-                    }
-                  />
-                  Ativa
-                </span>
-              </label>
-            </div>
-            <div className="form-fields-actions">
-              <button className="primary-btn" onClick={saveVanForm}>
-                {editingVanId ? "Guardar alterações" : "Registar carrinha"}
-              </button>
-              {editingVanId && <button onClick={resetVanForm}>Cancelar</button>}
-            </div>
-          </div>
-
-          <div className="card section-card">
-            <h2>Frota</h2>
-
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Carrinha</th>
-                  <th>Matrícula</th>
-                  <th>Próx. inspeção</th>
-                  <th>Próx. revisão</th>
-                  <th>Tarefas</th>
-                  <th>Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {vans.length === 0 && (
-                  <tr>
-                    <td colSpan={6} className="muted">
-                      Ainda não há carrinhas registadas.
-                    </td>
-                  </tr>
-                )}
-                {vans.map((van) => {
+          <MasterDetailLayout
+            showDetail={panelMode !== "view" || Boolean(selectedVan) || urgentTasks.length > 0}
+            list={
+              <SelectionList
+                title="Frota"
+                toolbar={
+                  <div className="van-fleet-toolbar">
+                    <FormField label="Filtrar">
+                      <select
+                        value={fleetFilter}
+                        onChange={(e) =>
+                          setFleetFilter(e.target.value as FleetFilter)
+                        }
+                      >
+                        <option value="active">Ativas</option>
+                        <option value="all">Todas</option>
+                      </select>
+                    </FormField>
+                    <button
+                      type="button"
+                      className="primary-btn"
+                      onClick={startCreateVan}
+                    >
+                      Nova
+                    </button>
+                  </div>
+                }
+                empty={<p className="muted">Ainda não há carrinhas registadas.</p>}
+              >
+                {visibleVans.map((van) => {
                   const vanTasks = tasks.filter((task) => task.vanId === van.id);
-                  const openCount = vanTasks.filter((task) => !task.completed).length;
-                  const nextInspection = getNextTaskDate(vanTasks, "inspection");
-                  const nextRevision = getNextTaskDate(vanTasks, "revision");
+                  const openCount = vanTasks.filter((task) => !task.completed)
+                    .length;
+                  const overdueCount = vanTasks.filter(
+                    (task) =>
+                      !task.completed &&
+                      getVanTaskStatus(task, today) === "overdue"
+                  ).length;
+                  const specs = vanSpecs(van);
 
                   return (
-                    <tr key={van.id}>
-                      <td className="data-table-primary" data-label="Carrinha">
-                        <strong>{van.name}</strong>
-                        {!van.active && (
-                          <>
-                            <br />
-                            <small className="muted">Inativa</small>
-                          </>
-                        )}
-                        {(van.brand || van.model || van.capacity) && (
-                          <>
-                            <br />
-                            <small>
-                              {[
-                                [van.brand, van.model, van.year].filter(Boolean).join(" · "),
-                                formatVanCapacity(van.capacity),
-                              ]
-                                .filter(Boolean)
-                                .join(" · ")}
-                            </small>
-                          </>
-                        )}
-                      </td>
-                      <td data-label="Matrícula">{van.plate}</td>
-                      <td data-label="Próx. inspeção">
-                        <div className="van-date-cell">
-                          <span>{formatDateLabel(nextInspection)}</span>
-                          <button
-                            type="button"
-                            className="compact-btn van-quick-task-btn"
-                            onClick={() => startVanTask(van, "inspection")}
-                          >
-                            + Inspeção
-                          </button>
-                        </div>
-                      </td>
-                      <td data-label="Próx. revisão">
-                        <div className="van-date-cell">
-                          <span>{formatDateLabel(nextRevision)}</span>
-                          <button
-                            type="button"
-                            className="compact-btn van-quick-task-btn"
-                            onClick={() => startVanTask(van, "revision")}
-                          >
-                            + Revisão
-                          </button>
-                        </div>
-                      </td>
-                      <td data-label="Tarefas">{openCount} em aberto</td>
-                      <td data-label="Ações">
-                        <ActionButtons
-                          onEdit={() => editVan(van)}
-                          onDelete={() => setVanToDelete(van)}
-                        />
-                      </td>
-                    </tr>
+                    <SelectionListItem
+                      key={van.id}
+                      active={
+                        panelMode === "view" && van.id === selectedVanId
+                      }
+                      onClick={() => selectVan(van.id)}
+                      title={van.name}
+                      subtitle={`${van.plate}${specs ? ` · ${specs}` : ""}`}
+                      meta={
+                        !van.active
+                          ? "Inativa"
+                          : openCount > 0
+                            ? `${openCount} em aberto`
+                            : "Sem tarefas em aberto"
+                      }
+                      badge={
+                        overdueCount > 0 ? (
+                          <span className="van-overdue-badge">{overdueCount}</span>
+                        ) : undefined
+                      }
+                    />
                   );
                 })}
-              </tbody>
-            </table>
-          </div>
-
-          <div
-            ref={taskFormRef}
-            className={`card section-card${taskFormHighlight ? " van-task-form-highlight" : ""}`}
-          >
-            <h2>Nova tarefa / responsabilidade</h2>
-            {taskFormHighlight && taskDraft.vanId && (
-              <p className="muted workflow-help">
-                Preenche a <strong>data limite</strong> e clica em{" "}
-                <strong>Adicionar tarefa</strong>. Carrinha:{" "}
-                <strong>{getVanName(taskDraft.vanId)}</strong> · Tipo:{" "}
-                <strong>{VAN_TASK_TYPE_LABELS[taskDraft.taskType]}</strong>
-              </p>
-            )}
-
-            <div className="form-fields-grid">
-              <FormField label="Carrinha">
-                <select
-                  value={taskDraft.vanId}
-                  onChange={(e) => {
-                    clearTaskFormHighlight();
-                    setTaskDraft((current) => ({ ...current, vanId: e.target.value }));
-                  }}
-                >
-                  <option value="">Selecionar carrinha</option>
-                  {vans.map((van) => (
-                    <option key={van.id} value={van.id}>
-                      {van.name} ({van.plate})
-                    </option>
-                  ))}
-                </select>
-              </FormField>
-
-              <FormField label="Tipo de tarefa">
-                <select
-                  value={taskDraft.taskType}
-                  onChange={(e) => {
-                    clearTaskFormHighlight();
-                    setTaskDraft((current) => ({
-                      ...current,
-                      taskType: e.target.value as VanTaskType,
-                    }));
-                  }}
-                >
-                  {Object.entries(VAN_TASK_TYPE_LABELS).map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-              </FormField>
-
-              <FormField label="Descrição">
-                <input
-                  placeholder="Ex: Inspeção periódica"
-                  value={taskDraft.title}
-                  onChange={(e) =>
-                    setTaskDraft((current) => ({ ...current, title: e.target.value }))
-                  }
-                />
-              </FormField>
-
-              <FormField label="Data limite">
-                <input
-                  type="date"
-                  value={taskDraft.dueDate}
-                  onChange={(e) =>
-                    setTaskDraft((current) => ({ ...current, dueDate: e.target.value }))
-                  }
-                />
-              </FormField>
-
-              <FormField label="Notas (opcional)">
-                <input
-                  placeholder="Detalhes extra"
-                  value={taskDraft.notes}
-                  onChange={(e) =>
-                    setTaskDraft((current) => ({ ...current, notes: e.target.value }))
-                  }
-                />
-              </FormField>
-            </div>
-            <div className="form-fields-actions">
-              <button className="primary-btn" onClick={addTask}>
-                Adicionar tarefa
-              </button>
-            </div>
-          </div>
-
-          <div className="card section-card">
-            <div className="table-header">
-              <h2>Agenda de tarefas</h2>
-              <select
-                value={taskFilter}
-                onChange={(e) =>
-                  setTaskFilter(e.target.value as "open" | "all")
-                }
-              >
-                <option value="open">Só em aberto</option>
-                <option value="all">Todas</option>
-              </select>
-            </div>
-
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Carrinha</th>
-                  <th>Tipo</th>
-                  <th>Tarefa</th>
-                  <th>Data limite</th>
-                  <th>Estado</th>
-                  <th>Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {visibleTasks.length === 0 && (
-                  <tr>
-                    <td colSpan={6} className="muted">
-                      Sem tarefas para mostrar.
-                    </td>
-                  </tr>
-                )}
-                {visibleTasks.map((task) => (
-                  <tr key={task.id}>
-                    <td data-label="Carrinha">{getVanName(task.vanId)}</td>
-                    <td data-label="Tipo">
-                      {VAN_TASK_TYPE_LABELS[task.taskType]}
-                    </td>
-                    <td data-label="Tarefa">
-                      <strong>{task.title}</strong>
-                      {task.notes && (
-                        <>
-                          <br />
-                          <small className="muted">{task.notes}</small>
-                        </>
-                      )}
-                    </td>
-                    <td data-label="Data limite">
-                      {formatDateLabel(task.dueDate)}
-                    </td>
-                    <td data-label="Estado">{renderTaskStatus(task)}</td>
-                    <td data-label="Ações">
-                      <div className="student-row-actions">
-                        <button
-                          className="compact-btn"
-                          onClick={() => toggleTaskComplete(task)}
-                        >
-                          {task.completed ? "Reabrir" : "Concluir"}
-                        </button>
-                        <ActionButtons onDelete={() => setTaskToDelete(task)} />
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+              </SelectionList>
+            }
+            detail={
+              panelMode === "create" || panelMode === "edit"
+                ? renderVanForm()
+                : selectedVan
+                  ? renderVanDetail(selectedVan)
+                  : renderEmptyDetail()
+            }
+            emptyDetail={
+              <DetailPanelEmpty message="Seleciona uma carrinha da frota." />
+            }
+          />
         </>
       )}
 
