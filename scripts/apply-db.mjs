@@ -10,6 +10,7 @@ const APPLY_ORDER = [
   "migrations/001_baseline_schema.sql",
   "rls.sql",
   "compensations.sql",
+  "compensations-coach-access.sql",
   "vans.sql",
   "inventory.sql",
   "generate-lessons.sql",

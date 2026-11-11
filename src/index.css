@@ -1860,6 +1860,11 @@ textarea:focus {
   background: #fff7f7;
 }
 
+.lesson-student-row.makeup {
+  border-color: #fcd34d;
+  background: #fffbeb;
+}
+
 .lesson-student-name {
   font-weight: 600;
 }
@@ -1868,6 +1873,7 @@ textarea:focus {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .attendance-btn {
@@ -1896,6 +1902,104 @@ textarea:focus {
   border-color: #dc2626;
   background: #fee2e2;
   color: #991b1b;
+}
+
+.attendance-btn.makeup.active {
+  border-color: #d97706;
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.compensation-add-block {
+  margin-bottom: 16px;
+  padding: 14px;
+  border: 1px solid #f0d7c4;
+  border-radius: 14px;
+  background: #fffaf6;
+}
+
+.compensation-add-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 10px;
+}
+
+.compensation-add-list {
+  display: grid;
+  gap: 8px;
+}
+
+.compensation-add-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  text-align: left;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid #f0d7c4;
+  background: #fff;
+  cursor: pointer;
+}
+
+.compensation-add-row span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.compensation-add-row small {
+  color: #9a3412;
+  font-weight: 650;
+}
+
+.compensation-add-action {
+  flex-shrink: 0;
+  font-size: 13px;
+  font-weight: 750;
+  color: #9a3412;
+}
+
+.compensation-count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: #fff7ed;
+  color: #c2410c;
+  font-weight: 800;
+  font-size: 13px;
+}
+
+.compensation-student-items {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.compensation-item-chip {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  text-align: left;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  cursor: pointer;
+}
+
+.compensation-item-chip.active {
+  border-color: #0f766e;
+  background: #f0fdfa;
 }
 
 .attendance-readonly {
