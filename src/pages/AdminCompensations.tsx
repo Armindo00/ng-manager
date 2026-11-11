@@ -400,7 +400,7 @@ function AdminCompensations() {
   }
 
   return (
-    <div>
+    <div className="dashboard-page">
       <header className="page-header">
         <p className="page-eyebrow">Gestão</p>
         <h1 className="page-title">Compensações</h1>

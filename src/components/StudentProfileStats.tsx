@@ -20,25 +20,27 @@ function StudentProfileStats({ student, lessons }: Props) {
       : Math.round((attendedLessons.length / studentLessons.length) * 100);
 
   return (
-    <div className="student-stats-grid">
-      <div className="student-stat-card">
-        <span>🏄 Treinos marcados</span>
-        <strong>{studentLessons.length}</strong>
+    <div className="stats-grid student-stats-grid">
+      <div className="card stat-card">
+        <span className="stat-label">Treinos marcados</span>
+        <strong className="stat-number">{studentLessons.length}</strong>
       </div>
 
-      <div className="student-stat-card">
-        <span>✅ Presenças</span>
-        <strong>{attendedLessons.length}</strong>
+      <div className="card stat-card">
+        <span className="stat-label">Presenças</span>
+        <strong className="stat-number">{attendedLessons.length}</strong>
       </div>
 
-      <div className="student-stat-card">
-        <span>📊 Taxa de presença</span>
-        <strong>{attendanceRate}%</strong>
+      <div className="card stat-card">
+        <span className="stat-label">Taxa de presença</span>
+        <strong className="stat-number">{attendanceRate}%</strong>
       </div>
 
-      <div className="student-stat-card">
-        <span>💳 Pagamento</span>
-        <strong>{student.paid ? "Pago" : "Pendente"}</strong>
+      <div className="card stat-card">
+        <span className="stat-label">Pagamento</span>
+        <strong className="stat-number small">
+          {student.paid ? "Pago" : "Pendente"}
+        </strong>
       </div>
     </div>
   );

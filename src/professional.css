@@ -4,7 +4,7 @@
    ============================================================================= */
 
 :root {
-  --font-sans: "Manrope", "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-sans: "Manrope", system-ui, sans-serif;
 
   --ink: #10233a;
   --ink-soft: #3d5168;
@@ -1478,7 +1478,356 @@ textarea:focus {
   color: white;
 }
 
+/* Student profile */
+.student-profile-tabs {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.student-stats-grid {
+  margin: 0;
+}
+
+.student-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-bottom: 2px;
+}
+
+.student-tabs .tab {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-soft);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.student-tabs .tab:hover {
+  background: var(--surface-soft);
+  border-color: var(--line-strong);
+}
+
+.student-tabs .tab.active {
+  background: var(--brand-soft);
+  border-color: #9ec9c3;
+  color: var(--brand-ink);
+}
+
+.student-tab-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.student-profile-card {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  padding: 18px;
+}
+
+.student-profile-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.student-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-md);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--brand-deep);
+  color: white;
+  font-weight: 800;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.student-profile-heading h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+
+.student-profile-heading p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.status-paid,
+.status-pending {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.status-paid {
+  background: #ecfdf3;
+  color: var(--success);
+}
+
+.status-pending {
+  background: #fff7ed;
+  color: var(--warning);
+}
+
+.student-profile-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.student-profile-grid > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface-soft);
+}
+
+.student-profile-grid span {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.student-profile-grid strong {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+  word-break: break-word;
+}
+
+.student-history,
+.student-payment-history {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.student-history-row,
+.payment-history-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.student-history-row p,
+.payment-history-row p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.student-history-row strong,
+.payment-history-row strong {
+  color: var(--ink);
+}
+
+/* Coach week schedule */
+.coach-count-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  height: 36px;
+  padding: 0 10px;
+  border-radius: var(--radius-sm);
+  background: var(--brand-soft);
+  color: var(--brand-ink);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.coach-week-days {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.coach-week-day {
+  padding-top: 4px;
+}
+
+.coach-week-day + .coach-week-day {
+  border-top: 1px solid var(--line);
+  padding-top: 18px;
+}
+
+.coach-week-day-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.coach-week-day-header h3 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+
+.coach-week-day-today {
+  padding: 14px;
+  margin: 0 -4px;
+  border: 1px solid #9ec9c3;
+  border-radius: var(--radius-md);
+  background: linear-gradient(180deg, #f0faf8, var(--surface));
+}
+
+.coach-week-day-today + .coach-week-day,
+.coach-week-day + .coach-week-day-today {
+  border-top: none;
+}
+
+/* Notifications / chrome polish */
+.notification-bell {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-soft);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.notification-bell:hover {
+  background: var(--surface-soft);
+  border-color: var(--line-strong);
+  color: var(--ink);
+}
+
+.notification-count {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--danger);
+  color: white;
+  font-size: 10px;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.notification-panel {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  background: var(--surface);
+}
+
+.notification-panel h3 {
+  margin: 0 0 10px;
+  font-size: 14px;
+  font-weight: 750;
+  color: var(--ink);
+}
+
+.lesson-detail-hero {
+  background: linear-gradient(135deg, var(--brand-soft), var(--surface-soft));
+  border: 1px solid #b6e2de;
+}
+
+.lesson-kicker,
+.coach-dashboard-kicker,
+.coach-section-title span {
+  color: var(--brand-ink) !important;
+}
+
+.coach-section-title > strong {
+  background: var(--brand-soft) !important;
+  color: var(--brand-ink) !important;
+  border-radius: var(--radius-sm) !important;
+}
+
+.calendar-today {
+  border-color: var(--brand) !important;
+}
+
+.calendar-selected {
+  background: var(--brand-soft) !important;
+  color: var(--brand-ink) !important;
+}
+
+.confirm-recommendation {
+  background: var(--brand-soft) !important;
+  color: var(--brand-ink) !important;
+  border-color: #b6e2de !important;
+}
+
+.icon-btn {
+  border-color: var(--line) !important;
+  color: var(--ink-soft) !important;
+  border-radius: var(--radius-sm) !important;
+}
+
+.icon-btn:hover {
+  background: var(--surface-soft) !important;
+  color: var(--ink) !important;
+}
+
+.icon-btn.danger {
+  color: var(--danger) !important;
+}
+
+.payment-status,
+.access-status,
+.lesson-status,
+.inventory-condition,
+.compensation-status,
+.coach-plan-badge,
+.coach-response-badge,
+.coach-session-card-status {
+  border-radius: var(--radius-sm) !important;
+}
+
 @media (max-width: 900px) {
+  .student-profile-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .student-history-row,
+  .payment-history-row {
+    flex-direction: column;
+  }
+
   .login-page {
     grid-template-columns: 1fr;
   }

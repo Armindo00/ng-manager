@@ -109,7 +109,7 @@ function CoachArea({ user }: Props) {
   }
 
   return (
-    <div>
+    <div className="dashboard-page">
       <header className="page-header">
         <p className="page-eyebrow">Escala semanal</p>
         <h1 className="page-title">Grupos fixos</h1>
@@ -119,46 +119,69 @@ function CoachArea({ user }: Props) {
         </p>
       </header>
 
-      {WEEKDAY_ORDER.map((weekday) => {
-        const groups = fixedTrainings.filter(
-          (group) => group.weekday === weekday
-        );
-        if (groups.length === 0) return null;
+      <section className="card section-card coach-week-schedule">
+        <div className="admin-section-heading">
+          <div>
+            <span className="admin-section-kicker">Semana</span>
+            <h2>Escala por dia</h2>
+          </div>
+        </div>
 
-        return (
-          <section className="card section-card" key={weekday}>
-            <div className="coach-section-title">
-              <div>
-                <span>{weekday === todayKey ? "Hoje" : "Grupo fixo"}</span>
-                <h2>{WEEKDAY_TITLE[weekday]}</h2>
-              </div>
-              <strong>{groups.length}</strong>
-            </div>
+        <div className="coach-week-days">
+          {WEEKDAY_ORDER.map((weekday) => {
+            const groups = fixedTrainings.filter(
+              (group) => group.weekday === weekday
+            );
+            if (groups.length === 0) return null;
 
-            <div className="coach-session-list">
-              {groups.map((group) => (
-                <div className="coach-session-card coach-session-card-static" key={group.id}>
-                  <div className="coach-session-card-main">
-                    <strong>{group.title}</strong>
-                    <span>{group.students.length} alunos</span>
-                    <span className="coach-group-students">
-                      {group.students.join(", ")}
+            return (
+              <div
+                className={
+                  weekday === todayKey
+                    ? "coach-week-day coach-week-day-today"
+                    : "coach-week-day"
+                }
+                key={weekday}
+              >
+                <div className="coach-week-day-header">
+                  <div>
+                    <span className="admin-section-kicker">
+                      {weekday === todayKey ? "Hoje" : "Grupo fixo"}
                     </span>
+                    <h3>{WEEKDAY_TITLE[weekday]}</h3>
                   </div>
+                  <span className="coach-count-chip">{groups.length}</span>
                 </div>
-              ))}
-            </div>
-          </section>
-        );
-      })}
+
+                <div className="coach-session-list">
+                  {groups.map((group) => (
+                    <div
+                      className="coach-session-card coach-session-card-static"
+                      key={group.id}
+                    >
+                      <div className="coach-session-card-main">
+                        <strong>{group.title}</strong>
+                        <span>{group.students.length} alunos</span>
+                        <span className="coach-group-students">
+                          {group.students.join(", ")}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </section>
 
       <section className="card section-card">
-        <div className="coach-section-title">
+        <div className="admin-section-heading">
           <div>
-            <span>Histórico</span>
+            <span className="admin-section-kicker">Histórico</span>
             <h2>Sessões recentes</h2>
           </div>
-          <strong>{recentSessions.length}</strong>
+          <span className="coach-count-chip">{recentSessions.length}</span>
         </div>
 
         {recentSessions.length === 0 ? (

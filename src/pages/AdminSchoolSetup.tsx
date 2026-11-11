@@ -90,12 +90,12 @@ function AdminSchoolSetup() {
       </header>
 
       <section className="card section-card">
-        <div className="coach-section-title">
+        <div className="admin-section-heading">
           <div>
-            <span>Alunos</span>
+            <span className="admin-section-kicker">Alunos</span>
             <h2>Importar alunos dos grupos fixos</h2>
           </div>
-          <strong>{studentCount}</strong>
+          <span className="coach-count-chip">{studentCount}</span>
         </div>
 
         <p className="muted">
@@ -120,12 +120,12 @@ function AdminSchoolSetup() {
       </section>
 
       <section className="card section-card">
-        <div className="coach-section-title">
+        <div className="admin-section-heading">
           <div>
-            <span>Treinadores</span>
+            <span className="admin-section-kicker">Treinadores</span>
             <h2>Criar contas dos treinadores</h2>
           </div>
-          <strong>{schoolCoaches.length}</strong>
+          <span className="coach-count-chip">{schoolCoaches.length}</span>
         </div>
 
         <p className="muted">
