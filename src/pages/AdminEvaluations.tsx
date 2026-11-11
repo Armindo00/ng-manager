@@ -173,16 +173,11 @@ function AdminEvaluations({ user }: Props) {
   useEffect(() => {
     if (panelMode !== "view") return;
 
-    if (visibleEvaluations.length === 0) {
-      setSelectedEvaluationId(null);
-      return;
-    }
-
     if (
-      !selectedEvaluationId ||
+      selectedEvaluationId &&
       !visibleEvaluations.some((item) => item.id === selectedEvaluationId)
     ) {
-      setSelectedEvaluationId(visibleEvaluations[0].id);
+      setSelectedEvaluationId(null);
     }
   }, [visibleEvaluations, selectedEvaluationId, panelMode]);
 
@@ -708,7 +703,9 @@ function AdminEvaluations({ user }: Props) {
                       key={evaluation.id}
                       active={evaluation.id === selectedEvaluationId}
                       onClick={() => {
-                        setSelectedEvaluationId(evaluation.id);
+                        setSelectedEvaluationId((current) =>
+                          current === evaluation.id ? null : evaluation.id
+                        );
                         setShareUrl(null);
                       }}
                       title={getStudentName(evaluation.studentId)}
@@ -727,9 +724,7 @@ function AdminEvaluations({ user }: Props) {
                   <DetailPanel title="Detalhe da avaliação">
                     {renderEvaluationDetail(selectedEvaluation)}
                   </DetailPanel>
-                ) : (
-                  <DetailPanelEmpty message="Seleciona uma avaliação da lista." />
-                )}
+                ) : null}
               </div>
             ) : (
               <DetailPanelEmpty message="Seleciona um mês da lista." />
