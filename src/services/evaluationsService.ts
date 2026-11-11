@@ -154,26 +154,145 @@ export async function getSharedEvaluation(token: string) {
   return data as SharedEvaluation;
 }
 
-export async function finalizeAndSendEvaluation(evaluationId: string) {
-  const { data, error } = await supabase.functions.invoke("send-evaluation", {
-    body: { evaluationId },
-  });
+function buildShareUrl(shareToken: string) {
+  return `${window.location.origin}${window.location.pathname}#/avaliacao/${shareToken}`;
+}
 
-  if (error) {
-    if (error instanceof FunctionsHttpError) {
-      throw new Error(
-        (data && typeof data === "object" && "error" in data
-          ? String((data as { error: string }).error)
-          : null) ||
-          `Erro ao enviar avaliação (HTTP ${error.context.status}).`
-      );
+function createShareToken() {
+  return crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "").slice(0, 8);
+}
+
+async function readFunctionErrorMessage(error: unknown, data: unknown) {
+  if (data && typeof data === "object" && "error" in data) {
+    return String((data as { error: string }).error);
+  }
+
+  if (error instanceof FunctionsHttpError) {
+    try {
+      const body = await error.context.json();
+      if (body && typeof body === "object" && "error" in body) {
+        return String((body as { error: string }).error);
+      }
+      if (body && typeof body === "object" && "message" in body) {
+        return String((body as { message: string }).message);
+      }
+    } catch {
+      // ignore parse failures
     }
-    throw error;
+    return `Erro ao enviar avaliação (HTTP ${error.context.status}).`;
   }
 
-  if (data?.error) {
-    throw new Error(String(data.error));
+  if (error instanceof Error && error.message) return error.message;
+  return "Erro ao enviar avaliação.";
+}
+
+/**
+ * Finaliza a avaliação no cliente (gera link partilhável) e tenta email
+ * via edge function. O email é opcional — se falhar auth/Resend, o link
+ * e o mailto continuam disponíveis.
+ */
+export async function finalizeAndSendEvaluation(evaluationId: string) {
+  const { data: evaluationRow, error: evaluationError } = await supabase
+    .from("evaluations")
+    .select("*")
+    .eq("id", evaluationId)
+    .single();
+
+  if (evaluationError || !evaluationRow) {
+    throw new Error("Avaliação não encontrada.");
   }
 
-  return data as SendEvaluationResult;
+  const evaluation = fromDb(evaluationRow as DbEvaluation);
+
+  const { data: student, error: studentError } = await supabase
+    .from("students")
+    .select("id, name, email")
+    .eq("id", evaluation.studentId)
+    .single();
+
+  if (studentError || !student) {
+    throw new Error("Aluno não encontrado.");
+  }
+
+  const shareToken = evaluation.shareToken || createShareToken();
+  const now = new Date().toISOString();
+  const studentEmail =
+    typeof student.email === "string" && student.email.includes("@")
+      ? student.email.trim()
+      : null;
+
+  // Finalize locally first so the public link always works, even if the
+  // optional email edge function returns 401/5xx.
+  const { error: updateError } = await supabase
+    .from("evaluations")
+    .update({
+      status: "finalized",
+      share_token: shareToken,
+      finalized_at: evaluation.finalizedAt || now,
+    })
+    .eq("id", evaluationId);
+
+  if (updateError) throw updateError;
+
+  const shareUrl = buildShareUrl(shareToken);
+  let emailed = false;
+  let emailReason: string | null = studentEmail
+    ? "email_send_skipped"
+    : "missing_student_email";
+  let status: EvaluationStatus = "finalized";
+
+  if (studentEmail) {
+    try {
+      const { data: refreshData } = await supabase.auth.refreshSession();
+      const accessToken =
+        refreshData.session?.access_token ||
+        (await supabase.auth.getSession()).data.session?.access_token;
+
+      if (!accessToken) {
+        emailReason = "missing_session";
+      } else {
+        const { data, error } = await supabase.functions.invoke(
+          "send-evaluation",
+          {
+            body: { evaluationId },
+            headers: { Authorization: `Bearer ${accessToken}` },
+          }
+        );
+
+        if (error || data?.error) {
+          emailReason = await readFunctionErrorMessage(error, data);
+        } else {
+          const result = data as SendEvaluationResult;
+          emailed = Boolean(result.emailed);
+          emailReason = result.emailReason;
+          status = result.status || (result.emailed ? "sent" : "finalized");
+          if (result.shareUrl) {
+            return {
+              ok: true as const,
+              shareUrl: result.shareUrl,
+              shareToken: result.shareToken || shareToken,
+              emailed,
+              emailReason,
+              studentEmail,
+              studentName: student.name,
+              status,
+            };
+          }
+        }
+      }
+    } catch (error) {
+      emailReason = await readFunctionErrorMessage(error, null);
+    }
+  }
+
+  return {
+    ok: true as const,
+    shareUrl,
+    shareToken,
+    emailed,
+    emailReason,
+    studentEmail,
+    studentName: student.name as string,
+    status,
+  } satisfies SendEvaluationResult;
 }
