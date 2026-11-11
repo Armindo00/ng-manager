@@ -88,7 +88,10 @@ button:disabled {
 input,
 select,
 textarea {
+  display: block;
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
   margin: 0;
   font-family: inherit;
   font-size: 14px;
@@ -97,6 +100,25 @@ textarea {
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
   padding: 11px 12px;
+  box-sizing: border-box;
+}
+
+input[type="date"],
+input[type="datetime-local"],
+input[type="time"],
+input[type="month"],
+input[type="week"],
+input[type="number"] {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+input[type="date"]::-webkit-date-and-time-value {
+  text-align: left;
+  min-width: 0;
 }
 
 input:focus,
@@ -110,9 +132,39 @@ textarea:focus {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  min-width: 0;
+  max-width: 100%;
   font-size: 13px;
   font-weight: 650;
   color: var(--ink-soft);
+}
+
+.form-fields-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.form-fields-grid > *,
+.form-row > *,
+.lesson-edit-grid > *,
+.pickup-row > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.card,
+.section-card,
+.detail-panel,
+.detail-panel-body,
+.van-task-composer,
+.coach-session-modal,
+.selection-list,
+.master-detail-list,
+.master-detail-panel {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .main-content {
@@ -1115,6 +1167,17 @@ textarea:focus {
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
   background: linear-gradient(180deg, #f8fbfb, var(--surface));
+  overflow: hidden;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.van-task-composer .form-fields-grid,
+.van-task-composer .field-label,
+.van-task-composer input,
+.van-task-composer select {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .van-task-list {
