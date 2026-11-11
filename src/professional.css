@@ -524,6 +524,10 @@ textarea:focus {
   box-shadow: 0 0 0 1px rgba(15, 118, 110, 0.12);
 }
 
+.master-detail-layout-list-only {
+  grid-template-columns: 1fr;
+}
+
 .selection-list-item-main strong {
   color: var(--ink);
 }
