@@ -17,6 +17,7 @@ type AttendanceStatus = "present" | "absent" | "makeup";
 type Props = {
   lesson: Lesson;
   students: Student[];
+  onLessonUpdated?: (lesson: Lesson) => void;
   onSaved: () => void;
 };
 
@@ -29,11 +30,21 @@ function formatMissedLessonLabel(lesson: Lesson | undefined) {
   return `${date}${lesson.groupName ? ` · ${lesson.groupName}` : ""}`;
 }
 
-function CoachAttendancePanel({ lesson, students, onSaved }: Props) {
+function CoachAttendancePanel({
+  lesson,
+  students,
+  onLessonUpdated,
+  onSaved,
+}: Props) {
+  const [workingLesson, setWorkingLesson] = useState(lesson);
   const [studentSearch, setStudentSearch] = useState("");
   const [saving, setSaving] = useState(false);
   const [compensations, setCompensations] = useState<LessonCompensation[]>([]);
   const [allLessons, setAllLessons] = useState<Lesson[]>([]);
+
+  useEffect(() => {
+    setWorkingLesson(lesson);
+  }, [lesson]);
 
   useEffect(() => {
     loadSideData();
@@ -52,12 +63,17 @@ function CoachAttendancePanel({ lesson, students, onSaved }: Props) {
     }
   }
 
+  function applyLessonUpdate(nextLesson: Lesson) {
+    setWorkingLesson(nextLesson);
+    onLessonUpdated?.(nextLesson);
+  }
+
   const bookedStudents = useMemo(
     () =>
       students
-        .filter((student) => lesson.bookedStudentIds.includes(student.id))
+        .filter((student) => workingLesson.bookedStudentIds.includes(student.id))
         .sort((a, b) => a.name.localeCompare(b.name, "pt")),
-    [students, lesson.bookedStudentIds]
+    [students, workingLesson.bookedStudentIds]
   );
 
   /** Alunos deste treino que vão compensar noutro dia. */
@@ -66,33 +82,36 @@ function CoachAttendancePanel({ lesson, students, onSaved }: Props) {
       compensations
         .filter(
           (item) =>
-            item.missedLessonId === lesson.id &&
+            item.missedLessonId === workingLesson.id &&
             (item.status === "pending" || item.status === "approved")
         )
         .map((item) => item.studentId)
     );
-  }, [compensations, lesson.id]);
+  }, [compensations, workingLesson.id]);
 
   /** Alunos que estão neste treino a compensar uma falta anterior. */
   const compensatingHere = useMemo(() => {
     const map = new Map<string, LessonCompensation>();
     for (const item of compensations) {
       if (
-        item.compensationLessonId === lesson.id &&
+        item.compensationLessonId === workingLesson.id &&
         (item.status === "scheduled" || item.status === "completed")
       ) {
         map.set(item.studentId, item);
       }
     }
     return map;
-  }, [compensations, lesson.id]);
+  }, [compensations, workingLesson.id]);
 
   const compensationCandidates = useMemo(() => {
-    const byStudent = new Map<string, { count: number; oldest: LessonCompensation }>();
+    const byStudent = new Map<
+      string,
+      { count: number; oldest: LessonCompensation }
+    >();
 
     for (const item of compensations) {
-      if (lesson.bookedStudentIds.includes(item.studentId)) continue;
-      if (item.missedLessonId === lesson.id) continue;
+      if (workingLesson.bookedStudentIds.includes(item.studentId)) continue;
+      if (item.missedLessonId === workingLesson.id) continue;
       if (item.status !== "pending" && item.status !== "approved") continue;
 
       const existing = byStudent.get(item.studentId);
@@ -123,7 +142,7 @@ function CoachAttendancePanel({ lesson, students, onSaved }: Props) {
         } => Boolean(item.student)
       )
       .sort((a, b) => a.student.name.localeCompare(b.student.name, "pt"));
-  }, [students, compensations, lesson.bookedStudentIds, lesson.id]);
+  }, [students, compensations, workingLesson.bookedStudentIds, workingLesson.id]);
 
   const filteredCompensationCandidates = useMemo(() => {
     const query = studentSearch.trim().toLowerCase();
@@ -144,7 +163,7 @@ function CoachAttendancePanel({ lesson, students, onSaved }: Props) {
     return students
       .filter(
         (student) =>
-          !lesson.bookedStudentIds.includes(student.id) &&
+          !workingLesson.bookedStudentIds.includes(student.id) &&
           !compensationIds.has(student.id) &&
           student.name.toLowerCase().includes(query)
       )
@@ -152,16 +171,17 @@ function CoachAttendancePanel({ lesson, students, onSaved }: Props) {
       .slice(0, 6);
   }, [
     students,
-    lesson.bookedStudentIds,
+    workingLesson.bookedStudentIds,
     studentSearch,
     compensationCandidates,
   ]);
 
-  const canEdit = canMarkAttendance(lesson) && lesson.status !== "draft";
+  const canEdit =
+    canMarkAttendance(workingLesson) && workingLesson.status !== "draft";
 
   function getStatus(studentId: string): AttendanceStatus {
     if (owedMakeupIds.has(studentId)) return "makeup";
-    if (lesson.presentStudentIds.includes(studentId)) return "present";
+    if (workingLesson.presentStudentIds.includes(studentId)) return "present";
     return "absent";
   }
 
@@ -172,58 +192,40 @@ function CoachAttendancePanel({ lesson, students, onSaved }: Props) {
     return formatMissedLessonLabel(missed);
   }
 
-  async function saveLesson(nextLesson: Lesson, successMessage: string) {
-    if (saving) return;
-
-    try {
-      setSaving(true);
-      await updateLesson(nextLesson);
-      toast.success(successMessage);
-      await loadSideData();
-      onSaved();
-    } catch (error) {
-      console.error(error);
-      toast.error("Erro ao atualizar o treino.");
-    } finally {
-      setSaving(false);
-    }
-  }
-
   async function setAttendance(studentId: string, status: AttendanceStatus) {
     if (!canEdit || saving) return;
     if (getStatus(studentId) === status) return;
+
+    const previousLesson = workingLesson;
 
     try {
       setSaving(true);
 
       if (status === "makeup") {
-        await markStudentForCompensation(lesson, studentId);
+        await markStudentForCompensation(workingLesson, studentId);
         toast.success("Aluno enviado para compensações.");
         await loadSideData();
         onSaved();
         return;
       }
 
-      await clearOpenCompensationForMissedLesson(studentId, lesson.id);
-
       const nextLesson: Lesson = {
-        ...lesson,
+        ...workingLesson,
         presentStudentIds:
           status === "present"
-            ? lesson.presentStudentIds.includes(studentId)
-              ? lesson.presentStudentIds
-              : [...lesson.presentStudentIds, studentId]
-            : lesson.presentStudentIds.filter((id) => id !== studentId),
+            ? workingLesson.presentStudentIds.includes(studentId)
+              ? workingLesson.presentStudentIds
+              : [...workingLesson.presentStudentIds, studentId]
+            : workingLesson.presentStudentIds.filter((id) => id !== studentId),
       };
 
+      applyLessonUpdate(nextLesson);
+      await clearOpenCompensationForMissedLesson(studentId, workingLesson.id);
       await updateLesson(nextLesson);
-      toast.success(
-        status === "present" ? "Presença marcada." : "Falta marcada."
-      );
       await loadSideData();
-      onSaved();
     } catch (error) {
       console.error(error);
+      applyLessonUpdate(previousLesson);
       toast.error("Erro ao atualizar presença.");
     } finally {
       setSaving(false);
@@ -231,18 +233,27 @@ function CoachAttendancePanel({ lesson, students, onSaved }: Props) {
   }
 
   async function addExtraStudent(studentId: string) {
-    if (!canEdit) return;
+    if (!canEdit || saving) return;
 
-    await saveLesson(
-      {
-        ...lesson,
-        bookedStudentIds: [...lesson.bookedStudentIds, studentId],
-        presentStudentIds: [...lesson.presentStudentIds, studentId],
-      },
-      "Aluno extra adicionado e marcado como presente."
-    );
+    const previousLesson = workingLesson;
+    const nextLesson: Lesson = {
+      ...workingLesson,
+      bookedStudentIds: [...workingLesson.bookedStudentIds, studentId],
+      presentStudentIds: [...workingLesson.presentStudentIds, studentId],
+    };
 
-    setStudentSearch("");
+    try {
+      setSaving(true);
+      applyLessonUpdate(nextLesson);
+      await updateLesson(nextLesson);
+      setStudentSearch("");
+    } catch (error) {
+      console.error(error);
+      applyLessonUpdate(previousLesson);
+      toast.error("Erro ao atualizar o treino.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function addFromCompensation(studentId: string) {
@@ -251,10 +262,11 @@ function CoachAttendancePanel({ lesson, students, onSaved }: Props) {
     try {
       setSaving(true);
       const result = await addCompensationStudentToLesson(
-        lesson,
+        workingLesson,
         studentId,
         compensations
       );
+      applyLessonUpdate(result.lesson);
       const missed = allLessons.find(
         (item) => item.id === result.compensation.missedLessonId
       );
@@ -292,7 +304,7 @@ function CoachAttendancePanel({ lesson, students, onSaved }: Props) {
         <div className="coach-attendance-locked">
           <p className="muted">
             As presenças só podem ser marcadas <strong>no dia do treino</strong>{" "}
-            ou depois ({lesson.date}).
+            ou depois ({workingLesson.date}).
           </p>
         </div>
       ) : (
