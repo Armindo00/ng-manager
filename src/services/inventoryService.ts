@@ -63,21 +63,30 @@ export async function deleteInventoryItem(id: string) {
   if (error) throw error;
 }
 
-export async function upsertSimpleInventoryCount(
-  itemType: Extract<
-    InventoryItemType,
-    "leash" | "lycra_coach" | "lycra_student" | "flags" | "medical_kit"
-  >,
-  quantity: number,
-  options?: { existingId?: string; notes?: string }
-) {
+export async function setInventoryQuantity(options: {
+  itemType: InventoryItemType;
+  size: string | null;
+  condition: InventoryCondition;
+  quantity: number;
+  existingId?: string;
+  notes?: string;
+}) {
+  const safe = Math.max(0, Math.floor(options.quantity));
+
+  if (safe === 0) {
+    if (options.existingId) {
+      await deleteInventoryItem(options.existingId);
+    }
+    return null;
+  }
+
   const item: InventoryItem = {
-    id: options?.existingId || crypto.randomUUID(),
-    itemType,
-    size: null,
-    condition: null,
-    quantity: Math.max(0, quantity),
-    notes: options?.notes || "",
+    id: options.existingId || crypto.randomUUID(),
+    itemType: options.itemType,
+    size: options.size,
+    condition: options.condition,
+    quantity: safe,
+    notes: options.notes || "",
   };
 
   await saveInventoryItem(item);

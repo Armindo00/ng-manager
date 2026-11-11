@@ -601,6 +601,21 @@ textarea:focus {
   border-radius: var(--radius-sm);
 }
 
+.inventory-matrix-table th:nth-child(3),
+.inventory-matrix-table th:nth-child(4),
+.inventory-matrix-table th:nth-child(5),
+.inventory-matrix-table th:nth-child(6),
+.inventory-matrix-table td:nth-child(3),
+.inventory-matrix-table td:nth-child(4),
+.inventory-matrix-table td:nth-child(5),
+.inventory-matrix-table td:nth-child(6) {
+  text-align: center;
+}
+
+.inventory-matrix-table td[data-label="Material"] strong {
+  font-weight: 750;
+}
+
 /* Coach session cards */
 .coach-session-card {
   border-radius: var(--radius-md);
