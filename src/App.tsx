@@ -44,7 +44,13 @@ type AdminSection =
   | "payments"
   | "coach-activity";
 
-type CoachSection = "dashboard" | "lessons" | "activity";
+type CoachSection =
+  | "dashboard"
+  | "lessons"
+  | "activity"
+  | "inventory"
+  | "evaluations"
+  | "compensations";
 
 function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -264,6 +270,12 @@ function App() {
               {coachSection === "activity" && (
                 <CoachActivity user={currentUser} />
               )}
+
+              {coachSection === "inventory" && <AdminInventory />}
+
+              {coachSection === "evaluations" && <AdminEvaluations />}
+
+              {coachSection === "compensations" && <AdminCompensations />}
             </>
           )}
 

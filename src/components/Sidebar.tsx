@@ -195,6 +195,11 @@ function Sidebar({ user, activeSection, onChangeSection, onLogout }: Props) {
               {item(LayoutDashboard, "Hoje", "dashboard")}
               {item(CalendarDays, "Grupos fixos", "lessons")}
               {item(Clapperboard, "Os meus treinos", "activity")}
+
+              <div className="nav-section-label">Gestão</div>
+              {item(Star, "Avaliações", "evaluations")}
+              {item(CalendarClock, "Compensações", "compensations")}
+              {item(Package, "Inventário", "inventory")}
             </nav>
           )}
         </div>
