@@ -601,19 +601,193 @@ textarea:focus {
   border-radius: var(--radius-sm);
 }
 
-.inventory-matrix-table th:nth-child(3),
-.inventory-matrix-table th:nth-child(4),
-.inventory-matrix-table th:nth-child(5),
-.inventory-matrix-table th:nth-child(6),
-.inventory-matrix-table td:nth-child(3),
-.inventory-matrix-table td:nth-child(4),
-.inventory-matrix-table td:nth-child(5),
-.inventory-matrix-table td:nth-child(6) {
-  text-align: center;
+.inventory-open-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
 }
 
-.inventory-matrix-table td[data-label="Material"] strong {
+.inventory-open-copy h2 {
+  margin: 0 0 6px;
+  font-size: 22px;
+  letter-spacing: -0.02em;
+}
+
+.inventory-open-copy p {
+  margin: 0;
+  max-width: 46ch;
+}
+
+.inventory-open-btn {
+  min-width: 180px;
+}
+
+.inventory-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: rgba(11, 31, 42, 0.55);
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  padding: 16px;
+}
+
+.inventory-sheet {
+  width: min(1100px, 100%);
+  background: #f7faf8;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.inventory-sheet-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 22px;
+  background: #fff;
+  border-bottom: 1px solid var(--line);
+}
+
+.inventory-sheet-kicker {
+  margin: 0 0 4px;
+  font-size: 11px;
   font-weight: 750;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--brand-ink);
+}
+
+.inventory-sheet-header h2 {
+  margin: 0;
+  font-size: 22px;
+  letter-spacing: -0.02em;
+}
+
+.inventory-sheet-body {
+  overflow: auto;
+  padding: 18px 22px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.inventory-sheet-section h3 {
+  margin: 0 0 10px;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--brand-ink);
+}
+
+.inventory-sheet-table-wrap {
+  overflow: auto;
+  border: 1px solid #c9d5c8;
+  border-radius: 4px;
+  background: #fff;
+}
+
+.inventory-sheet-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 560px;
+  font-variant-numeric: tabular-nums;
+}
+
+.inventory-sheet-table th,
+.inventory-sheet-table td {
+  border: 1px solid #d5e0d4;
+  padding: 0;
+  text-align: center;
+  font-size: 14px;
+}
+
+.inventory-sheet-table th {
+  background: #e8f0e9;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 10px 12px;
+}
+
+.inventory-sheet-table th:first-child,
+.inventory-sheet-table td:first-child,
+.inventory-sheet-table tfoot th:first-child {
+  text-align: left;
+  padding-left: 14px;
+  min-width: 140px;
+}
+
+.inventory-sheet-label {
+  padding: 10px 14px !important;
+  font-weight: 700;
+  background: #fbfdfb;
+}
+
+.inventory-sheet-cell {
+  width: 100%;
+  min-width: 88px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  text-align: center;
+  padding: 10px 8px;
+  font-weight: 650;
+  box-shadow: none;
+}
+
+.inventory-sheet-cell:focus {
+  outline: 2px solid var(--brand);
+  outline-offset: -2px;
+  background: #f0faf8;
+}
+
+.inventory-sheet-total {
+  padding: 10px 12px !important;
+  font-weight: 800;
+  background: #f3f7f3;
+}
+
+.inventory-sheet-empty {
+  padding: 16px 14px !important;
+  text-align: left !important;
+  color: var(--muted);
+  font-style: italic;
+}
+
+.inventory-sheet-table tfoot th {
+  background: #dfeadf;
+  font-weight: 800;
+}
+
+@media (max-width: 768px) {
+  .inventory-sheet-backdrop {
+    padding: 0;
+  }
+
+  .inventory-sheet {
+    border-radius: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  .inventory-open-card {
+    align-items: stretch;
+  }
+
+  .inventory-open-btn {
+    width: 100%;
+  }
 }
 
 /* Coach session cards */
