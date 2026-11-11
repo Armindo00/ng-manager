@@ -182,6 +182,10 @@ DROP POLICY IF EXISTS "recurring_admin_write" ON recurring_trainings;
 
 DROP POLICY IF EXISTS "inventory_admin_select" ON inventory_items;
 DROP POLICY IF EXISTS "inventory_admin_write" ON inventory_items;
+DROP POLICY IF EXISTS "inventory_staff_select" ON inventory_items;
+DROP POLICY IF EXISTS "inventory_staff_write" ON inventory_items;
+DROP POLICY IF EXISTS "evaluations_coach_select_all" ON evaluations;
+DROP POLICY IF EXISTS "students_coach_select_all" ON students;
 
 CREATE POLICY "app_users_select"
 ON app_users
@@ -205,10 +209,7 @@ FOR SELECT
 TO authenticated
 USING (
   public.is_admin()
-  OR (
-    public.is_coach()
-    AND public.coach_can_access_student(students.id::text)
-  )
+  OR public.is_coach()
   OR (
     public.is_student()
     AND students.id::text = public.current_student_id()
@@ -371,6 +372,12 @@ TO authenticated
 USING (public.is_admin())
 WITH CHECK (public.is_admin());
 
+CREATE POLICY "evaluations_coach_select_all"
+ON evaluations
+FOR SELECT
+TO authenticated
+USING (public.is_coach());
+
 CREATE POLICY "evaluations_coach_write"
 ON evaluations
 FOR INSERT
@@ -378,7 +385,6 @@ TO authenticated
 WITH CHECK (
   public.is_coach()
   AND evaluations.coach_id::text = public.current_app_user_id()
-  AND public.coach_can_access_student(evaluations.student_id::text)
 );
 
 CREATE POLICY "evaluations_coach_update"
@@ -388,12 +394,10 @@ TO authenticated
 USING (
   public.is_coach()
   AND evaluations.coach_id::text = public.current_app_user_id()
-  AND public.coach_can_access_student(evaluations.student_id::text)
 )
 WITH CHECK (
   public.is_coach()
   AND evaluations.coach_id::text = public.current_app_user_id()
-  AND public.coach_can_access_student(evaluations.student_id::text)
 );
 
 CREATE POLICY "evaluations_coach_delete"
@@ -403,7 +407,6 @@ TO authenticated
 USING (
   public.is_coach()
   AND evaluations.coach_id::text = public.current_app_user_id()
-  AND public.coach_can_access_student(evaluations.student_id::text)
 );
 
 CREATE POLICY "payments_select"
@@ -444,18 +447,18 @@ TO authenticated
 USING (public.is_admin())
 WITH CHECK (public.is_admin());
 
-CREATE POLICY "inventory_admin_select"
+CREATE POLICY "inventory_staff_select"
 ON inventory_items
 FOR SELECT
 TO authenticated
-USING (public.is_admin());
+USING (public.is_admin() OR public.is_coach());
 
-CREATE POLICY "inventory_admin_write"
+CREATE POLICY "inventory_staff_write"
 ON inventory_items
 FOR ALL
 TO authenticated
-USING (public.is_admin())
-WITH CHECK (public.is_admin());
+USING (public.is_admin() OR public.is_coach())
+WITH CHECK (public.is_admin() OR public.is_coach());
 
 GRANT EXECUTE ON FUNCTION public.auth_email() TO authenticated;
 GRANT EXECUTE ON FUNCTION public.is_admin() TO authenticated;

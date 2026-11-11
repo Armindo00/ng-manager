@@ -39,16 +39,18 @@ ALTER TABLE inventory_items ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "inventory_admin_select" ON inventory_items;
 DROP POLICY IF EXISTS "inventory_admin_write" ON inventory_items;
+DROP POLICY IF EXISTS "inventory_staff_select" ON inventory_items;
+DROP POLICY IF EXISTS "inventory_staff_write" ON inventory_items;
 
-CREATE POLICY "inventory_admin_select"
+CREATE POLICY "inventory_staff_select"
 ON inventory_items
 FOR SELECT
 TO authenticated
-USING (public.is_admin());
+USING (public.is_admin() OR public.is_coach());
 
-CREATE POLICY "inventory_admin_write"
+CREATE POLICY "inventory_staff_write"
 ON inventory_items
 FOR ALL
 TO authenticated
-USING (public.is_admin())
-WITH CHECK (public.is_admin());
+USING (public.is_admin() OR public.is_coach())
+WITH CHECK (public.is_admin() OR public.is_coach());
