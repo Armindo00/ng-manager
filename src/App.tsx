@@ -19,6 +19,7 @@ import AdminSchoolSetup from "./pages/AdminSchoolSetup";
 import AdminCoachActivity from "./pages/AdminCoachActivity";
 import AdminFixedTrainings from "./pages/AdminFixedTrainings";
 import CoachActivity from "./pages/CoachActivity";
+import PublicEvaluation from "./pages/PublicEvaluation";
 import Sidebar from "./components/Sidebar";
 import Topbar from "./components/Topbar";
 
@@ -26,6 +27,12 @@ import { supabase } from "./services/supabase";
 import { resolveAppUserFromEmail } from "./services/sessionService";
 import { requiresPasswordChange } from "./services/usersService";
 import ChangePassword from "./pages/ChangePassword";
+
+function getEvaluationShareToken() {
+  const hash = window.location.hash.replace(/^#/, "");
+  const match = hash.match(/^\/?avaliacao\/([A-Za-z0-9_-]+)/);
+  return match?.[1] || null;
+}
 
 type AdminSection =
   | "dashboard"
@@ -58,8 +65,20 @@ function App() {
   const [coachSection, setCoachSection] = useState<CoachSection>("dashboard");
   const [activeSection, setActiveSection] =
     useState<AdminSection>("my-dashboard");
+  const [evaluationShareToken, setEvaluationShareToken] = useState<string | null>(
+    () => getEvaluationShareToken()
+  );
   const resolveSeq = useRef(0);
   const currentUserRef = useRef<User | null>(null);
+
+  useEffect(() => {
+    function syncShareRoute() {
+      setEvaluationShareToken(getEvaluationShareToken());
+    }
+
+    window.addEventListener("hashchange", syncShareRoute);
+    return () => window.removeEventListener("hashchange", syncShareRoute);
+  }, []);
 
   useEffect(() => {
     currentUserRef.current = currentUser;
@@ -205,6 +224,15 @@ function App() {
     return coachSection;
   }
 
+  if (evaluationShareToken) {
+    return (
+      <>
+        <Toaster position="top-right" />
+        <PublicEvaluation token={evaluationShareToken} />
+      </>
+    );
+  }
+
   if (!authReady) {
     return (
       <>
@@ -220,7 +248,7 @@ function App() {
     );
   }
 
-      if (!currentUser) {
+  if (!currentUser) {
     return (
       <>
         <Toaster position="top-right" />
@@ -273,7 +301,9 @@ function App() {
 
               {coachSection === "inventory" && <AdminInventory />}
 
-              {coachSection === "evaluations" && <AdminEvaluations />}
+              {coachSection === "evaluations" && (
+                <AdminEvaluations user={currentUser} />
+              )}
 
               {coachSection === "compensations" && <AdminCompensations />}
             </>
@@ -321,7 +351,9 @@ function App() {
             activeSection === "compensations" && <AdminCompensations />}
 
           {currentUser.role === "admin" &&
-            activeSection === "evaluations" && <AdminEvaluations />}
+            activeSection === "evaluations" && (
+              <AdminEvaluations user={currentUser} />
+            )}
 
           {currentUser.role === "admin" &&
             activeSection === "payments" && <AdminPayments />}

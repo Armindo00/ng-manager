@@ -1943,6 +1943,84 @@ textarea:focus {
   color: var(--ink);
 }
 
+/* Evaluations */
+.evaluation-detail-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface-soft);
+}
+
+.evaluation-detail-card p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.evaluation-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.evaluation-actions a.compact-btn {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.evaluation-email-hint {
+  margin: 14px 0 0;
+}
+
+.public-evaluation-page {
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: 28px 16px 40px;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.public-evaluation-card {
+  width: min(640px, 100%);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-md);
+  padding: 22px;
+}
+
+.public-evaluation-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.public-evaluation-brand img {
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+}
+
+.public-evaluation-brand h1 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.public-evaluation-detail {
+  background: var(--surface);
+}
+
 /* Coach week schedule */
 .coach-count-chip {
   display: inline-flex;

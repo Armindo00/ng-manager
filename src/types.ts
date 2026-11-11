@@ -96,6 +96,8 @@ export type Lesson = {
 
   responses?: LessonResponse[];
 };
+export type EvaluationStatus = "draft" | "finalized" | "sent";
+
 export type MonthlyEvaluation = {
   id: string;
 
@@ -118,4 +120,12 @@ export type MonthlyEvaluation = {
   coachComment: string;
 
   nextGoal: string;
+
+  status: EvaluationStatus;
+
+  shareToken: string | null;
+
+  finalizedAt: string | null;
+
+  sentAt: string | null;
 };
