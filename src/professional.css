@@ -507,6 +507,32 @@ textarea:focus {
   color: var(--brand-ink);
 }
 
+.selection-list-item {
+  border-color: var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.selection-list-item:hover {
+  border-color: var(--line-strong);
+  background: var(--surface-soft);
+}
+
+.selection-list-item.active {
+  border-color: #9ec9c3;
+  background: #f0faf8;
+  box-shadow: 0 0 0 1px rgba(15, 118, 110, 0.12);
+}
+
+.selection-list-item-main strong {
+  color: var(--ink);
+}
+
+.selection-list-item-subtitle,
+.selection-list-item-meta {
+  color: var(--muted);
+}
+
 .admin-attention-card {
   border-color: #f0d7c4;
   background: linear-gradient(180deg, #fffaf6, var(--surface));
@@ -966,6 +992,259 @@ textarea:focus {
 .compensation-add-row:hover {
   border-color: #e0b894;
   background: #fff8f2;
+}
+
+/* Vans / fleet */
+.van-fleet-toolbar {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.van-fleet-toolbar .field-label {
+  min-width: 120px;
+}
+
+.van-fleet-toolbar .primary-btn {
+  white-space: nowrap;
+  padding: 10px 14px;
+}
+
+.van-overdue-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 7px;
+  border-radius: var(--radius-sm);
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.van-detail-identity {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 18px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.van-plate {
+  display: block;
+  margin-top: 2px;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: var(--ink);
+}
+
+.van-detail-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  align-items: center;
+  color: var(--ink-soft);
+  font-size: 14px;
+}
+
+.van-detail-notes {
+  margin: 0;
+}
+
+.van-state-active,
+.van-state-inactive {
+  font-size: 12px;
+  font-weight: 750;
+  letter-spacing: 0.02em;
+}
+
+.van-state-active {
+  color: var(--success);
+}
+
+.van-state-inactive {
+  color: var(--muted);
+}
+
+.van-schedule-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 22px;
+}
+
+.van-schedule-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface-soft);
+}
+
+.van-schedule-card strong {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+
+.van-schedule-card .compact-btn {
+  width: fit-content;
+  margin-top: 2px;
+}
+
+.van-task-section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.van-task-composer {
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: linear-gradient(180deg, #f8fbfb, var(--surface));
+}
+
+.van-task-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.van-task-row,
+.van-agenda-item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  text-align: left;
+}
+
+.van-agenda-item {
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.van-agenda-item:hover {
+  border-color: #9ec9c3;
+  background: #f8fbfb;
+}
+
+.van-task-row-main {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.van-task-row-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.van-task-row-title strong {
+  font-size: 14px;
+  font-weight: 750;
+  color: var(--ink);
+}
+
+.van-task-row-meta,
+.van-task-row-notes {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.van-agenda-intro {
+  margin: 0 0 12px;
+}
+
+.van-task-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 0.02em;
+}
+
+.van-task-status-overdue {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.van-task-status-due_soon {
+  background: #fff7ed;
+  color: var(--warning);
+}
+
+.van-task-status-pending {
+  background: var(--brand-soft);
+  color: var(--brand-ink);
+}
+
+.van-task-status-completed {
+  background: #ecfdf3;
+  color: var(--success);
+}
+
+.van-alert {
+  margin: 0 0 16px;
+  padding: 14px 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+}
+
+.van-alert-danger {
+  background: var(--danger-soft);
+  border-color: #f0c7b4;
+  color: #9a3412;
+}
+
+.van-active-toggle {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.van-active-toggle-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.van-active-toggle input[type="checkbox"] {
+  width: auto;
+  margin: 0;
+}
+
+@media (max-width: 900px) {
+  .van-schedule-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .van-task-row,
+  .van-agenda-item {
+    flex-direction: column;
+  }
 }
 
 .coach-session-card-status.status-finished {
