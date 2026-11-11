@@ -84,7 +84,7 @@ function CoachDashboard({ user }: Props) {
 
   const todayGroups = useMemo(
     () => fixedTrainings.filter((group) => group.weekday === weekdayKey),
-    [weekdayKey]
+    [fixedTrainings, weekdayKey]
   );
 
   const selectedLesson =
