@@ -5,7 +5,6 @@ import FormField from "../components/FormField";
 import ConfirmDialog from "../components/ConfirmDialog";
 import {
   DetailPanel,
-  DetailPanelEmpty,
   MasterDetailLayout,
   SelectionList,
   SelectionListItem,
@@ -128,16 +127,6 @@ function AdminVans() {
     };
   }, [tasks, today, vans]);
 
-  const urgentTasks = useMemo(
-    () =>
-      sortVanTasks(tasks).filter((task) => {
-        if (task.completed) return false;
-        const status = getVanTaskStatus(task, today);
-        return status === "overdue" || status === "due_soon";
-      }),
-    [tasks, today]
-  );
-
   const visibleVans = useMemo(() => {
     const filtered =
       fleetFilter === "active" ? vans.filter((van) => van.active) : vans;
@@ -205,6 +194,11 @@ function AdminVans() {
   }
 
   function selectVan(vanId: string) {
+    if (panelMode === "view" && selectedVanId === vanId) {
+      setSelectedVanId(null);
+      return;
+    }
+
     setSelectedVanId(vanId);
     setPanelMode("view");
     setTaskDraft({
@@ -213,6 +207,12 @@ function AdminVans() {
       dueDate: "",
       notes: "",
     });
+  }
+
+  function clearSelection() {
+    setSelectedVanId(null);
+    setPanelMode("view");
+    setVanForm(emptyVan());
   }
 
   function startQuickTask(taskType: "inspection" | "revision") {
@@ -343,10 +343,6 @@ function AdminVans() {
       console.error(error);
       toast.error("Erro ao remover tarefa.");
     }
-  }
-
-  function getVanName(vanId: string) {
-    return vans.find((van) => van.id === vanId)?.name || "Carrinha";
   }
 
   function renderTaskStatus(task: VanTask) {
@@ -485,6 +481,7 @@ function AdminVans() {
     return (
       <DetailPanel
         title={van.name}
+        onBack={clearSelection}
         actions={
           <div className="detail-panel-actions">
             <ActionButtons
@@ -666,45 +663,6 @@ function AdminVans() {
     );
   }
 
-  function renderEmptyDetail() {
-    if (urgentTasks.length === 0) {
-      return (
-        <DetailPanelEmpty message="Seleciona uma carrinha à esquerda ou regista uma nova." />
-      );
-    }
-
-    return (
-      <DetailPanel title="Agenda da frota">
-        <p className="muted van-agenda-intro">
-          Tarefas em atraso ou a chegar nos próximos 14 dias. Seleciona a
-          carrinha para gerir.
-        </p>
-        <div className="van-task-list">
-          {urgentTasks.map((task) => (
-            <button
-              key={task.id}
-              type="button"
-              className="van-agenda-item"
-              onClick={() => selectVan(task.vanId)}
-            >
-              <div className="van-task-row-main">
-                <div className="van-task-row-title">
-                  <strong>{task.title}</strong>
-                  {renderTaskStatus(task)}
-                </div>
-                <span className="van-task-row-meta">
-                  {getVanName(task.vanId)} ·{" "}
-                  {VAN_TASK_TYPE_LABELS[task.taskType]} ·{" "}
-                  {formatDateLabel(task.dueDate)}
-                </span>
-              </div>
-            </button>
-          ))}
-        </div>
-      </DetailPanel>
-    );
-  }
-
   return (
     <div className="dashboard-page">
       <header className="page-header">
@@ -749,7 +707,8 @@ function AdminVans() {
           </div>
 
           <MasterDetailLayout
-            showDetail={panelMode !== "view" || Boolean(selectedVan) || urgentTasks.length > 0}
+            showDetail={panelMode !== "view" || Boolean(selectedVan)}
+            emptyDetail={null}
             list={
               <SelectionList
                 title="Frota"
@@ -819,10 +778,7 @@ function AdminVans() {
                 ? renderVanForm()
                 : selectedVan
                   ? renderVanDetail(selectedVan)
-                  : renderEmptyDetail()
-            }
-            emptyDetail={
-              <DetailPanelEmpty message="Seleciona uma carrinha da frota." />
+                  : null
             }
           />
         </>

@@ -13,12 +13,24 @@ export function MasterDetailLayout({
   emptyDetail,
   showDetail = true,
 }: MasterDetailLayoutProps) {
+  const panelContent = showDetail
+    ? detail
+    : emptyDetail === undefined
+      ? <DetailPanelEmpty />
+      : emptyDetail;
+
   return (
-    <div className="master-detail-layout">
+    <div
+      className={
+        panelContent == null
+          ? "master-detail-layout master-detail-layout-list-only"
+          : "master-detail-layout"
+      }
+    >
       <div className="master-detail-list">{list}</div>
-      <div className="master-detail-panel">
-        {showDetail ? detail : emptyDetail ?? <DetailPanelEmpty />}
-      </div>
+      {panelContent != null ? (
+        <div className="master-detail-panel">{panelContent}</div>
+      ) : null}
     </div>
   );
 }
