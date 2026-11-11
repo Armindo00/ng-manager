@@ -292,6 +292,7 @@ function LessonDetailCard({ lesson, students }: Props) {
         <CoachAttendancePanel
           lesson={currentLesson}
           students={students}
+          onLessonUpdated={setCurrentLesson}
           onSaved={refreshLesson}
         />
       </div>
