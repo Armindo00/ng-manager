@@ -1,20 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import {
-  ArrowRight,
-  BarChart3,
-  Calendar,
-  CalendarClock,
-  CalendarDays,
-  CreditCard,
-  Package,
-  Star,
-  Truck,
-  UserCircle,
-  Users,
-  Wrench,
-} from "lucide-react";
-import type { LucideIcon } from "lucide-react";
 import type { Coach, Lesson, MonthlyEvaluation, Student } from "../types";
 import type { FixedTraining } from "../data/fixedTrainings";
 import { getStudents } from "../services/studentsService";
@@ -22,52 +7,15 @@ import { getCoaches } from "../services/coachesService";
 import { getLessons } from "../services/lessonsService";
 import { getEvaluations } from "../services/evaluationsService";
 import { ensureFixedTrainingsSeeded } from "../services/fixedTrainingsService";
-import Modal from "../components/Modal";
-import LessonDetailCard from "../components/LessonDetailCard";
 import { getCurrentMonthYear, getTodayDate } from "../utils/dateUtils";
-import {
-  getUpcomingCalendarEntries,
-  statusLabelForEntry,
-} from "../utils/fixedScheduleCalendar";
+import { formatSessionCoaches } from "../utils/sessionCoaches";
 
-type AdminSection =
-  | "dashboard"
-  | "setup"
-  | "students"
-  | "coaches"
-  | "fixed-trainings"
-  | "lessons"
-  | "inventory"
-  | "vans"
-  | "compensations"
-  | "evaluations"
-  | "payments"
-  | "coach-activity";
-
-type Props = {
-  onChangeSection: (section: AdminSection) => void;
-};
-
-type ModuleLink = {
-  section: AdminSection;
-  title: string;
-  detail: string;
-  icon: LucideIcon;
-};
-
-type ModuleGroup = {
-  title: string;
-  description: string;
-  items: ModuleLink[];
-};
-
-function AdminDashboard({ onChangeSection }: Props) {
+function AdminDashboard() {
   const [students, setStudents] = useState<Student[]>([]);
   const [coaches, setCoaches] = useState<Coach[]>([]);
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [evaluations, setEvaluations] = useState<MonthlyEvaluation[]>([]);
   const [fixedTrainings, setFixedTrainings] = useState<FixedTraining[]>([]);
-  const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -123,142 +71,29 @@ function AdminDashboard({ onChangeSection }: Props) {
     totalBooked === 0 ? 0 : Math.round((totalPresent / totalBooked) * 100);
 
   const today = getTodayDate();
-  const todayRegistered = lessons.filter(
-    (lesson) => lesson.date === today && lesson.status !== "draft"
-  );
+  const todayRegistered = lessons
+    .filter((lesson) => lesson.date === today && lesson.status !== "draft")
+    .sort((a, b) =>
+      (a.groupName || "").localeCompare(b.groupName || "", "pt")
+    );
   const todayOpen = todayRegistered.filter(
     (lesson) => lesson.status !== "finished"
   ).length;
+  const todayFinished = todayRegistered.length - todayOpen;
 
-  const upcoming = useMemo(
-    () => getUpcomingCalendarEntries(lessons, fixedTrainings, 5),
-    [lessons, fixedTrainings]
-  );
-
-  const attentionItems = [
+  const alerts = [
     pendingPayments > 0
-      ? {
-          id: "payments",
-          label: `${pendingPayments} mensalidade${pendingPayments === 1 ? "" : "s"} em falta`,
-          action: "Ver pagamentos" as const,
-          section: "payments" as AdminSection,
-        }
+      ? `${pendingPayments} mensalidade${pendingPayments === 1 ? "" : "s"} em falta`
       : null,
     todayOpen > 0
-      ? {
-          id: "today-open",
-          label:
-            todayOpen === 1
-              ? "1 sessão aberta hoje"
-              : `${todayOpen} sessões abertas hoje`,
-          action: "Ver calendário" as const,
-          section: "lessons" as AdminSection,
-        }
+      ? todayOpen === 1
+        ? "1 sessão ainda aberta hoje"
+        : `${todayOpen} sessões ainda abertas hoje`
       : null,
     evaluationsThisMonth === 0
-      ? {
-          id: "evaluations",
-          label: "Ainda sem avaliações este mês",
-          action: "Abrir avaliações" as const,
-          section: "evaluations" as AdminSection,
-        }
+      ? "Ainda sem avaliações este mês"
       : null,
-  ].filter(Boolean) as Array<{
-    id: string;
-    label: string;
-    action: string;
-    section: AdminSection;
-  }>;
-
-  const moduleGroups: ModuleGroup[] = [
-    {
-      title: "Pessoas",
-      description: "Fichas e contas da escola",
-      items: [
-        {
-          section: "students",
-          title: "Alunos",
-          detail: `${students.length} fichas`,
-          icon: Users,
-        },
-        {
-          section: "coaches",
-          title: "Treinadores",
-          detail: `${coaches.length} contas`,
-          icon: UserCircle,
-        },
-        {
-          section: "setup",
-          title: "Importação",
-          detail: "Alunos e passwords",
-          icon: Wrench,
-        },
-      ],
-    },
-    {
-      title: "Escala e treinos",
-      description: "Semana, histórico e totais",
-      items: [
-        {
-          section: "fixed-trainings",
-          title: "Grupos fixos",
-          detail: `${fixedTrainings.length} na escala`,
-          icon: CalendarDays,
-        },
-        {
-          section: "lessons",
-          title: "Calendário",
-          detail: `${todayRegistered.length} hoje`,
-          icon: Calendar,
-        },
-        {
-          section: "coach-activity",
-          title: "Relatório mensal",
-          detail: "Totais por treinador",
-          icon: BarChart3,
-        },
-      ],
-    },
-    {
-      title: "Gestão",
-      description: "Follow-up e logística",
-      items: [
-        {
-          section: "payments",
-          title: "Pagamentos",
-          detail:
-            pendingPayments > 0
-              ? `${pendingPayments} pendentes`
-              : "Em dia",
-          icon: CreditCard,
-        },
-        {
-          section: "evaluations",
-          title: "Avaliações",
-          detail: `${evaluationsThisMonth} este mês`,
-          icon: Star,
-        },
-        {
-          section: "compensations",
-          title: "Compensações",
-          detail: "Faltas a repor",
-          icon: CalendarClock,
-        },
-        {
-          section: "inventory",
-          title: "Inventário",
-          detail: "Material",
-          icon: Package,
-        },
-        {
-          section: "vans",
-          title: "Carrinhas",
-          detail: "Frota",
-          icon: Truck,
-        },
-      ],
-    },
-  ];
+  ].filter(Boolean) as string[];
 
   return (
     <div className="dashboard-page admin-dashboard">
@@ -266,8 +101,8 @@ function AdminDashboard({ onChangeSection }: Props) {
         <p className="page-eyebrow">Administração</p>
         <h1 className="page-title">Visão geral</h1>
         <p className="page-description">
-          Estado da escola e atalhos por área. Presenças do dia ficam em{" "}
-          <strong>Hoje</strong>, no menu principal.
+          Resumo do estado da escola. Para gerir alunos, escala ou pagamentos,
+          usa o menu.
         </p>
       </header>
 
@@ -277,14 +112,12 @@ function AdminDashboard({ onChangeSection }: Props) {
         <>
           <div className="stats-grid admin-snapshot-grid">
             <div className="card stat-card">
-              <span className="stat-label">Sessões hoje</span>
+              <span className="stat-label">Hoje</span>
               <strong className="stat-number">{todayRegistered.length}</strong>
               <span className="stat-hint">
-                {todayOpen > 0
-                  ? `${todayOpen} por concluir`
-                  : todayRegistered.length > 0
-                    ? "Todas concluídas"
-                    : "Nenhuma registada"}
+                {todayRegistered.length === 0
+                  ? "sem sessões registadas"
+                  : `${todayFinished} concluída${todayFinished === 1 ? "" : "s"} · ${todayOpen} aberta${todayOpen === 1 ? "" : "s"}`}
               </span>
             </div>
             <div className="card stat-card">
@@ -300,126 +133,79 @@ function AdminDashboard({ onChangeSection }: Props) {
               <span className="stat-hint">média global</span>
             </div>
             <div className="card stat-card">
-              <span className="stat-label">Escala</span>
-              <strong className="stat-number">{fixedTrainings.length}</strong>
-              <span className="stat-hint">grupos fixos</span>
+              <span className="stat-label">Escola</span>
+              <strong className="stat-number">{students.length}</strong>
+              <span className="stat-hint">
+                alunos · {coaches.length} treinador
+                {coaches.length === 1 ? "" : "es"} · {fixedTrainings.length}{" "}
+                grupos
+              </span>
             </div>
           </div>
 
-          {attentionItems.length > 0 && (
+          {alerts.length > 0 && (
             <section className="card section-card admin-attention-card">
               <div className="admin-section-heading">
                 <div>
-                  <span className="admin-section-kicker">Prioridade</span>
-                  <h2>Precisa de atenção</h2>
+                  <span className="admin-section-kicker">Atenção</span>
+                  <h2>Pontos a acompanhar</h2>
                 </div>
               </div>
-
-              <div className="admin-attention-list">
-                {attentionItems.map((item) => (
-                  <button
-                    type="button"
-                    className="admin-attention-row"
-                    key={item.id}
-                    onClick={() => onChangeSection(item.section)}
-                  >
-                    <span>{item.label}</span>
-                    <span className="admin-attention-action">
-                      {item.action}
-                      <ArrowRight size={16} strokeWidth={2.2} />
-                    </span>
-                  </button>
+              <ul className="admin-alert-list">
+                {alerts.map((alert) => (
+                  <li key={alert}>{alert}</li>
                 ))}
-              </div>
+              </ul>
             </section>
           )}
-
-          <div className="admin-module-groups">
-            {moduleGroups.map((group) => (
-              <section className="card section-card admin-module-group" key={group.title}>
-                <div className="admin-section-heading">
-                  <div>
-                    <span className="admin-section-kicker">{group.title}</span>
-                    <h2>{group.description}</h2>
-                  </div>
-                </div>
-
-                <div className="admin-module-grid">
-                  {group.items.map((item) => {
-                    const Icon = item.icon;
-                    return (
-                      <button
-                        type="button"
-                        className="admin-module-card"
-                        key={item.section}
-                        onClick={() => onChangeSection(item.section)}
-                      >
-                        <span className="admin-module-icon">
-                          <Icon size={18} strokeWidth={2} />
-                        </span>
-                        <strong>{item.title}</strong>
-                        <span>{item.detail}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </section>
-            ))}
-          </div>
 
           <section className="card section-card">
             <div className="admin-section-heading">
               <div>
-                <span className="admin-section-kicker">Próximos</span>
-                <h2>Na escala</h2>
+                <span className="admin-section-kicker">Hoje</span>
+                <h2>Sessões registadas</h2>
               </div>
-              <button
-                type="button"
-                className="compact-btn"
-                onClick={() => onChangeSection("lessons")}
-              >
-                Calendário completo
-              </button>
             </div>
 
-            {upcoming.length === 0 ? (
-              <p className="muted">Sem grupos próximos na escala.</p>
+            {todayRegistered.length === 0 ? (
+              <p className="muted">
+                Ainda não há sessões registadas hoje. Os treinadores fazem-no em
+                Hoje.
+              </p>
             ) : (
-              <div className="admin-upcoming-list">
-                {upcoming.map((entry) => (
-                  <button
-                    type="button"
-                    className="admin-upcoming-row"
-                    key={entry.id}
-                    onClick={() => {
-                      if (entry.lesson) setSelectedLesson(entry.lesson);
-                      else onChangeSection("lessons");
-                    }}
-                  >
-                    <div className="admin-upcoming-main">
-                      <strong>{entry.title}</strong>
-                      <span>
-                        {entry.date}
-                        {entry.coachName ? ` · ${entry.coachName}` : ""}
+              <div className="admin-summary-list">
+                {todayRegistered.map((lesson) => {
+                  const present = lesson.presentStudentIds.filter((id) =>
+                    lesson.bookedStudentIds.includes(id)
+                  ).length;
+                  const status =
+                    lesson.status === "finished" ? "Concluído" : "Aberto";
+
+                  return (
+                    <div className="admin-summary-row" key={lesson.id}>
+                      <div className="admin-summary-main">
+                        <strong>{lesson.groupName || "Treino"}</strong>
+                        <span>
+                          {formatSessionCoaches(
+                            lesson.coachName,
+                            lesson.secondaryCoachName
+                          )}{" "}
+                          · {present}/{lesson.bookedStudentIds.length} presentes
+                        </span>
+                      </div>
+                      <span
+                        className={`admin-summary-status${
+                          lesson.status === "finished" ? " is-done" : ""
+                        }`}
+                      >
+                        {status}
                       </span>
                     </div>
-                    <span className="admin-upcoming-status">
-                      {statusLabelForEntry(entry)}
-                    </span>
-                  </button>
-                ))}
+                  );
+                })}
               </div>
             )}
           </section>
-
-          {selectedLesson && (
-            <Modal
-              title="Ficha do treino"
-              onClose={() => setSelectedLesson(null)}
-            >
-              <LessonDetailCard lesson={selectedLesson} students={students} />
-            </Modal>
-          )}
         </>
       )}
     </div>

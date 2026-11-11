@@ -228,7 +228,7 @@ function App() {
           )}
 
           {currentUser.role === "admin" && activeSection === "dashboard" && (
-            <AdminDashboard onChangeSection={setActiveSection} />
+            <AdminDashboard />
           )}
 
           {currentUser.role === "admin" && activeSection === "setup" && (
