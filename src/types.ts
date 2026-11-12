@@ -17,6 +17,8 @@ export type Student = {
   email: string;
   level: string;
   monthlyLimit: number;
+  /** Valor mensal esperado da mensalidade (€). */
+  monthlyFee: number;
   paid: boolean;
   pickup: string;
   mainCoach: string;

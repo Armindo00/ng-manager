@@ -8,6 +8,7 @@ type DbStudent = {
   email: string;
   level: string;
   monthly_limit: number;
+  monthly_fee?: number | null;
   paid: boolean;
   pickup: string;
   main_coach: string;
@@ -22,6 +23,7 @@ function fromDb(student: DbStudent): Student {
     email: student.email,
     level: student.level,
     monthlyLimit: student.monthly_limit,
+    monthlyFee: Number(student.monthly_fee ?? 0),
     paid: student.paid,
     pickup: student.pickup,
     mainCoach: student.main_coach,
@@ -37,6 +39,7 @@ function toDb(student: Student) {
     email: student.email,
     level: student.level,
     monthly_limit: student.monthlyLimit,
+    monthly_fee: student.monthlyFee,
     paid: student.paid,
     pickup: student.pickup,
     main_coach: student.mainCoach,
@@ -77,19 +80,54 @@ export async function getCurrentStudent(user: { role: string; studentId?: string
   return fromDb(data);
 }
 
-export async function addStudent(student: Student) {
-  const { error } = await supabase.from("students").insert(toDb(student));
+function isMissingMonthlyFeeColumn(error: { message?: string; code?: string }) {
+  const message = (error.message || "").toLowerCase();
+  return (
+    message.includes("monthly_fee") &&
+    (message.includes("column") ||
+      message.includes("schema cache") ||
+      error.code === "PGRST204")
+  );
+}
 
-  if (error) throw error;
+function toDbWithoutMonthlyFee(student: Student) {
+  const payload = toDb(student);
+  delete (payload as { monthly_fee?: number }).monthly_fee;
+  return payload;
+}
+
+export async function addStudent(student: Student) {
+  const payload = toDb(student);
+  const { error } = await supabase.from("students").insert(payload);
+
+  if (!error) return;
+
+  if (!isMissingMonthlyFeeColumn(error)) throw error;
+
+  const { error: fallbackError } = await supabase
+    .from("students")
+    .insert(toDbWithoutMonthlyFee(student));
+
+  if (fallbackError) throw fallbackError;
 }
 
 export async function updateStudent(student: Student) {
+  const payload = toDb(student);
   const { error } = await supabase
     .from("students")
-    .update(toDb(student))
+    .update(payload)
     .eq("id", student.id);
 
-  if (error) throw error;
+  if (!error) return;
+
+  if (!isMissingMonthlyFeeColumn(error)) throw error;
+
+  const { error: fallbackError } = await supabase
+    .from("students")
+    .update(toDbWithoutMonthlyFee(student))
+    .eq("id", student.id);
+
+  if (fallbackError) throw fallbackError;
 }
 
 export async function deleteStudent(id: string) {

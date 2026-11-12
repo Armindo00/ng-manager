@@ -57,6 +57,7 @@ export async function importFixedStudents() {
       email: "",
       level: "",
       monthlyLimit: 0,
+      monthlyFee: 0,
       paid: false,
       pickup: "",
       mainCoach: "",
