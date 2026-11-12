@@ -2600,11 +2600,141 @@ textarea:focus {
   font-size: 14px;
 }
 
-.payments-matrix-table tbody th.payments-matrix-student-col span {
+.payments-matrix-table tbody th.payments-matrix-student-col span,
+.payments-matrix-table tbody th.payments-matrix-student-col .payments-student-link {
   display: block;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.payments-student-link {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  text-align: left;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 750;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: rgba(15, 118, 110, 0.35);
+  text-underline-offset: 3px;
+}
+
+.payments-student-link:hover {
+  color: #0f766e;
+  text-decoration-color: #0f766e;
+}
+
+.student-payment-back {
+  margin-bottom: 10px;
+}
+
+.student-payment-plan-card {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  padding: 18px;
+  margin-bottom: 18px;
+}
+
+.student-payment-plan-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.student-payment-plan-summary {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: #f7fafc;
+}
+
+.student-payment-plan-summary span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.student-payment-plan-summary strong {
+  color: var(--ink);
+  font-size: 18px;
+  letter-spacing: -0.02em;
+}
+
+.student-payment-plan-summary p {
+  margin: 0;
+  font-size: 13px;
+}
+
+.student-payment-months-toolbar {
+  grid-template-columns: 140px !important;
+}
+
+.student-payment-months-wrap {
+  overflow: auto;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-md);
+  background: #fff;
+}
+
+.student-payment-months-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 860px;
+  font-variant-numeric: tabular-nums;
+}
+
+.student-payment-months-table th,
+.student-payment-months-table td {
+  border: 1px solid #d7e0ea;
+  padding: 10px 12px;
+  text-align: left;
+  vertical-align: middle;
+  font-size: 14px;
+}
+
+.student-payment-months-table thead th {
+  background: #eef4f7;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.student-payment-months-table tbody th {
+  background: #f7fafc;
+  font-weight: 750;
+  color: var(--ink);
+}
+
+.student-payment-months-table tbody tr.is-current-month th,
+.student-payment-months-table tbody tr.is-current-month td {
+  background: #f0faf8;
+}
+
+.student-payment-amount-input {
+  width: 100%;
+  min-width: 88px;
+  max-width: 120px;
+}
+
+.student-payment-month-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .payments-matrix-cell {
@@ -2709,6 +2839,10 @@ textarea:focus {
   }
 
   .payments-matrix-toolbar-main {
+    grid-template-columns: 1fr;
+  }
+
+  .student-payment-plan-grid {
     grid-template-columns: 1fr;
   }
 

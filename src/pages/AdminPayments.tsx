@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
-import type { Student } from "../types";
+import type { Lesson, Student } from "../types";
 import { getStudents } from "../services/studentsService";
+import { getLessons } from "../services/lessonsService";
 import {
   getPayments,
   addPayment,
@@ -14,7 +15,12 @@ import {
 import FormField from "../components/FormField";
 import ConfirmDialog from "../components/ConfirmDialog";
 import Modal from "../components/Modal";
+import StudentPaymentDetail from "../components/StudentPaymentDetail";
 import { getCurrentMonthYear, getTodayDate } from "../utils/dateUtils";
+import {
+  DEFAULT_MONTHLY_FEE,
+  resolveStudentMonthlyFee,
+} from "../utils/studentPaymentPlan";
 
 const MONTH_LABELS = [
   "Jan",
@@ -31,7 +37,7 @@ const MONTH_LABELS = [
   "Dez",
 ];
 
-const DEFAULT_AMOUNT = 80;
+const DEFAULT_AMOUNT = DEFAULT_MONTHLY_FEE;
 
 type CellTarget = {
   studentId: string;
@@ -43,11 +49,15 @@ type CellTarget = {
 function AdminPayments() {
   const [students, setStudents] = useState<Student[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
+  const [lessons, setLessons] = useState<Lesson[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
   const currentPeriod = getCurrentMonthYear();
   const [selectedYear, setSelectedYear] = useState(currentPeriod.year);
+  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(
+    null
+  );
   const [defaultAmount, setDefaultAmount] = useState(String(DEFAULT_AMOUNT));
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [cellTarget, setCellTarget] = useState<CellTarget | null>(null);
@@ -62,10 +72,6 @@ function AdminPayments() {
   const [notes, setNotes] = useState("");
   const matrixWrapRef = useRef<HTMLDivElement | null>(null);
   const savedMatrixScroll = useRef<{ top: number; left: number } | null>(null);
-
-  useEffect(() => {
-    loadData();
-  }, []);
 
   function rememberMatrixScroll() {
     const wrap = matrixWrapRef.current;
@@ -110,12 +116,14 @@ function AdminPayments() {
 
     try {
       if (!silent) setLoading(true);
-      const [studentsData, paymentsData] = await Promise.all([
+      const [studentsData, paymentsData, lessonsData] = await Promise.all([
         getStudents(),
         getPayments(),
+        getLessons(),
       ]);
       setStudents(studentsData);
       setPayments(paymentsData);
+      setLessons(lessonsData);
     } catch (error) {
       console.error(error);
       toast.error("Erro ao carregar pagamentos.");
@@ -126,6 +134,10 @@ function AdminPayments() {
       }
     }
   }
+
+  useEffect(() => {
+    loadData();
+  }, []);
 
   const paymentMap = useMemo(() => {
     const map = new Map<string, Payment>();
@@ -188,14 +200,23 @@ function AdminPayments() {
     const fromDefault = Number(defaultAmount);
     if (Number.isFinite(fromDefault) && fromDefault > 0) return fromDefault;
 
-    const previous = payments
-      .filter(
-        (payment) =>
-          payment.studentId === studentIdValue && payment.status === "paid"
-      )
-      .sort((a, b) => b.year - a.year || b.month - a.month)[0];
+    const student = students.find((item) => item.id === studentIdValue);
+    if (student) {
+      return resolveStudentMonthlyFee(student, payments, DEFAULT_AMOUNT);
+    }
 
-    return previous?.amount || DEFAULT_AMOUNT;
+    return DEFAULT_AMOUNT;
+  }
+
+  const selectedStudent =
+    students.find((student) => student.id === selectedStudentId) || null;
+
+  function handleStudentUpdated(nextStudent: Student) {
+    setStudents((current) =>
+      current.map((student) =>
+        student.id === nextStudent.id ? nextStudent : student
+      )
+    );
   }
 
   function resetCreateForm(overrides?: Partial<{
@@ -422,6 +443,23 @@ function AdminPayments() {
     return "Pend.";
   }
 
+  if (selectedStudent) {
+    return (
+      <StudentPaymentDetail
+        key={`${selectedStudent.id}-${selectedYear}`}
+        student={selectedStudent}
+        payments={payments}
+        lessons={lessons}
+        selectedYear={selectedYear}
+        yearOptions={yearOptions}
+        onYearChange={setSelectedYear}
+        onBack={() => setSelectedStudentId(null)}
+        onStudentUpdated={handleStudentUpdated}
+        onPaymentUpserted={upsertLocalPayment}
+      />
+    );
+  }
+
   return (
     <div className="dashboard-page payments-page">
       <header className="page-header payments-page-header">
@@ -496,8 +534,9 @@ function AdminPayments() {
           </div>
 
           <p className="muted payments-matrix-hint">
-            Clica numa célula vazia ou pendente para marcar como pago. Clica num
-            pago para ver detalhes.
+            Clica no nome do aluno para abrir a ficha com treinos e valores.
+            Clica numa célula vazia ou pendente para marcar como pago; num pago
+            para ver detalhes.
           </p>
         </div>
 
@@ -530,7 +569,13 @@ function AdminPayments() {
                 {visibleStudents.map((student) => (
                   <tr key={student.id}>
                     <th scope="row" className="payments-matrix-student-col">
-                      <span>{student.name}</span>
+                      <button
+                        type="button"
+                        className="payments-student-link"
+                        onClick={() => setSelectedStudentId(student.id)}
+                      >
+                        {student.name}
+                      </button>
                     </th>
                     {MONTH_LABELS.map((_, index) => {
                       const monthValue = index + 1;

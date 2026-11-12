@@ -46,6 +46,7 @@ function AdminArea() {
   const [email, setEmail] = useState("");
   const [level, setLevel] = useState("");
   const [monthlyLimit, setMonthlyLimit] = useState("");
+  const [monthlyFee, setMonthlyFee] = useState("");
   const [pickup, setPickup] = useState("");
   const [mainCoach, setMainCoach] = useState("");
   const [notes, setNotes] = useState("");
@@ -95,6 +96,7 @@ function AdminArea() {
     setEmail("");
     setLevel("");
     setMonthlyLimit("");
+    setMonthlyFee("");
     setPickup("");
     setMainCoach("");
     setNotes("");
@@ -128,6 +130,12 @@ function AdminArea() {
       return;
     }
 
+    const feeNumber = monthlyFee.trim() === "" ? 0 : Number(monthlyFee);
+    if (!Number.isFinite(feeNumber) || feeNumber < 0) {
+      toast.error("Valor mensal inválido.");
+      return;
+    }
+
     const student: Student = {
       id: editingId || crypto.randomUUID(),
       name: name.trim(),
@@ -135,6 +143,7 @@ function AdminArea() {
       email: normalizedEmail,
       level,
       monthlyLimit: Number(monthlyLimit),
+      monthlyFee: feeNumber,
       paid: false,
       pickup,
       mainCoach,
@@ -145,7 +154,10 @@ function AdminArea() {
       if (editingId) {
         const oldStudent = students.find((item) => item.id === editingId);
 
-        await updateStudent({ ...student, paid: oldStudent?.paid ?? false });
+        await updateStudent({
+          ...student,
+          paid: oldStudent?.paid ?? false,
+        });
 
         const access = accessMap.get(editingId);
 
@@ -179,6 +191,7 @@ function AdminArea() {
     setEmail(student.email);
     setLevel(student.level);
     setMonthlyLimit(String(student.monthlyLimit));
+    setMonthlyFee(student.monthlyFee ? String(student.monthlyFee) : "");
     setPickup(student.pickup);
     setMainCoach(student.mainCoach);
     setNotes(student.notes);
@@ -252,6 +265,15 @@ function AdminArea() {
               placeholder="Ex: 8"
               value={monthlyLimit}
               onChange={(e) => setMonthlyLimit(e.target.value)}
+            />
+          </FormField>
+          <FormField label="Mensalidade (€)">
+            <input
+              type="text"
+              inputMode="decimal"
+              placeholder="Ex: 80"
+              value={monthlyFee}
+              onChange={(e) => setMonthlyFee(e.target.value)}
             />
           </FormField>
           <FormField label="Pickup habitual">

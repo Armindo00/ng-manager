@@ -39,6 +39,13 @@ function StudentProfileCard({ student }: Props) {
         </div>
 
         <div>
+          <span>Mensalidade</span>
+          <strong>
+            {student.monthlyFee > 0 ? `${student.monthlyFee}€` : "Por definir"}
+          </strong>
+        </div>
+
+        <div>
           <span>Pickup habitual</span>
           <strong>{student.pickup || "Não definido"}</strong>
         </div>

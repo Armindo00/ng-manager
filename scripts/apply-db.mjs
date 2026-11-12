@@ -23,6 +23,7 @@ const APPLY_ORDER = [
   "inventory-condition-matrix.sql",
   "evaluations-share.sql",
   "login-resolve.sql",
+  "students-monthly-fee.sql",
 ];
 
 if (!token) {

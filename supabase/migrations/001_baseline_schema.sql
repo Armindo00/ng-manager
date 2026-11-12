@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS students (
   email text NOT NULL DEFAULT '',
   level text NOT NULL DEFAULT '',
   monthly_limit integer NOT NULL DEFAULT 0,
+  monthly_fee numeric(10, 2) NOT NULL DEFAULT 0,
   paid boolean NOT NULL DEFAULT false,
   pickup text NOT NULL DEFAULT '',
   main_coach text NOT NULL DEFAULT '',
