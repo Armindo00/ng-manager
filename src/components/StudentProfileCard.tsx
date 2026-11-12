@@ -1,10 +1,13 @@
 import type { Student } from "../types";
+import { billingTypeLabel } from "../utils/studentPaymentPlan";
 
 type Props = {
   student: Student;
 };
 
 function StudentProfileCard({ student }: Props) {
+  const isPack = student.billingType === "pack";
+
   return (
     <div className="student-profile-card">
       <div className="student-profile-header">
@@ -34,16 +37,43 @@ function StudentProfileCard({ student }: Props) {
         </div>
 
         <div>
-          <span>Plano</span>
-          <strong>{student.monthlyLimit} treinos/mês</strong>
+          <span>Tipo de registo</span>
+          <strong>{billingTypeLabel(student.billingType)}</strong>
         </div>
 
-        <div>
-          <span>Mensalidade</span>
-          <strong>
-            {student.monthlyFee > 0 ? `${student.monthlyFee}€` : "Por definir"}
-          </strong>
-        </div>
+        {isPack ? (
+          <>
+            <div>
+              <span>Pack</span>
+              <strong>
+                {student.packRemaining}/{student.packSize} treinos
+              </strong>
+            </div>
+
+            <div>
+              <span>Valor do pack</span>
+              <strong>
+                {student.packPrice > 0 ? `${student.packPrice}€` : "Por definir"}
+              </strong>
+            </div>
+          </>
+        ) : (
+          <>
+            <div>
+              <span>Plano</span>
+              <strong>{student.monthlyLimit} treinos/mês</strong>
+            </div>
+
+            <div>
+              <span>Mensalidade</span>
+              <strong>
+                {student.monthlyFee > 0
+                  ? `${student.monthlyFee}€`
+                  : "Por definir"}
+              </strong>
+            </div>
+          </>
+        )}
 
         <div>
           <span>Pickup habitual</span>

@@ -10,15 +10,25 @@ export type User = {
   blocked?: boolean;
 };
 
+export type StudentBillingType = "monthly" | "pack";
+
 export type Student = {
   id: string;
   name: string;
   phone: string;
   email: string;
   level: string;
+  /** Mensalidade ou pack de treinos. */
+  billingType: StudentBillingType;
   monthlyLimit: number;
   /** Valor mensal esperado da mensalidade (€). */
   monthlyFee: number;
+  /** Treinos incluídos no pack atual. */
+  packSize: number;
+  /** Valor do pack (€). */
+  packPrice: number;
+  /** Treinos ainda por usar no pack. */
+  packRemaining: number;
   paid: boolean;
   pickup: string;
   mainCoach: string;

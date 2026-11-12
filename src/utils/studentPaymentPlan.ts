@@ -4,11 +4,16 @@ import { isDateInMonthYear } from "./dateUtils";
 
 export const DEFAULT_MONTHLY_FEE = 80;
 
+export function isPackStudent(student: Pick<Student, "billingType">) {
+  return student.billingType === "pack";
+}
+
 export function resolveStudentMonthlyFee(
   student: Student,
   payments: Payment[],
   fallback = DEFAULT_MONTHLY_FEE
 ) {
+  if (isPackStudent(student) && student.packPrice > 0) return student.packPrice;
   if (student.monthlyFee > 0) return student.monthlyFee;
 
   const previous = payments
@@ -36,6 +41,12 @@ export function countStudentTrainingsInMonth(
   ).length;
 }
 
+export function countStudentTrainingsTotal(studentId: string, lessons: Lesson[]) {
+  return lessons.filter((lesson) =>
+    lesson.presentStudentIds.includes(studentId)
+  ).length;
+}
+
 /** Sugere valor proporcional aos treinos feitos, sem ultrapassar a mensalidade. */
 export function suggestAmountForTrainings(
   monthlyFee: number,
@@ -47,4 +58,8 @@ export function suggestAmountForTrainings(
 
   const ratio = Math.min(1, Math.max(0, trainingsDone) / monthlyLimit);
   return Math.round(monthlyFee * ratio * 100) / 100;
+}
+
+export function billingTypeLabel(billingType: Student["billingType"]) {
+  return billingType === "pack" ? "Pack" : "Mensalidade";
 }
