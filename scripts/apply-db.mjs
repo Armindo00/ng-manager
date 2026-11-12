@@ -24,6 +24,7 @@ const APPLY_ORDER = [
   "evaluations-share.sql",
   "login-resolve.sql",
   "students-monthly-fee.sql",
+  "students-billing-type.sql",
 ];
 
 if (!token) {

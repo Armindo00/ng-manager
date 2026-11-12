@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
-import type { Lesson, Student } from "../types";
+import type { Lesson, Student, StudentBillingType } from "../types";
 import { getStudents } from "../services/studentsService";
 import { getLessons } from "../services/lessonsService";
 import {
@@ -19,8 +19,11 @@ import StudentPaymentDetail from "../components/StudentPaymentDetail";
 import { getCurrentMonthYear, getTodayDate } from "../utils/dateUtils";
 import {
   DEFAULT_MONTHLY_FEE,
+  isPackStudent,
   resolveStudentMonthlyFee,
 } from "../utils/studentPaymentPlan";
+
+type BillingFilter = "all" | StudentBillingType;
 
 const MONTH_LABELS = [
   "Jan",
@@ -53,6 +56,7 @@ function AdminPayments() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
+  const [billingFilter, setBillingFilter] = useState<BillingFilter>("all");
   const currentPeriod = getCurrentMonthYear();
   const [selectedYear, setSelectedYear] = useState(currentPeriod.year);
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(
@@ -159,11 +163,14 @@ function AdminPayments() {
   const visibleStudents = useMemo(() => {
     const term = search.trim().toLowerCase();
     return [...students]
-      .filter((student) =>
-        term ? student.name.toLowerCase().includes(term) : true
-      )
+      .filter((student) => {
+        if (billingFilter !== "all" && student.billingType !== billingFilter) {
+          return false;
+        }
+        return term ? student.name.toLowerCase().includes(term) : true;
+      })
       .sort((a, b) => a.name.localeCompare(b.name, "pt"));
-  }, [students, search]);
+  }, [students, search, billingFilter]);
 
   const yearPayments = useMemo(
     () => payments.filter((payment) => payment.year === selectedYear),
@@ -173,6 +180,13 @@ function AdminPayments() {
   const stats = useMemo(() => {
     const pending = yearPayments.filter((payment) => payment.status === "pending");
     const paid = yearPayments.filter((payment) => payment.status === "paid");
+    const monthlyStudents = visibleStudents.filter(
+      (student) => !isPackStudent(student)
+    );
+    const monthlyStudentIds = new Set(monthlyStudents.map((student) => student.id));
+    const monthlyYearPayments = yearPayments.filter((payment) =>
+      monthlyStudentIds.has(payment.studentId)
+    );
     return {
       pending: pending.length,
       paid: paid.length,
@@ -180,11 +194,12 @@ function AdminPayments() {
       paidAmount: paid.reduce((sum, payment) => sum + payment.amount, 0),
       missingCells: Math.max(
         0,
-        visibleStudents.length * 12 -
-          yearPayments.filter((payment) => payment.status !== "cancelled").length
+        monthlyStudents.length * 12 -
+          monthlyYearPayments.filter((payment) => payment.status !== "cancelled")
+            .length
       ),
     };
-  }, [yearPayments, visibleStudents.length]);
+  }, [yearPayments, visibleStudents]);
 
   function getStudentName(id: string) {
     return students.find((student) => student.id === id)?.name || "Aluno";
@@ -496,7 +511,7 @@ function AdminPayments() {
 
       <section className="payments-matrix-card">
         <div className="payments-matrix-toolbar">
-          <div className="payments-matrix-toolbar-main">
+          <div className="payments-matrix-toolbar-main payments-matrix-toolbar-main-wide">
             <label className="field-label">
               Ano
               <select
@@ -508,6 +523,20 @@ function AdminPayments() {
                     {yearOption}
                   </option>
                 ))}
+              </select>
+            </label>
+
+            <label className="field-label">
+              Tipo
+              <select
+                value={billingFilter}
+                onChange={(event) =>
+                  setBillingFilter(event.target.value as BillingFilter)
+                }
+              >
+                <option value="all">Todos</option>
+                <option value="monthly">Mensalidade</option>
+                <option value="pack">Pack</option>
               </select>
             </label>
 
@@ -534,7 +563,7 @@ function AdminPayments() {
           </div>
 
           <p className="muted payments-matrix-hint">
-            Clica no nome do aluno para abrir a ficha com treinos e valores.
+            Clica no nome do aluno para abrir a ficha (mensalidade ou pack).
             Clica numa célula vazia ou pendente para marcar como pago; num pago
             para ver detalhes.
           </p>
@@ -574,7 +603,15 @@ function AdminPayments() {
                         className="payments-student-link"
                         onClick={() => setSelectedStudentId(student.id)}
                       >
-                        {student.name}
+                        <span>{student.name}</span>
+                        {isPackStudent(student) && (
+                          <span className="student-billing-badge is-pack compact">
+                            Pack
+                            {student.packSize > 0
+                              ? ` ${student.packRemaining}/${student.packSize}`
+                              : ""}
+                          </span>
+                        )}
                       </button>
                     </th>
                     {MONTH_LABELS.map((_, index) => {

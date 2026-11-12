@@ -18,6 +18,12 @@ CREATE TABLE IF NOT EXISTS students (
   level text NOT NULL DEFAULT '',
   monthly_limit integer NOT NULL DEFAULT 0,
   monthly_fee numeric(10, 2) NOT NULL DEFAULT 0,
+  billing_type text NOT NULL DEFAULT 'monthly' CHECK (
+    billing_type IN ('monthly', 'pack')
+  ),
+  pack_size integer NOT NULL DEFAULT 0,
+  pack_price numeric(10, 2) NOT NULL DEFAULT 0,
+  pack_remaining integer NOT NULL DEFAULT 0,
   paid boolean NOT NULL DEFAULT false,
   pickup text NOT NULL DEFAULT '',
   main_coach text NOT NULL DEFAULT '',

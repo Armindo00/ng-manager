@@ -2536,6 +2536,47 @@ textarea:focus {
   align-items: end;
 }
 
+.payments-matrix-toolbar-main-wide {
+  grid-template-columns: 110px 140px minmax(180px, 1fr) 140px;
+}
+
+.student-billing-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+  font-size: 12px;
+  font-weight: 750;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.student-billing-badge.is-monthly {
+  background: #eef6f8;
+  color: #0f766e;
+}
+
+.student-billing-badge.is-pack {
+  background: #fff7ed;
+  color: #b45309;
+  border-color: #fdba74;
+}
+
+.student-billing-badge.compact {
+  margin-top: 4px;
+  padding: 2px 7px;
+  font-size: 10px;
+}
+
+.student-payment-pack-history {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
 .payments-matrix-hint {
   margin: 0;
   font-size: 13px;
@@ -2600,12 +2641,23 @@ textarea:focus {
   font-size: 14px;
 }
 
-.payments-matrix-table tbody th.payments-matrix-student-col span,
 .payments-matrix-table tbody th.payments-matrix-student-col .payments-student-link {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  max-width: 100%;
+}
+
+.payments-matrix-table tbody th.payments-matrix-student-col .payments-student-link > span:first-child {
   display: block;
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  text-decoration: underline;
+  text-decoration-color: rgba(15, 118, 110, 0.35);
+  text-underline-offset: 3px;
 }
 
 .payments-student-link {
@@ -2618,9 +2670,6 @@ textarea:focus {
   font: inherit;
   font-weight: 750;
   cursor: pointer;
-  text-decoration: underline;
-  text-decoration-color: rgba(15, 118, 110, 0.35);
-  text-underline-offset: 3px;
 }
 
 .payments-student-link:hover {
@@ -2838,7 +2887,8 @@ textarea:focus {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .payments-matrix-toolbar-main {
+  .payments-matrix-toolbar-main,
+  .payments-matrix-toolbar-main-wide {
     grid-template-columns: 1fr;
   }
 
