@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import type { Student } from "../types";
 import { getStudents } from "../services/studentsService";
@@ -60,14 +60,56 @@ function AdminPayments() {
   const [status, setStatus] = useState<PaymentStatus>("paid");
   const [paymentMethod, setPaymentMethod] = useState("");
   const [notes, setNotes] = useState("");
+  const matrixWrapRef = useRef<HTMLDivElement | null>(null);
+  const savedMatrixScroll = useRef<{ top: number; left: number } | null>(null);
 
   useEffect(() => {
     loadData();
   }, []);
 
-  async function loadData() {
+  function rememberMatrixScroll() {
+    const wrap = matrixWrapRef.current;
+    if (!wrap) return;
+    savedMatrixScroll.current = {
+      top: wrap.scrollTop,
+      left: wrap.scrollLeft,
+    };
+  }
+
+  function restoreMatrixScroll() {
+    const saved = savedMatrixScroll.current;
+    const wrap = matrixWrapRef.current;
+    if (!saved || !wrap) return;
+    wrap.scrollTop = saved.top;
+    wrap.scrollLeft = saved.left;
+  }
+
+  function upsertLocalPayment(nextPayment: Payment) {
+    setPayments((current) => {
+      const index = current.findIndex((payment) => payment.id === nextPayment.id);
+      if (index === -1) {
+        const withoutSameMonth = current.filter(
+          (payment) =>
+            !(
+              payment.studentId === nextPayment.studentId &&
+              payment.month === nextPayment.month &&
+              payment.year === nextPayment.year
+            )
+        );
+        return [nextPayment, ...withoutSameMonth];
+      }
+      const copy = [...current];
+      copy[index] = nextPayment;
+      return copy;
+    });
+  }
+
+  async function loadData(options?: { silent?: boolean }) {
+    const silent = options?.silent === true;
+    if (silent) rememberMatrixScroll();
+
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const [studentsData, paymentsData] = await Promise.all([
         getStudents(),
         getPayments(),
@@ -78,7 +120,10 @@ function AdminPayments() {
       console.error(error);
       toast.error("Erro ao carregar pagamentos.");
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
+      if (silent) {
+        requestAnimationFrame(() => restoreMatrixScroll());
+      }
     }
   }
 
@@ -220,7 +265,8 @@ function AdminPayments() {
 
       await addPayment(newPayment);
       await syncStudentPaidStatus(studentId);
-      await loadData();
+      upsertLocalPayment(newPayment);
+      await loadData({ silent: true });
       setShowCreateModal(false);
       setSelectedYear(yearNumber);
       toast.success("Pagamento registado.");
@@ -244,73 +290,89 @@ function AdminPayments() {
       return;
     }
 
+    rememberMatrixScroll();
+
     try {
       setSaving(true);
+      const nextPayment: Payment = existing
+        ? {
+            ...existing,
+            status: "paid",
+            paymentDate: getTodayDate(),
+          }
+        : {
+            id: crypto.randomUUID(),
+            studentId: student.id,
+            month: monthValue,
+            year: selectedYear,
+            amount: suggestedAmount(student.id),
+            status: "paid",
+            paymentDate: getTodayDate(),
+            paymentMethod: null,
+            notes: null,
+          };
+
       if (existing) {
-        await updatePayment({
-          ...existing,
-          status: "paid",
-          paymentDate: getTodayDate(),
-        });
+        await updatePayment(nextPayment);
       } else {
-        await addPayment({
-          id: crypto.randomUUID(),
-          studentId: student.id,
-          month: monthValue,
-          year: selectedYear,
-          amount: suggestedAmount(student.id),
-          status: "paid",
-          paymentDate: getTodayDate(),
-          paymentMethod: null,
-          notes: null,
-        });
+        await addPayment(nextPayment);
       }
       await syncStudentPaidStatus(student.id);
-      await loadData();
+      upsertLocalPayment(nextPayment);
+      requestAnimationFrame(() => restoreMatrixScroll());
       toast.success(`${student.name} · ${MONTH_LABELS[monthValue - 1]} pago`);
     } catch (error) {
       console.error(error);
       toast.error("Erro ao marcar pagamento.");
+      await loadData({ silent: true });
     } finally {
       setSaving(false);
     }
   }
 
   async function markAsPaid(payment: Payment) {
+    rememberMatrixScroll();
     try {
       setSaving(true);
-      await updatePayment({
+      const nextPayment: Payment = {
         ...payment,
         status: "paid",
         paymentDate: getTodayDate(),
-      });
+      };
+      await updatePayment(nextPayment);
       await syncStudentPaidStatus(payment.studentId);
-      await loadData();
+      upsertLocalPayment(nextPayment);
       setCellTarget(null);
+      requestAnimationFrame(() => restoreMatrixScroll());
       toast.success("Pagamento marcado como pago.");
     } catch (error) {
       console.error(error);
       toast.error("Erro ao atualizar pagamento.");
+      await loadData({ silent: true });
     } finally {
       setSaving(false);
     }
   }
 
   async function markAsPending(payment: Payment) {
+    rememberMatrixScroll();
     try {
       setSaving(true);
-      await updatePayment({
+      const nextPayment: Payment = {
         ...payment,
         status: "pending",
         paymentDate: null,
-      });
+      };
+      await updatePayment(nextPayment);
       await syncStudentPaidStatus(payment.studentId);
-      await loadData();
+      upsertLocalPayment(nextPayment);
       setCellTarget(null);
+      requestAnimationFrame(() => restoreMatrixScroll());
       toast.success("Pagamento marcado como pendente.");
     } catch (error) {
       console.error(error);
       toast.error("Erro ao atualizar pagamento.");
+      await loadData({ silent: true });
     } finally {
       setSaving(false);
     }
@@ -319,17 +381,22 @@ function AdminPayments() {
   async function confirmDeletePayment() {
     if (!paymentToDelete) return;
 
+    rememberMatrixScroll();
     try {
       setSaving(true);
       await deletePayment(paymentToDelete.id);
       await syncStudentPaidStatus(paymentToDelete.studentId);
-      await loadData();
+      setPayments((current) =>
+        current.filter((payment) => payment.id !== paymentToDelete.id)
+      );
       setPaymentToDelete(null);
       setCellTarget(null);
+      requestAnimationFrame(() => restoreMatrixScroll());
       toast.success("Pagamento eliminado.");
     } catch (error) {
       console.error(error);
       toast.error("Erro ao apagar pagamento.");
+      await loadData({ silent: true });
     } finally {
       setSaving(false);
     }
@@ -439,7 +506,7 @@ function AdminPayments() {
         ) : visibleStudents.length === 0 ? (
           <p className="muted">Sem alunos para mostrar.</p>
         ) : (
-          <div className="payments-matrix-wrap">
+          <div className="payments-matrix-wrap" ref={matrixWrapRef}>
             <table className="payments-matrix-table">
               <thead>
                 <tr>
