@@ -2571,6 +2571,14 @@ textarea:focus {
   font-size: 10px;
 }
 
+.payments-student-plan {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+  text-decoration: none !important;
+}
+
 .student-payment-pack-history {
   display: flex;
   flex-direction: column;
