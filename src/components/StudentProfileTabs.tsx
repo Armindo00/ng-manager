@@ -58,7 +58,9 @@ function StudentProfileTabs({
       </div>
 
       <div className="student-tab-panel" role="tabpanel">
-        {activeTab === "dados" && <StudentProfileCard student={student} />}
+        {activeTab === "dados" && (
+          <StudentProfileCard student={student} lessons={lessons} />
+        )}
 
         {activeTab === "treinos" && (
           <StudentLessonHistory student={student} lessons={lessons} />

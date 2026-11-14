@@ -1,12 +1,24 @@
-import type { Student } from "../types";
+import type { Lesson, Student } from "../types";
+import { getCurrentMonthYear } from "../utils/dateUtils";
 import { billingTypeLabel } from "../utils/studentPaymentPlan";
+import {
+  getStudentTrainingUsage,
+  usageStatusLabel,
+} from "../utils/studentTrainingUsage";
 
 type Props = {
   student: Student;
+  lessons?: Lesson[];
 };
 
-function StudentProfileCard({ student }: Props) {
+function StudentProfileCard({ student, lessons = [] }: Props) {
   const isPack = student.billingType === "pack";
+  const { month, year } = getCurrentMonthYear();
+  const usage = getStudentTrainingUsage(student, lessons, month, year);
+  const showQuota =
+    usage.status === "over" ||
+    usage.status === "pack_empty" ||
+    usage.status === "at_limit";
 
   return (
     <div className="student-profile-card">
@@ -20,9 +32,16 @@ function StudentProfileCard({ student }: Props) {
           <p>{student.level || "Nível por definir"}</p>
         </div>
 
-        <span className={student.paid ? "status-paid" : "status-pending"}>
-          {student.paid ? "Pago" : "Pendente"}
-        </span>
+        <div className="student-profile-badges">
+          <span className={student.paid ? "status-paid" : "status-pending"}>
+            {student.paid ? "Pago" : "Pendente"}
+          </span>
+          {showQuota && (
+            <span className={`quota-status ${usage.status === "at_limit" ? "is-limit" : "is-over"}`}>
+              {usageStatusLabel(usage.status)}
+            </span>
+          )}
+        </div>
       </div>
 
       <div className="student-profile-grid">
@@ -74,6 +93,11 @@ function StudentProfileCard({ student }: Props) {
             </div>
           </>
         )}
+
+        <div>
+          <span>Este mês</span>
+          <strong>{usage.label}</strong>
+        </div>
 
         <div>
           <span>Pickup habitual</span>

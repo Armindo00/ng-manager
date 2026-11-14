@@ -9,6 +9,7 @@ import { getEvaluations } from "../services/evaluationsService";
 import { ensureFixedTrainingsSeeded } from "../services/fixedTrainingsService";
 import { getCurrentMonthYear, getTodayDate } from "../utils/dateUtils";
 import { formatSessionCoaches } from "../utils/sessionCoaches";
+import { listOverQuotaStudents } from "../utils/studentTrainingUsage";
 
 function AdminDashboard() {
   const [students, setStudents] = useState<Student[]>([]);
@@ -81,7 +82,19 @@ function AdminDashboard() {
   ).length;
   const todayFinished = todayRegistered.length - todayOpen;
 
+  const overQuota = listOverQuotaStudents(
+    students,
+    lessons,
+    currentMonth,
+    currentYear
+  );
+
   const alerts = [
+    overQuota.length > 0
+      ? overQuota.length === 1
+        ? "1 atleta acima do limite / pack este mês"
+        : `${overQuota.length} atletas acima do limite / pack este mês`
+      : null,
     pendingPayments > 0
       ? `${pendingPayments} mensalidade${pendingPayments === 1 ? "" : "s"} em falta`
       : null,
@@ -156,6 +169,35 @@ function AdminDashboard() {
                   <li key={alert}>{alert}</li>
                 ))}
               </ul>
+            </section>
+          )}
+
+          {overQuota.length > 0 && (
+            <section className="card section-card">
+              <div className="admin-section-heading">
+                <div>
+                  <span className="admin-section-kicker">Quotas</span>
+                  <h2>Treinos a mais este mês</h2>
+                </div>
+              </div>
+              <div className="admin-summary-list">
+                {overQuota.slice(0, 8).map((row) => (
+                  <div className="admin-summary-row" key={row.studentId}>
+                    <div className="admin-summary-main">
+                      <strong>{row.studentName}</strong>
+                      <span>{row.label}</span>
+                    </div>
+                    <span className="admin-summary-status is-warn">
+                      {row.billingType === "pack" ? "Pack" : `+${row.overBy}`}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              {overQuota.length > 8 && (
+                <p className="muted">
+                  +{overQuota.length - 8} na página Treinos a mais.
+                </p>
+              )}
             </section>
           )}
 
