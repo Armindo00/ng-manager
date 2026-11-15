@@ -350,7 +350,7 @@ function App() {
           )}
 
           {currentUser.role === "admin" && activeSection === "dashboard" && (
-            <AdminDashboard />
+            <AdminDashboard onNavigate={handleChangeSection} />
           )}
 
           {currentUser.role === "admin" &&
