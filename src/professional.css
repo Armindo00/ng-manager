@@ -1175,6 +1175,26 @@ textarea:focus {
   color: var(--brand-ink);
 }
 
+.coach-extra-kind-picker {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.coach-extra-kind-picker .primary-btn,
+.coach-extra-kind-picker .compact-btn {
+  width: 100%;
+  min-height: 48px;
+  justify-content: center;
+}
+
+@media (max-width: 520px) {
+  .coach-extra-kind-picker {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Coach session cards */
 .coach-session-card {
   border-radius: var(--radius-md);

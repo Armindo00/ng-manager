@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
-import type { Lesson, User } from "../types";
+import type { Lesson, Student, User } from "../types";
 import type { VideoAnalysisSession } from "../types/videoAnalysis";
 import { getLessons } from "../services/lessonsService";
+import { getStudents } from "../services/studentsService";
 import {
   addVideoAnalysisSession,
   deleteVideoAnalysisSession,
@@ -30,6 +31,7 @@ function CoachActivity({ user }: Props) {
   const [month, setMonth] = useState(current.month);
   const [year, setYear] = useState(current.year);
   const [lessons, setLessons] = useState<Lesson[]>([]);
+  const [students, setStudents] = useState<Student[]>([]);
   const [videoSessions, setVideoSessions] = useState<VideoAnalysisSession[]>(
     []
   );
@@ -39,6 +41,8 @@ function CoachActivity({ user }: Props) {
   const [saving, setSaving] = useState(false);
   const [date, setDate] = useState(getTodayDate());
   const [notes, setNotes] = useState("");
+  const [studentIds, setStudentIds] = useState<string[]>([]);
+  const [studentSearch, setStudentSearch] = useState("");
 
   useEffect(() => {
     loadData();
@@ -47,14 +51,17 @@ function CoachActivity({ user }: Props) {
   async function loadData() {
     try {
       setLoading(true);
-      const [lessonsData, videoData, resolvedCoachId] = await Promise.all([
-        getLessons(),
-        getVideoAnalysisSessions(),
-        resolveCoachId(user),
-      ]);
+      const [lessonsData, videoData, studentsData, resolvedCoachId] =
+        await Promise.all([
+          getLessons(),
+          getVideoAnalysisSessions(),
+          getStudents(),
+          resolveCoachId(user),
+        ]);
 
       setLessons(lessonsData);
       setVideoSessions(videoData);
+      setStudents(studentsData);
       setCoachId(resolvedCoachId);
       setCoachName(user.name);
     } catch (error) {
@@ -100,10 +107,42 @@ function CoachActivity({ user }: Props) {
     [videoSessions, coachId, month, year]
   );
 
+  const selectableStudents = useMemo(() => {
+    const term = studentSearch.trim().toLowerCase();
+    return students
+      .filter((student) =>
+        term ? student.name.toLowerCase().includes(term) : true
+      )
+      .sort((a, b) => a.name.localeCompare(b.name, "pt"));
+  }, [students, studentSearch]);
+
+  const studentNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const student of students) {
+      map.set(student.id, student.name);
+    }
+    return map;
+  }, [students]);
+
   function changeMonth(delta: number) {
     const next = shiftMonth(month, year, delta);
     setMonth(next.month);
     setYear(next.year);
+  }
+
+  function toggleStudent(studentId: string) {
+    setStudentIds((current) =>
+      current.includes(studentId)
+        ? current.filter((id) => id !== studentId)
+        : [...current, studentId]
+    );
+  }
+
+  function formatStudentNames(ids: string[]) {
+    if (ids.length === 0) return "Sem alunos";
+    return ids
+      .map((id) => studentNameById.get(id) || "Aluno")
+      .join(", ");
   }
 
   async function saveVideoSession() {
@@ -117,6 +156,11 @@ function CoachActivity({ user }: Props) {
       return;
     }
 
+    if (studentIds.length === 0) {
+      toast.error("Escolhe pelo menos um aluno da videoanálise.");
+      return;
+    }
+
     try {
       setSaving(true);
       const session: Omit<VideoAnalysisSession, "createdAt"> = {
@@ -125,6 +169,7 @@ function CoachActivity({ user }: Props) {
         coachName,
         date,
         notes: notes.trim(),
+        studentIds,
       };
 
       await addVideoAnalysisSession(session);
@@ -133,6 +178,8 @@ function CoachActivity({ user }: Props) {
         ...currentSessions,
       ]);
       setNotes("");
+      setStudentIds([]);
+      setStudentSearch("");
       toast.success("Videoanálise registada.");
     } catch (error) {
       console.error(error);
@@ -204,7 +251,7 @@ function CoachActivity({ user }: Props) {
             <h2>Registar videoanálise</h2>
             <p className="muted">
               Usa isto para sessões de videoanálise que não estão no calendário
-              de treinos.
+              de treinos. Indica os alunos que participaram.
             </p>
 
             <div className="form-fields-grid">
@@ -225,6 +272,41 @@ function CoachActivity({ user }: Props) {
                 />
               </FormField>
             </div>
+
+            <label className="field-label">
+              Quem esteve na videoanálise
+              <input
+                className="search-input"
+                value={studentSearch}
+                onChange={(event) => setStudentSearch(event.target.value)}
+                placeholder="Pesquisar aluno..."
+              />
+            </label>
+
+            <div className="coach-extra-student-picker">
+              {selectableStudents.length === 0 ? (
+                <p className="muted">Sem alunos encontrados.</p>
+              ) : (
+                selectableStudents.map((student) => {
+                  const selected = studentIds.includes(student.id);
+                  return (
+                    <button
+                      type="button"
+                      key={student.id}
+                      className={`coach-extra-student-option${
+                        selected ? " selected" : ""
+                      }`}
+                      onClick={() => toggleStudent(student.id)}
+                    >
+                      <span>{student.name}</span>
+                      <strong>{selected ? "Foi" : "Selecionar"}</strong>
+                    </button>
+                  );
+                })
+              )}
+            </div>
+
+            <p className="muted">{studentIds.length} aluno(s) selecionado(s)</p>
 
             <div className="form-fields-actions">
               <button
@@ -249,6 +331,9 @@ function CoachActivity({ user }: Props) {
                   <div className="coach-session-card" key={session.id}>
                     <div>
                       <strong>{formatDisplayDate(session.date)}</strong>
+                      <p className="muted">
+                        {formatStudentNames(session.studentIds || [])}
+                      </p>
                       <p className="muted">
                         {session.notes || "Sem notas"}
                       </p>

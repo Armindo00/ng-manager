@@ -4,5 +4,6 @@ export type VideoAnalysisSession = {
   coachName: string;
   date: string;
   notes: string;
+  studentIds: string[];
   createdAt: string;
 };
