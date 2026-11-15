@@ -77,6 +77,7 @@ type AdminSection =
 type CoachSection =
   | "dashboard"
   | "lessons"
+  | "calendar"
   | "activity"
   | "inventory"
   | "evaluations"
@@ -318,6 +319,10 @@ function App() {
                 <CoachArea user={currentUser} />
               )}
 
+              {coachSection === "calendar" && (
+                <AdminLessons user={currentUser} />
+              )}
+
               {coachSection === "activity" && (
                 <CoachActivity user={currentUser} />
               )}
@@ -358,7 +363,9 @@ function App() {
             activeSection === "fixed-trainings" && <AdminFixedTrainings />}
 
           {currentUser.role === "admin" &&
-            activeSection === "lessons" && <AdminLessons />}
+            activeSection === "lessons" && (
+              <AdminLessons user={currentUser} />
+            )}
 
           {currentUser.role === "admin" &&
             activeSection === "inventory" && <AdminInventory />}

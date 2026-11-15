@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
-import type { Coach, Lesson, Student } from "../types";
+import type { Coach, Lesson, Student, User } from "../types";
 import type { FixedTraining } from "../data/fixedTrainings";
 import { getStudents } from "../services/studentsService";
 import { getCoaches } from "../services/coachesService";
@@ -25,6 +25,11 @@ import {
   matchStudentIdsByNames,
   namesMatchLoose,
 } from "../utils/studentNameMatch";
+import { resolveCoachId } from "../utils/coachAccess";
+
+type Props = {
+  user: User;
+};
 
 function resolveCoachForGroup(
   coaches: Coach[],
@@ -40,7 +45,7 @@ function resolveCoachForGroup(
   return coaches[0];
 }
 
-function AdminLessons() {
+function AdminLessons({ user }: Props) {
   const [students, setStudents] = useState<Student[]>([]);
   const [coaches, setCoaches] = useState<Coach[]>([]);
   const [lessons, setLessons] = useState<Lesson[]>([]);
@@ -50,25 +55,33 @@ function AdminLessons() {
   const [lessonToDelete, setLessonToDelete] = useState<Lesson | null>(null);
   const [loading, setLoading] = useState(true);
   const [registeringId, setRegisteringId] = useState<string | null>(null);
+  const [actingCoachId, setActingCoachId] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [user.id, user.role, user.name]);
 
   async function loadData() {
     try {
       setLoading(true);
-      const [studentsData, coachesData, lessonsData, trainingsData] =
-        await Promise.all([
-          getStudents(),
-          getCoaches(),
-          getLessons(),
-          ensureFixedTrainingsSeeded(),
-        ]);
+      const [
+        studentsData,
+        coachesData,
+        lessonsData,
+        trainingsData,
+        resolvedCoachId,
+      ] = await Promise.all([
+        getStudents(),
+        getCoaches(),
+        getLessons(),
+        ensureFixedTrainingsSeeded(),
+        resolveCoachId(user),
+      ]);
       setStudents(studentsData);
       setCoaches(coachesData);
       setLessons(lessonsData);
       setFixedTrainings(trainingsData);
+      setActingCoachId(resolvedCoachId);
     } catch (error) {
       console.error(error);
       toast.error("Erro ao carregar calendário.");
@@ -152,10 +165,16 @@ function AdminLessons() {
       return;
     }
 
-    const coach = resolveCoachForGroup(
-      coaches,
-      group.coachName || entry.coachName
-    );
+    const selfCoach =
+      actingCoachId != null
+        ? coaches.find((coach) => coach.id === actingCoachId) || null
+        : null;
+    const coach =
+      user.role === "coach"
+        ? selfCoach ||
+          coaches.find((item) => namesMatchLoose(item.name, user.name)) ||
+          null
+        : resolveCoachForGroup(coaches, group.coachName || entry.coachName);
     if (!coach) {
       toast.error("Não há treinadores para associar ao treino.");
       return;
@@ -353,13 +372,16 @@ function AdminLessons() {
                             >
                               Editar / Presenças
                             </button>
-                            <button
-                              type="button"
-                              className="danger-btn compact-btn"
-                              onClick={() => setLessonToDelete(entry.lesson!)}
-                            >
-                              Apagar
-                            </button>
+                            {(user.role === "admin" ||
+                              entry.lesson.coachId === actingCoachId) && (
+                              <button
+                                type="button"
+                                className="danger-btn compact-btn"
+                                onClick={() => setLessonToDelete(entry.lesson!)}
+                              >
+                                Apagar
+                              </button>
+                            )}
                           </>
                         )}
 
