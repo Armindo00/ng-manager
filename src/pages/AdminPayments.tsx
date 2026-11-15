@@ -18,10 +18,8 @@ import Modal from "../components/Modal";
 import StudentPaymentDetail from "../components/StudentPaymentDetail";
 import { getCurrentMonthYear, getTodayDate } from "../utils/dateUtils";
 import {
-  DEFAULT_MONTHLY_FEE,
   amountDueFromPlan,
   isPackStudent,
-  resolveStudentMonthlyFee,
 } from "../utils/studentPaymentPlan";
 
 type BillingFilter = "all" | StudentBillingType;
@@ -40,8 +38,6 @@ const MONTH_LABELS = [
   "Nov",
   "Dez",
 ];
-
-const DEFAULT_AMOUNT = DEFAULT_MONTHLY_FEE;
 
 type CellTarget = {
   studentId: string;
@@ -63,7 +59,6 @@ function AdminPayments() {
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(
     null
   );
-  const [defaultAmount, setDefaultAmount] = useState(String(DEFAULT_AMOUNT));
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [cellTarget, setCellTarget] = useState<CellTarget | null>(null);
   const [paymentToDelete, setPaymentToDelete] = useState<Payment | null>(null);
@@ -71,7 +66,7 @@ function AdminPayments() {
   const [studentId, setStudentId] = useState("");
   const [month, setMonth] = useState(String(currentPeriod.month));
   const [year, setYear] = useState(String(currentPeriod.year));
-  const [amount, setAmount] = useState(String(DEFAULT_AMOUNT));
+  const [amount, setAmount] = useState("");
   const [status, setStatus] = useState<PaymentStatus>("paid");
   const [paymentMethod, setPaymentMethod] = useState("");
   const [notes, setNotes] = useState("");
@@ -212,18 +207,11 @@ function AdminPayments() {
     );
   }
 
-  /** Valor a cobrar: plano do aluno; "Valor rápido" só se o plano não tiver preço. */
+  /** Valor a cobrar = preço do plano do aluno. */
   function suggestedAmount(studentIdValue: string) {
     const student = students.find((item) => item.id === studentIdValue);
-    if (student) {
-      const fromPlan = amountDueFromPlan(student);
-      if (fromPlan > 0) return fromPlan;
-      return resolveStudentMonthlyFee(student, payments, DEFAULT_AMOUNT);
-    }
-
-    const fromDefault = Number(defaultAmount);
-    if (Number.isFinite(fromDefault) && fromDefault > 0) return fromDefault;
-    return DEFAULT_AMOUNT;
+    if (!student) return 0;
+    return amountDueFromPlan(student);
   }
 
   const selectedStudent =
@@ -247,7 +235,7 @@ function AdminPayments() {
     setStudentId(overrides?.studentId || "");
     setMonth(overrides?.month || String(currentPeriod.month));
     setYear(overrides?.year || String(selectedYear));
-    setAmount(overrides?.amount || defaultAmount || String(DEFAULT_AMOUNT));
+    setAmount(overrides?.amount || "");
     setStatus(overrides?.status || "paid");
     setPaymentMethod("");
     setNotes("");
@@ -329,11 +317,16 @@ function AdminPayments() {
       return;
     }
 
+    const planAmount = suggestedAmount(student.id);
+    if (!(planAmount > 0) && !existing) {
+      toast.error("Define o plano do aluno antes de marcar o pagamento.");
+      return;
+    }
+
     rememberMatrixScroll();
 
     try {
       setSaving(true);
-      const planAmount = suggestedAmount(student.id);
       const nextPayment: Payment = existing
         ? {
             ...existing,
@@ -561,22 +554,11 @@ function AdminPayments() {
               />
             </label>
 
-            <label className="field-label">
-              Fallback (€)
-              <input
-                type="text"
-                inputMode="decimal"
-                value={defaultAmount}
-                onChange={(event) => setDefaultAmount(event.target.value)}
-                placeholder="95"
-              />
-            </label>
           </div>
 
           <p className="muted payments-matrix-hint">
             O valor vem do plano do aluno (mensalidade/pack do preçário). Células
-            vazias mostram o que há a cobrar; clica para marcar pago. Fallback só
-            se o aluno ainda não tiver plano com preço.
+            vazias mostram o que há a cobrar; clica para marcar pago.
           </p>
         </div>
 
