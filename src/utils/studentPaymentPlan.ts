@@ -74,6 +74,31 @@ export function countStudentTrainingsTotal(studentId: string, lessons: Lesson[])
   ).length;
 }
 
+/** Taxa de presença no mês: presentes / inscritos no treino (booked). */
+export function studentAttendanceRateInMonth(
+  studentId: string,
+  lessons: Lesson[],
+  month: number,
+  year: number
+) {
+  const monthLessons = lessons.filter(
+    (lesson) =>
+      lesson.status !== "draft" &&
+      isDateInMonthYear(lesson.date, month, year) &&
+      lesson.bookedStudentIds.includes(studentId)
+  );
+  const booked = monthLessons.length;
+  const present = monthLessons.filter((lesson) =>
+    lesson.presentStudentIds.includes(studentId)
+  ).length;
+
+  return {
+    booked,
+    present,
+    rate: booked === 0 ? 0 : Math.round((present / booked) * 100),
+  };
+}
+
 /**
  * @deprecated Prefer amountDueFromPlan — o valor a cobrar é o do plano,
  * não proporcional às presenças.

@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
-import type { Coach, MonthlyEvaluation, Student, User } from "../types";
+import type { Coach, Lesson, MonthlyEvaluation, Student, User } from "../types";
 import { getStudents } from "../services/studentsService";
 import { getCoaches } from "../services/coachesService";
+import { getLessons } from "../services/lessonsService";
 import {
   deleteEvaluation,
   emptyEvaluation,
@@ -11,6 +12,7 @@ import {
   saveEvaluation,
 } from "../services/evaluationsService";
 import { formatMonthYear, getCurrentMonthYear } from "../utils/dateUtils";
+import { studentAttendanceRateInMonth } from "../utils/studentPaymentPlan";
 import { isStudentMainCoach } from "../utils/studentNameMatch";
 import FormField from "../components/FormField";
 import ConfirmDialog from "../components/ConfirmDialog";
@@ -85,6 +87,7 @@ function applyNumberDrafts(
 function AdminEvaluations({ user }: Props) {
   const [students, setStudents] = useState<Student[]>([]);
   const [coaches, setCoaches] = useState<Coach[]>([]);
+  const [lessons, setLessons] = useState<Lesson[]>([]);
   const [evaluations, setEvaluations] = useState<MonthlyEvaluation[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -109,13 +112,16 @@ function AdminEvaluations({ user }: Props) {
   async function loadData() {
     try {
       setLoading(true);
-      const [studentsData, coachesData, evaluationsData] = await Promise.all([
-        getStudents(),
-        getCoaches(),
-        getEvaluations(),
-      ]);
+      const [studentsData, coachesData, lessonsData, evaluationsData] =
+        await Promise.all([
+          getStudents(),
+          getCoaches(),
+          getLessons(),
+          getEvaluations(),
+        ]);
       setStudents(studentsData);
       setCoaches(coachesData);
+      setLessons(lessonsData);
       setEvaluations(evaluationsData);
     } catch (error) {
       console.error(error);
@@ -123,6 +129,28 @@ function AdminEvaluations({ user }: Props) {
     } finally {
       setLoading(false);
     }
+  }
+
+  function attendanceFor(
+    studentId: string,
+    month: number,
+    year: number
+  ) {
+    return studentAttendanceRateInMonth(studentId, lessons, month, year);
+  }
+
+  function applyCalculatedAttendance(
+    studentId: string,
+    month: number,
+    year: number
+  ) {
+    if (!studentId) return;
+    const { rate } = attendanceFor(studentId, month, year);
+    setForm((current) => ({ ...current, attendance: rate }));
+    setNumberDrafts((current) => ({
+      ...current,
+      attendance: String(rate),
+    }));
   }
 
   const studentMap = useMemo(
@@ -274,6 +302,13 @@ function AdminEvaluations({ user }: Props) {
     };
     if (selectableStudents.length === 1) {
       draft.studentId = selectableStudents[0].id;
+      draft.attendance = attendanceFor(
+        draft.studentId,
+        draft.month,
+        draft.year
+      ).rate;
+    } else {
+      draft.attendance = 0;
     }
     setForm(draft);
     setNumberDrafts(numberDraftsFromEvaluation(draft));
@@ -282,8 +317,14 @@ function AdminEvaluations({ user }: Props) {
   }
 
   function startEdit(evaluation: MonthlyEvaluation) {
-    setForm({ ...evaluation });
-    setNumberDrafts(numberDraftsFromEvaluation(evaluation));
+    const rate = attendanceFor(
+      evaluation.studentId,
+      evaluation.month,
+      evaluation.year
+    ).rate;
+    const next = { ...evaluation, attendance: rate };
+    setForm(next);
+    setNumberDrafts(numberDraftsFromEvaluation(next));
     setShareUrl(null);
     setPanelMode("edit");
   }
@@ -315,15 +356,21 @@ function AdminEvaluations({ user }: Props) {
     try {
       setSaving(true);
       const withNumbers = applyNumberDrafts(form, numberDrafts);
-      setForm(withNumbers);
-      setNumberDrafts(numberDraftsFromEvaluation(withNumbers));
+      const rate = attendanceFor(
+        withNumbers.studentId,
+        withNumbers.month,
+        withNumbers.year
+      ).rate;
+      const withAttendance = { ...withNumbers, attendance: rate };
+      setForm(withAttendance);
+      setNumberDrafts(numberDraftsFromEvaluation(withAttendance));
       const next: MonthlyEvaluation = {
-        ...withNumbers,
-        technicalGoal: withNumbers.technicalGoal.trim(),
-        coachComment: withNumbers.coachComment.trim(),
-        nextGoal: withNumbers.nextGoal.trim(),
-        status: withNumbers.status === "sent" ? "sent" : "draft",
-        coachId: withNumbers.coachId || user.id,
+        ...withAttendance,
+        technicalGoal: withAttendance.technicalGoal.trim(),
+        coachComment: withAttendance.coachComment.trim(),
+        nextGoal: withAttendance.nextGoal.trim(),
+        status: withAttendance.status === "sent" ? "sent" : "draft",
+        coachId: withAttendance.coachId || user.id,
       };
       await saveEvaluation(next);
       await loadData();
@@ -362,15 +409,21 @@ function AdminEvaluations({ user }: Props) {
       // Ensure latest draft exists before send.
       if (panelMode === "create" || panelMode === "edit") {
         const withNumbers = applyNumberDrafts(form, numberDrafts);
-        setForm(withNumbers);
-        setNumberDrafts(numberDraftsFromEvaluation(withNumbers));
+        const rate = attendanceFor(
+          withNumbers.studentId,
+          withNumbers.month,
+          withNumbers.year
+        ).rate;
+        const withAttendance = { ...withNumbers, attendance: rate };
+        setForm(withAttendance);
+        setNumberDrafts(numberDraftsFromEvaluation(withAttendance));
         const draft: MonthlyEvaluation = {
-          ...withNumbers,
-          technicalGoal: withNumbers.technicalGoal.trim(),
-          coachComment: withNumbers.coachComment.trim(),
-          nextGoal: withNumbers.nextGoal.trim(),
+          ...withAttendance,
+          technicalGoal: withAttendance.technicalGoal.trim(),
+          coachComment: withAttendance.coachComment.trim(),
+          nextGoal: withAttendance.nextGoal.trim(),
           status: "draft",
-          coachId: withNumbers.coachId || user.id,
+          coachId: withAttendance.coachId || user.id,
         };
         if (!draft.studentId || !draft.technicalGoal) {
           toast.error("Preenche aluno e objetivo técnico.");
@@ -449,6 +502,18 @@ function AdminEvaluations({ user }: Props) {
 
   function renderForm() {
     const selectedStudent = studentMap.get(form.studentId);
+    const attendanceStats = form.studentId
+      ? attendanceFor(
+          form.studentId,
+          clampInt(numberDrafts.month, 1, 12, form.month || 1),
+          clampInt(
+            numberDrafts.year,
+            2020,
+            2100,
+            form.year || new Date().getFullYear()
+          )
+        )
+      : null;
 
     return (
       <DetailPanel
@@ -476,9 +541,37 @@ function AdminEvaluations({ user }: Props) {
           <FormField label="Aluno">
             <select
               value={form.studentId}
-              onChange={(e) =>
-                setForm((current) => ({ ...current, studentId: e.target.value }))
-              }
+              onChange={(e) => {
+                const studentId = e.target.value;
+                const month = clampInt(
+                  numberDrafts.month,
+                  1,
+                  12,
+                  form.month || 1
+                );
+                const year = clampInt(
+                  numberDrafts.year,
+                  2020,
+                  2100,
+                  form.year || new Date().getFullYear()
+                );
+                const rate = studentId
+                  ? attendanceFor(studentId, month, year).rate
+                  : 0;
+                setForm((current) => ({
+                  ...current,
+                  studentId,
+                  month,
+                  year,
+                  attendance: rate,
+                }));
+                setNumberDrafts((current) => ({
+                  ...current,
+                  month: String(month),
+                  year: String(year),
+                  attendance: String(rate),
+                }));
+              }}
             >
               <option value="">Selecionar aluno</option>
               {selectableStudents.map((student) => (
@@ -510,12 +603,31 @@ function AdminEvaluations({ user }: Props) {
                   month: e.target.value.replace(/[^\d]/g, ""),
                 }))
               }
-              onBlur={() =>
+              onBlur={() => {
+                const month = clampInt(
+                  numberDrafts.month,
+                  1,
+                  12,
+                  form.month || 1
+                );
+                setForm((current) => ({ ...current, month }));
                 setNumberDrafts((current) => ({
                   ...current,
-                  month: String(clampInt(current.month, 1, 12, form.month || 1)),
-                }))
-              }
+                  month: String(month),
+                }));
+                if (form.studentId) {
+                  applyCalculatedAttendance(
+                    form.studentId,
+                    month,
+                    clampInt(
+                      numberDrafts.year,
+                      2020,
+                      2100,
+                      form.year || new Date().getFullYear()
+                    )
+                  );
+                }
+              }}
             />
           </FormField>
 
@@ -531,19 +643,26 @@ function AdminEvaluations({ user }: Props) {
                   year: e.target.value.replace(/[^\d]/g, ""),
                 }))
               }
-              onBlur={() =>
+              onBlur={() => {
+                const year = clampInt(
+                  numberDrafts.year,
+                  2020,
+                  2100,
+                  form.year || new Date().getFullYear()
+                );
+                setForm((current) => ({ ...current, year }));
                 setNumberDrafts((current) => ({
                   ...current,
-                  year: String(
-                    clampInt(
-                      current.year,
-                      2020,
-                      2100,
-                      form.year || new Date().getFullYear()
-                    )
-                  ),
-                }))
-              }
+                  year: String(year),
+                }));
+                if (form.studentId) {
+                  applyCalculatedAttendance(
+                    form.studentId,
+                    clampInt(numberDrafts.month, 1, 12, form.month || 1),
+                    year
+                  );
+                }
+              }}
             />
           </FormField>
 
@@ -576,21 +695,16 @@ function AdminEvaluations({ user }: Props) {
               inputMode="numeric"
               pattern="[0-9]*"
               value={numberDrafts.attendance}
-              onChange={(e) =>
-                setNumberDrafts((current) => ({
-                  ...current,
-                  attendance: e.target.value.replace(/[^\d]/g, ""),
-                }))
-              }
-              onBlur={() =>
-                setNumberDrafts((current) => ({
-                  ...current,
-                  attendance: String(
-                    clampInt(current.attendance, 0, 100, form.attendance || 0)
-                  ),
-                }))
-              }
+              readOnly
+              title="Calculada automaticamente a partir das presenças do mês"
             />
+            <p className="muted" style={{ marginTop: 8 }}>
+              {attendanceStats
+                ? attendanceStats.booked === 0
+                  ? "Sem treinos inscritos neste mês — presença 0%."
+                  : `Calculada: ${attendanceStats.present}/${attendanceStats.booked} presenças neste mês.`
+                : "Escolhe o aluno para calcular a partir das presenças."}
+            </p>
           </FormField>
 
           <FormField label="Resultado do objetivo">

@@ -97,7 +97,7 @@ export function emptyEvaluation(coachId: string): MonthlyEvaluation {
     month: now.getMonth() + 1,
     year: now.getFullYear(),
     effort: 3,
-    attendance: 100,
+    attendance: 0,
     technicalGoal: "",
     goalResult: "progress",
     coachComment: "",
