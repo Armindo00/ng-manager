@@ -10,6 +10,7 @@ import { ensureFixedTrainingsSeeded } from "../services/fixedTrainingsService";
 import { getCurrentMonthYear, getTodayDate } from "../utils/dateUtils";
 import { formatSessionCoaches } from "../utils/sessionCoaches";
 import { listOverQuotaStudents } from "../utils/studentTrainingUsage";
+import LoadingBlock from "../components/LoadingBlock";
 
 function AdminDashboard() {
   const [students, setStudents] = useState<Student[]>([]);
@@ -111,7 +112,7 @@ function AdminDashboard() {
   return (
     <div className="dashboard-page admin-dashboard">
       <header className="page-header">
-        <p className="page-eyebrow">Administração</p>
+        <p className="page-eyebrow">NextGeneration · Administração</p>
         <h1 className="page-title">Visão geral</h1>
         <p className="page-description">
           Resumo do estado da escola. Para gerir alunos, escala ou pagamentos,
@@ -120,7 +121,7 @@ function AdminDashboard() {
       </header>
 
       {loading ? (
-        <p className="muted">A carregar visão geral...</p>
+        <LoadingBlock label="A carregar visão geral..." />
       ) : (
         <>
           <div className="stats-grid admin-snapshot-grid">

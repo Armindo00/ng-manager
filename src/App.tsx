@@ -28,6 +28,29 @@ import { resolveAppUserFromEmail } from "./services/sessionService";
 import { requiresPasswordChange } from "./services/usersService";
 import ChangePassword from "./pages/ChangePassword";
 
+const TOAST_OPTIONS = {
+  className: "ng-toast",
+  duration: 3200,
+  style: {
+    background: "#0b1f2a",
+    color: "#f3f7fa",
+    borderRadius: "12px",
+    border: "1px solid rgba(158, 176, 191, 0.25)",
+    fontFamily: "Manrope, system-ui, sans-serif",
+    fontWeight: 600,
+  },
+  success: {
+    iconTheme: { primary: "#0f766e", secondary: "#f3f7fa" },
+  },
+  error: {
+    iconTheme: { primary: "#c2410c", secondary: "#f3f7fa" },
+  },
+} as const;
+
+function AppToaster() {
+  return <Toaster position="top-right" toastOptions={TOAST_OPTIONS} />;
+}
+
 function getEvaluationShareToken() {
   const hash = window.location.hash.replace(/^#/, "");
   const match = hash.match(/^\/?avaliacao\/([A-Za-z0-9_-]+)/);
@@ -227,7 +250,7 @@ function App() {
   if (evaluationShareToken) {
     return (
       <>
-        <Toaster position="top-right" />
+        <AppToaster />
         <PublicEvaluation token={evaluationShareToken} />
       </>
     );
@@ -236,7 +259,7 @@ function App() {
   if (!authReady) {
     return (
       <>
-        <Toaster position="top-right" />
+        <AppToaster />
         <div className="login-page">
           <div className="login-form-panel" style={{ gridColumn: "1 / -1" }}>
             <div className="login-card">
@@ -251,7 +274,7 @@ function App() {
   if (!currentUser) {
     return (
       <>
-        <Toaster position="top-right" />
+        <AppToaster />
         <Login onLogin={handleLogin} />
       </>
     );
@@ -260,7 +283,7 @@ function App() {
   if (requiresPasswordChange(currentUser)) {
     return (
       <>
-        <Toaster position="top-right" />
+        <AppToaster />
         <ChangePassword
           user={currentUser}
           onComplete={setCurrentUser}
@@ -272,7 +295,7 @@ function App() {
 
   return (
     <>
-      <Toaster position="top-right" />
+      <AppToaster />
 
       <div className="app-layout">
         <Sidebar
