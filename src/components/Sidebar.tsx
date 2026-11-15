@@ -192,6 +192,7 @@ function Sidebar({ user, activeSection, onChangeSection, onLogout }: Props) {
             <nav className="sidebar-nav">
               <div className="nav-section-label">Dia a dia</div>
               {item(LayoutDashboard, "Hoje", "dashboard")}
+              {item(Calendar, "Calendário", "calendar")}
               {item(CalendarDays, "Grupos fixos", "lessons")}
               {item(Clapperboard, "Os meus treinos", "activity")}
 
