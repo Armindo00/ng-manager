@@ -13,14 +13,22 @@ export function isPackStudent(student: Pick<Student, "billingType">) {
   return student.billingType === "pack";
 }
 
-/** Valor esperado a cobrar: plano base + extras mensais (fato / prancha). */
+/**
+ * Valor a cobrar no fim do mês / no pagamento do pack,
+ * tirado do plano do preçário (+ extras).
+ */
 export function resolveExpectedCharge(student: Student) {
   if (isPackStudent(student)) {
     return student.packPrice > 0 ? student.packPrice : 0;
   }
 
   const base = student.monthlyFee > 0 ? student.monthlyFee : 0;
-  return base + addonMonthlyTotal(student);
+  return Math.round((base + addonMonthlyTotal(student)) * 100) / 100;
+}
+
+/** Alias explícito: quanto o aluno tem de pagar segundo o plano. */
+export function amountDueFromPlan(student: Student) {
+  return resolveExpectedCharge(student);
 }
 
 export function resolveStudentMonthlyFee(
@@ -66,17 +74,16 @@ export function countStudentTrainingsTotal(studentId: string, lessons: Lesson[])
   ).length;
 }
 
-/** Sugere valor proporcional aos treinos feitos, sem ultrapassar a mensalidade. */
+/**
+ * @deprecated Prefer amountDueFromPlan — o valor a cobrar é o do plano,
+ * não proporcional às presenças.
+ */
 export function suggestAmountForTrainings(
   monthlyFee: number,
-  monthlyLimit: number,
-  trainingsDone: number
+  _monthlyLimit: number,
+  _trainingsDone: number
 ) {
-  if (!(monthlyFee > 0)) return 0;
-  if (!(monthlyLimit > 0)) return monthlyFee;
-
-  const ratio = Math.min(1, Math.max(0, trainingsDone) / monthlyLimit);
-  return Math.round(monthlyFee * ratio * 100) / 100;
+  return monthlyFee > 0 ? monthlyFee : 0;
 }
 
 export function billingTypeLabel(billingType: Student["billingType"]) {

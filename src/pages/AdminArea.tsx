@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import type { Lesson, MonthlyEvaluation, Student } from "../types";
 import {
+  amountDueFromPlan,
   parseStudentPlanDraft,
   studentPlanLabel,
 } from "../utils/studentPaymentPlan";
@@ -11,6 +12,7 @@ import {
   updateStudent,
   deleteStudent as removeStudent,
 } from "../services/studentsService";
+import { ensureMonthPaymentAmount } from "../services/paymentsService";
 import { getLessons } from "../services/lessonsService";
 import { getEvaluations } from "../services/evaluationsService";
 import {
@@ -167,11 +169,12 @@ function AdminArea() {
     try {
       if (editingId) {
         const oldStudent = students.find((item) => item.id === editingId);
-
-        await updateStudent({
+        const saved = {
           ...student,
           paid: oldStudent?.paid ?? false,
-        });
+        };
+
+        await updateStudent(saved);
 
         const access = accessMap.get(editingId);
 
@@ -180,16 +183,41 @@ function AdminArea() {
           toast.success("Email de acesso atualizado.");
         }
 
+        const due = amountDueFromPlan(saved);
+        if (due > 0) {
+          await ensureMonthPaymentAmount({
+            studentId: saved.id,
+            amount: due,
+            notes: saved.billingType === "pack" ? "Pack" : "Mensalidade (plano)",
+          });
+        }
+
         await loadData();
         clearForm();
-        toast.success("Aluno atualizado com sucesso!");
+        toast.success(
+          due > 0
+            ? `Aluno atualizado · a cobrar ${due}€ este mês`
+            : "Aluno atualizado com sucesso!"
+        );
         return;
       }
 
       await addStudent(student);
+      const due = amountDueFromPlan(student);
+      if (due > 0) {
+        await ensureMonthPaymentAmount({
+          studentId: student.id,
+          amount: due,
+          notes: student.billingType === "pack" ? "Pack" : "Mensalidade (plano)",
+        });
+      }
       await loadData();
       clearForm();
-      toast.success("Aluno criado com sucesso!");
+      toast.success(
+        due > 0
+          ? `Aluno criado · a cobrar ${due}€ este mês`
+          : "Aluno criado com sucesso!"
+      );
     } catch (error) {
       console.error(error);
       toast.error("Erro ao guardar aluno.");
