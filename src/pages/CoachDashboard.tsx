@@ -26,10 +26,13 @@ import { canFinishLesson } from "../utils/lessonWorkflow";
 import { buildCoachAttentionAlerts } from "../utils/coachAttentionAlerts";
 import { getVanTasks, getVans } from "../services/vansService";
 import type { Van, VanTask } from "../types/van";
+import { addVideoAnalysisSession } from "../services/videoAnalysisService";
 
 type Props = {
   user: User;
 };
+
+type ExtraSessionKind = "water" | "video";
 
 function CoachDashboard({ user }: Props) {
   const [lessons, setLessons] = useState<Lesson[]>([]);
@@ -37,10 +40,12 @@ function CoachDashboard({ user }: Props) {
   const [selectedLessonId, setSelectedLessonId] = useState<string | null>(null);
   const [pendingGroup, setPendingGroup] = useState<FixedTraining | null>(null);
   const [creatingExtra, setCreatingExtra] = useState(false);
+  const [extraKind, setExtraKind] = useState<ExtraSessionKind | null>(null);
   const [extraTitle, setExtraTitle] = useState("Treino extra");
   const [extraStudentIds, setExtraStudentIds] = useState<string[]>([]);
   const [extraStudentSearch, setExtraStudentSearch] = useState("");
   const [secondaryCoachName, setSecondaryCoachName] = useState("");
+  const [videoNotes, setVideoNotes] = useState("");
   const [sessionDate, setSessionDate] = useState(getTodayDate());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -195,11 +200,18 @@ function CoachDashboard({ user }: Props) {
 
   function openCreateExtra() {
     setCreatingExtra(true);
+    setExtraKind(null);
     setSessionDate(today);
     setExtraTitle("Treino extra");
     setExtraStudentIds([]);
     setExtraStudentSearch("");
     setSecondaryCoachName("");
+    setVideoNotes("");
+  }
+
+  function closeCreateExtra() {
+    setCreatingExtra(false);
+    setExtraKind(null);
   }
 
   function toggleExtraStudent(studentId: string) {
@@ -248,12 +260,41 @@ function CoachDashboard({ user }: Props) {
 
       await addLesson(lesson);
       await loadData();
-      setCreatingExtra(false);
+      closeCreateExtra();
       setSelectedLessonId(lesson.id);
-      toast.success("Treino extra registado.");
+      toast.success("Treino de água registado.");
     } catch (error) {
       console.error(error);
       toast.error("Erro ao registar o treino extra.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function createVideoSession() {
+    if (!coachId) {
+      toast.error("Não foi possível identificar o treinador.");
+      return;
+    }
+    if (!sessionDate || sessionDate > today) {
+      toast.error("A data tem de ser hoje ou um dia anterior.");
+      return;
+    }
+
+    try {
+      setSaving(true);
+      await addVideoAnalysisSession({
+        id: crypto.randomUUID(),
+        coachId,
+        coachName: user.name,
+        date: sessionDate,
+        notes: videoNotes.trim(),
+      });
+      closeCreateExtra();
+      toast.success("Sessão de videoanálise registada.");
+    } catch (error) {
+      console.error(error);
+      toast.error("Erro ao registar a videoanálise.");
     } finally {
       setSaving(false);
     }
@@ -583,98 +624,193 @@ function CoachDashboard({ user }: Props) {
       </section>
 
       {creatingExtra && (
-        <Modal title="Treino extra" onClose={() => setCreatingExtra(false)}>
+        <Modal
+          title={
+            extraKind === "video"
+              ? "Videoanálise"
+              : extraKind === "water"
+                ? "Treino de água"
+                : "Novo treino"
+          }
+          onClose={closeCreateExtra}
+        >
           <div className="coach-session-modal">
-            <p className="muted">
-              Regista um treino fora dos grupos fixos e indica quem foi. Podes
-              escolher um dia anterior se foi esquecimento.
-            </p>
+            {extraKind === null ? (
+              <>
+                <p className="muted">
+                  Que tipo de sessão queres registar para este dia?
+                </p>
+                <div className="coach-extra-kind-picker">
+                  <button
+                    type="button"
+                    className="primary-btn"
+                    onClick={() => setExtraKind("water")}
+                  >
+                    Treino de água
+                  </button>
+                  <button
+                    type="button"
+                    className="compact-btn"
+                    onClick={() => setExtraKind("video")}
+                  >
+                    Videoanálise
+                  </button>
+                </div>
+              </>
+            ) : null}
 
-            <label className="field-label">
-              Data do treino
-              <input
-                type="date"
-                value={sessionDate}
-                max={today}
-                onChange={(event) => setSessionDate(event.target.value)}
-              />
-            </label>
+            {extraKind === "water" ? (
+              <>
+                <p className="muted">
+                  Regista um treino de água fora dos grupos fixos e indica quem
+                  foi. Podes escolher um dia anterior se foi esquecimento.
+                </p>
 
-            <label className="field-label">
-              Nome do treino
-              <input
-                value={extraTitle}
-                onChange={(event) => setExtraTitle(event.target.value)}
-                placeholder="Treino extra"
-              />
-            </label>
+                <button
+                  type="button"
+                  className="compact-btn"
+                  onClick={() => setExtraKind(null)}
+                >
+                  ← Mudar tipo
+                </button>
 
-            <label className="field-label">
-              Segundo treinador (opcional)
-              <select
-                value={secondaryCoachName}
-                onChange={(event) => setSecondaryCoachName(event.target.value)}
-              >
-                <option value="">Só eu</option>
-                {coaches
-                  .filter(
-                    (coach) =>
-                      coach.name.trim().toLowerCase() !==
-                      user.name.trim().toLowerCase()
-                  )
-                  .map((coach) => (
-                    <option key={coach.id} value={coach.name}>
-                      {coach.name}
-                    </option>
-                  ))}
-              </select>
-            </label>
+                <label className="field-label">
+                  Data do treino
+                  <input
+                    type="date"
+                    value={sessionDate}
+                    max={today}
+                    onChange={(event) => setSessionDate(event.target.value)}
+                  />
+                </label>
 
-            <label className="field-label">
-              Quem foi ao treino
-              <input
-                className="search-input"
-                value={extraStudentSearch}
-                onChange={(event) => setExtraStudentSearch(event.target.value)}
-                placeholder="Pesquisar aluno..."
-              />
-            </label>
+                <label className="field-label">
+                  Nome do treino
+                  <input
+                    value={extraTitle}
+                    onChange={(event) => setExtraTitle(event.target.value)}
+                    placeholder="Treino extra"
+                  />
+                </label>
 
-            <div className="coach-extra-student-picker">
-              {selectableExtraStudents.length === 0 ? (
-                <p className="muted">Sem alunos encontrados.</p>
-              ) : (
-                selectableExtraStudents.map((student) => {
-                  const selected = extraStudentIds.includes(student.id);
-                  return (
-                    <button
-                      type="button"
-                      key={student.id}
-                      className={`coach-extra-student-option${
-                        selected ? " selected" : ""
-                      }`}
-                      onClick={() => toggleExtraStudent(student.id)}
-                    >
-                      <span>{student.name}</span>
-                      <strong>{selected ? "Foi" : "Selecionar"}</strong>
-                    </button>
-                  );
-                })
-              )}
-            </div>
+                <label className="field-label">
+                  Segundo treinador (opcional)
+                  <select
+                    value={secondaryCoachName}
+                    onChange={(event) =>
+                      setSecondaryCoachName(event.target.value)
+                    }
+                  >
+                    <option value="">Só eu</option>
+                    {coaches
+                      .filter(
+                        (coach) =>
+                          coach.name.trim().toLowerCase() !==
+                          user.name.trim().toLowerCase()
+                      )
+                      .map((coach) => (
+                        <option key={coach.id} value={coach.name}>
+                          {coach.name}
+                        </option>
+                      ))}
+                  </select>
+                </label>
 
-            <p className="muted">
-              {extraStudentIds.length} aluno(s) selecionado(s)
-            </p>
+                <label className="field-label">
+                  Quem foi ao treino
+                  <input
+                    className="search-input"
+                    value={extraStudentSearch}
+                    onChange={(event) =>
+                      setExtraStudentSearch(event.target.value)
+                    }
+                    placeholder="Pesquisar aluno..."
+                  />
+                </label>
 
-            <button
-              type="button"
-              className="primary-btn"
-              disabled={saving}
-              onClick={createExtraSession}
-            >
-              {saving ? "A registar..." : "Registar treino extra"}
-            </button>
+                <div className="coach-extra-student-picker">
+                  {selectableExtraStudents.length === 0 ? (
+                    <p className="muted">Sem alunos encontrados.</p>
+                  ) : (
+                    selectableExtraStudents.map((student) => {
+                      const selected = extraStudentIds.includes(student.id);
+                      return (
+                        <button
+                          type="button"
+                          key={student.id}
+                          className={`coach-extra-student-option${
+                            selected ? " selected" : ""
+                          }`}
+                          onClick={() => toggleExtraStudent(student.id)}
+                        >
+                          <span>{student.name}</span>
+                          <strong>{selected ? "Foi" : "Selecionar"}</strong>
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+
+                <p className="muted">
+                  {extraStudentIds.length} aluno(s) selecionado(s)
+                </p>
+
+                <button
+                  type="button"
+                  className="primary-btn"
+                  disabled={saving}
+                  onClick={createExtraSession}
+                >
+                  {saving ? "A registar..." : "Registar treino de água"}
+                </button>
+              </>
+            ) : null}
+
+            {extraKind === "video" ? (
+              <>
+                <p className="muted">
+                  Regista uma sessão de videoanálise. Aparece em Os meus
+                  treinos / relatório mensal.
+                </p>
+
+                <button
+                  type="button"
+                  className="compact-btn"
+                  onClick={() => setExtraKind(null)}
+                >
+                  ← Mudar tipo
+                </button>
+
+                <label className="field-label">
+                  Data da sessão
+                  <input
+                    type="date"
+                    value={sessionDate}
+                    max={today}
+                    onChange={(event) => setSessionDate(event.target.value)}
+                  />
+                </label>
+
+                <label className="field-label">
+                  Notas (opcional)
+                  <textarea
+                    rows={3}
+                    value={videoNotes}
+                    onChange={(event) => setVideoNotes(event.target.value)}
+                    placeholder="Ex: revisão de bottom turn, foco em timing..."
+                  />
+                </label>
+
+                <button
+                  type="button"
+                  className="primary-btn"
+                  disabled={saving}
+                  onClick={createVideoSession}
+                >
+                  {saving ? "A registar..." : "Registar videoanálise"}
+                </button>
+              </>
+            ) : null}
           </div>
         </Modal>
       )}
