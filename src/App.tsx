@@ -16,7 +16,6 @@ import AdminInventory from "./pages/AdminInventory";
 import AdminVans from "./pages/AdminVans";
 import AdminCompensations from "./pages/AdminCompensations";
 import AdminEvaluations from "./pages/AdminEvaluations";
-import AdminSchoolSetup from "./pages/AdminSchoolSetup";
 import AdminCoachActivity from "./pages/AdminCoachActivity";
 import AdminFixedTrainings from "./pages/AdminFixedTrainings";
 import CoachActivity from "./pages/CoachActivity";
@@ -40,7 +39,6 @@ type AdminSection =
   | "my-dashboard"
   | "my-lessons"
   | "my-activity"
-  | "setup"
   | "students"
   | "coaches"
   | "fixed-trainings"
@@ -325,10 +323,6 @@ function App() {
 
           {currentUser.role === "admin" && activeSection === "dashboard" && (
             <AdminDashboard />
-          )}
-
-          {currentUser.role === "admin" && activeSection === "setup" && (
-            <AdminSchoolSetup />
           )}
 
           {currentUser.role === "admin" &&

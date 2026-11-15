@@ -13,7 +13,6 @@ import {
   Star,
   Shield,
   ArrowLeft,
-  Wrench,
   LogOut,
   Menu,
   X,
@@ -21,6 +20,7 @@ import {
   BarChart3,
   TrendingUp,
 } from "lucide-react";
+
 import type { User } from "../types";
 import logo from "../assets/logo next.jpeg";
 import AppVersion from "./AppVersion";
@@ -34,7 +34,6 @@ type Props = {
 
 const ADMIN_MANAGEMENT_SECTIONS = new Set([
   "dashboard",
-  "setup",
   "students",
   "coaches",
   "fixed-trainings",
@@ -186,9 +185,6 @@ function Sidebar({ user, activeSection, onChangeSection, onLogout }: Props) {
               {item(CalendarClock, "Compensações", "compensations")}
               {item(Package, "Inventário", "inventory")}
               {item(Truck, "Carrinhas", "vans")}
-
-              <div className="nav-section-label">Ferramentas</div>
-              {item(Wrench, "Importação", "setup")}
             </nav>
           )}
 
