@@ -1,5 +1,6 @@
 import { supabase } from "./supabase";
 import type { Student, StudentBillingType } from "../types";
+import { matchPricingPlanId } from "../data/pricingCatalog";
 
 type DbStudent = {
   id: string;
@@ -10,9 +11,13 @@ type DbStudent = {
   monthly_limit: number;
   monthly_fee?: number | null;
   billing_type?: string | null;
+  plan_id?: string | null;
   pack_size?: number | null;
   pack_price?: number | null;
   pack_remaining?: number | null;
+  includes_transport?: boolean | null;
+  wetsuit_rental?: boolean | null;
+  board_storage?: boolean | null;
   paid: boolean;
   pickup: string;
   main_coach: string;
@@ -24,18 +29,39 @@ function normalizeBillingType(value: string | null | undefined): StudentBillingT
 }
 
 function fromDb(student: DbStudent): Student {
+  const billingType = normalizeBillingType(student.billing_type);
+  const monthlyLimit = student.monthly_limit;
+  const monthlyFee = Number(student.monthly_fee ?? 0);
+  const packSize = Number(student.pack_size ?? 0);
+  const packPrice = Number(student.pack_price ?? 0);
+  const includesTransport = Boolean(student.includes_transport);
+  const planId =
+    (student.plan_id || "").trim() ||
+    matchPricingPlanId({
+      billingType,
+      monthlyLimit,
+      monthlyFee,
+      packSize,
+      packPrice,
+      includesTransport,
+    });
+
   return {
     id: student.id,
     name: student.name,
     phone: student.phone,
     email: student.email,
     level: student.level,
-    billingType: normalizeBillingType(student.billing_type),
-    monthlyLimit: student.monthly_limit,
-    monthlyFee: Number(student.monthly_fee ?? 0),
-    packSize: Number(student.pack_size ?? 0),
-    packPrice: Number(student.pack_price ?? 0),
+    billingType,
+    planId,
+    monthlyLimit,
+    monthlyFee,
+    packSize,
+    packPrice,
     packRemaining: Number(student.pack_remaining ?? 0),
+    includesTransport,
+    wetsuitRental: Boolean(student.wetsuit_rental),
+    boardStorage: Boolean(student.board_storage),
     paid: student.paid,
     pickup: student.pickup,
     mainCoach: student.main_coach,
@@ -51,11 +77,15 @@ function toDb(student: Student) {
     email: student.email,
     level: student.level,
     billing_type: student.billingType,
+    plan_id: student.planId || "",
     monthly_limit: student.monthlyLimit,
     monthly_fee: student.monthlyFee,
     pack_size: student.packSize,
     pack_price: student.packPrice,
     pack_remaining: student.packRemaining,
+    includes_transport: student.includesTransport,
+    wetsuit_rental: student.wetsuitRental,
+    board_storage: student.boardStorage,
     paid: student.paid,
     pickup: student.pickup,
     main_coach: student.mainCoach,
@@ -102,6 +132,10 @@ const OPTIONAL_STUDENT_COLUMNS = [
   "pack_size",
   "pack_price",
   "pack_remaining",
+  "plan_id",
+  "includes_transport",
+  "wetsuit_rental",
+  "board_storage",
 ] as const;
 
 function missingOptionalColumn(error: { message?: string; code?: string }) {

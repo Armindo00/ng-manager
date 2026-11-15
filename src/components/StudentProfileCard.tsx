@@ -1,10 +1,15 @@
 import type { Lesson, Student } from "../types";
 import { getCurrentMonthYear } from "../utils/dateUtils";
-import { billingTypeLabel } from "../utils/studentPaymentPlan";
+import { studentPlanLabel } from "../utils/studentPaymentPlan";
 import {
   getStudentTrainingUsage,
   usageStatusLabel,
 } from "../utils/studentTrainingUsage";
+import {
+  BOARD_STORAGE_FEE,
+  WETSUIT_RENTAL_FEE,
+  formatEuro,
+} from "../data/pricingCatalog";
 
 type Props = {
   student: Student;
@@ -37,7 +42,11 @@ function StudentProfileCard({ student, lessons = [] }: Props) {
             {student.paid ? "Pago" : "Pendente"}
           </span>
           {showQuota && (
-            <span className={`quota-status ${usage.status === "at_limit" ? "is-limit" : "is-over"}`}>
+            <span
+              className={`quota-status ${
+                usage.status === "at_limit" ? "is-limit" : "is-over"
+              }`}
+            >
               {usageStatusLabel(usage.status)}
             </span>
           )}
@@ -55,49 +64,49 @@ function StudentProfileCard({ student, lessons = [] }: Props) {
           <strong>{student.email || "—"}</strong>
         </div>
 
-        <div>
-          <span>Tipo de registo</span>
-          <strong>{billingTypeLabel(student.billingType)}</strong>
+        <div className="student-profile-span">
+          <span>Plano</span>
+          <strong>{studentPlanLabel(student)}</strong>
         </div>
 
         {isPack ? (
-          <>
-            <div>
-              <span>Pack</span>
-              <strong>
-                {student.packRemaining}/{student.packSize} treinos
-              </strong>
-            </div>
-
-            <div>
-              <span>Valor do pack</span>
-              <strong>
-                {student.packPrice > 0 ? `${student.packPrice}€` : "Por definir"}
-              </strong>
-            </div>
-          </>
+          <div>
+            <span>Saldo do pack</span>
+            <strong>
+              {student.packRemaining}/{student.packSize} treinos
+            </strong>
+          </div>
         ) : (
-          <>
-            <div>
-              <span>Plano</span>
-              <strong>{student.monthlyLimit} treinos/mês</strong>
-            </div>
-
-            <div>
-              <span>Mensalidade</span>
-              <strong>
-                {student.monthlyFee > 0
-                  ? `${student.monthlyFee}€`
-                  : "Por definir"}
-              </strong>
-            </div>
-          </>
+          <div>
+            <span>Transporte</span>
+            <strong>
+              {student.includesTransport ? "Incluído" : "Não incluído"}
+            </strong>
+          </div>
         )}
 
         <div>
           <span>Este mês</span>
           <strong>{usage.label}</strong>
         </div>
+
+        {!isPack && (student.wetsuitRental || student.boardStorage) && (
+          <div>
+            <span>Extras</span>
+            <strong>
+              {[
+                student.wetsuitRental
+                  ? `Fato ${formatEuro(WETSUIT_RENTAL_FEE)}`
+                  : null,
+                student.boardStorage
+                  ? `Prancha ${formatEuro(BOARD_STORAGE_FEE)}`
+                  : null,
+              ]
+                .filter(Boolean)
+                .join(" · ")}
+            </strong>
+          </div>
+        )}
 
         <div>
           <span>Pickup habitual</span>

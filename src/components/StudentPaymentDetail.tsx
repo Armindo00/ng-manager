@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import toast from "react-hot-toast";
-import type { Lesson, Student, StudentBillingType } from "../types";
+import type { Lesson, Student } from "../types";
 import {
   addPayment,
   syncStudentPaidStatus,
@@ -9,7 +9,10 @@ import {
   type PaymentStatus,
 } from "../services/paymentsService";
 import { updateStudent } from "../services/studentsService";
-import FormField from "./FormField";
+import StudentPlanFields, {
+  draftFromStudentPlan,
+  type StudentPlanDraft,
+} from "./StudentPlanFields";
 import { getCurrentMonthYear, getTodayDate } from "../utils/dateUtils";
 import {
   billingTypeLabel,
@@ -17,7 +20,9 @@ import {
   countStudentTrainingsTotal,
   DEFAULT_MONTHLY_FEE,
   isPackStudent,
+  parseStudentPlanDraft,
   resolveStudentMonthlyFee,
+  studentPlanLabel,
   suggestAmountForTrainings,
 } from "../utils/studentPaymentPlan";
 
@@ -109,23 +114,8 @@ function StudentPaymentDetail({
   const currentPeriod = getCurrentMonthYear();
   const resolvedFee = resolveStudentMonthlyFee(student, payments);
 
-  const [billingTypeDraft, setBillingTypeDraft] = useState<StudentBillingType>(
-    student.billingType || "monthly"
-  );
-  const [monthlyLimitDraft, setMonthlyLimitDraft] = useState(
-    String(student.monthlyLimit || "")
-  );
-  const [monthlyFeeDraft, setMonthlyFeeDraft] = useState(
-    String(student.monthlyFee || resolvedFee || "")
-  );
-  const [packSizeDraft, setPackSizeDraft] = useState(
-    String(student.packSize || "")
-  );
-  const [packPriceDraft, setPackPriceDraft] = useState(
-    String(student.packPrice || "")
-  );
-  const [packRemainingDraft, setPackRemainingDraft] = useState(
-    String(student.packRemaining || student.packSize || "")
+  const [planDraft, setPlanDraft] = useState<StudentPlanDraft>(() =>
+    draftFromStudentPlan(student)
   );
   const [savingPlan, setSavingPlan] = useState(false);
   const [savingMonth, setSavingMonth] = useState<number | null>(null);
@@ -134,6 +124,12 @@ function StudentPaymentDetail({
     () => buildMonthDrafts(student, payments, lessons, selectedYear)
   );
 
+  const billingTypeDraft = planDraft.billingType;
+  const monthlyLimitDraft = planDraft.monthlyLimit;
+  const monthlyFeeDraft = planDraft.monthlyFee;
+  const packPriceDraft = planDraft.packPrice;
+  const packSizeDraft = planDraft.packSize;
+  const packRemainingDraft = planDraft.packRemaining;
   const expectedTrainings =
     Number(monthlyLimitDraft) || student.monthlyLimit || 0;
   const totalTrainingsDone = useMemo(
@@ -195,50 +191,15 @@ function StudentPaymentDetail({
   ]);
 
   async function savePlan() {
-    const limitNumber = Number(monthlyLimitDraft || 0);
-    const feeNumber = Number(monthlyFeeDraft || 0);
-    const packSizeNumber = Number(packSizeDraft || 0);
-    const packPriceNumber = Number(packPriceDraft || 0);
-    const packRemainingNumber = Number(
-      packRemainingDraft === "" ? packSizeNumber : packRemainingDraft
-    );
-
-    if (billingTypeDraft === "monthly") {
-      if (!Number.isFinite(limitNumber) || limitNumber < 0 || limitNumber > 31) {
-        toast.error("Número de treinos por mês inválido.");
-        return;
-      }
-      if (!Number.isFinite(feeNumber) || feeNumber < 0) {
-        toast.error("Valor mensal inválido.");
-        return;
-      }
-    } else {
-      if (!Number.isFinite(packSizeNumber) || packSizeNumber <= 0) {
-        toast.error("Número de treinos do pack inválido.");
-        return;
-      }
-      if (!Number.isFinite(packPriceNumber) || packPriceNumber < 0) {
-        toast.error("Valor do pack inválido.");
-        return;
-      }
-      if (
-        !Number.isFinite(packRemainingNumber) ||
-        packRemainingNumber < 0 ||
-        packRemainingNumber > packSizeNumber
-      ) {
-        toast.error("Treinos por usar inválidos.");
-        return;
-      }
+    const parsed = parseStudentPlanDraft(planDraft);
+    if (!parsed.ok) {
+      toast.error(parsed.error);
+      return;
     }
 
     const nextStudent: Student = {
       ...student,
-      billingType: billingTypeDraft,
-      monthlyLimit: billingTypeDraft === "monthly" ? limitNumber : 0,
-      monthlyFee: billingTypeDraft === "monthly" ? feeNumber : 0,
-      packSize: billingTypeDraft === "pack" ? packSizeNumber : 0,
-      packPrice: billingTypeDraft === "pack" ? packPriceNumber : 0,
-      packRemaining: billingTypeDraft === "pack" ? packRemainingNumber : 0,
+      ...parsed.value,
     };
 
     try {
@@ -391,11 +352,7 @@ function StudentPaymentDetail({
           </button>
           <p className="page-eyebrow">Atleta</p>
           <h1 className="page-title">{student.name}</h1>
-          <p className="page-description">
-            {billingTypeDraft === "pack"
-              ? "Pack de treinos — valor, saldo e presenças."
-              : "Treinos previstos, valor da mensalidade e ajuste mês a mês."}
-          </p>
+          <p className="page-description">{studentPlanLabel(student)}</p>
         </div>
         <span
           className={`student-billing-badge is-${billingTypeDraft}`}
@@ -407,100 +364,26 @@ function StudentPaymentDetail({
       <section className="student-payment-plan-card">
         <div className="admin-section-heading">
           <div>
-            <span className="admin-section-kicker">Plano</span>
-            <h2>
-              {billingTypeDraft === "pack"
-                ? "Pack do atleta"
-                : "Mensalidade do atleta"}
-            </h2>
+            <span className="admin-section-kicker">Preçário</span>
+            <h2>Plano do atleta</h2>
           </div>
         </div>
 
         <div className="student-payment-plan-grid">
-          <FormField label="Tipo de registo">
-            <select
-              value={billingTypeDraft}
-              onChange={(event) =>
-                setBillingTypeDraft(event.target.value as StudentBillingType)
-              }
-            >
-              <option value="monthly">Mensalidade</option>
-              <option value="pack">Pack de treinos</option>
-            </select>
-          </FormField>
-
-          {billingTypeDraft === "monthly" ? (
-            <>
-              <FormField label="Treinos por mês (previstos)">
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  value={monthlyLimitDraft}
-                  onChange={(event) =>
-                    setMonthlyLimitDraft(
-                      event.target.value.replace(/[^\d]/g, "")
-                    )
-                  }
-                />
-              </FormField>
-
-              <FormField label="Valor a pagar à escola (€)">
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  value={monthlyFeeDraft}
-                  onChange={(event) => setMonthlyFeeDraft(event.target.value)}
-                />
-              </FormField>
-            </>
-          ) : (
-            <>
-              <FormField label="Treinos do pack">
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  value={packSizeDraft}
-                  onChange={(event) =>
-                    setPackSizeDraft(event.target.value.replace(/[^\d]/g, ""))
-                  }
-                />
-              </FormField>
-
-              <FormField label="Valor do pack (€)">
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  value={packPriceDraft}
-                  onChange={(event) => setPackPriceDraft(event.target.value)}
-                />
-              </FormField>
-
-              <FormField label="Treinos por usar">
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  value={packRemainingDraft}
-                  onChange={(event) =>
-                    setPackRemainingDraft(
-                      event.target.value.replace(/[^\d]/g, "")
-                    )
-                  }
-                />
-              </FormField>
-            </>
-          )}
+          <StudentPlanFields
+            value={planDraft}
+            onChange={(patch) =>
+              setPlanDraft((current) => ({ ...current, ...patch }))
+            }
+          />
 
           <div className="student-payment-plan-summary">
-            <span>Resumo</span>
-            <strong>
-              {billingTypeDraft === "pack"
-                ? `${packRemainingDraft || "0"}/${packSizeDraft || "0"} treinos · ${packPriceDraft || "0"}€`
-                : `${monthlyLimitDraft || "0"} treinos · ${monthlyFeeDraft || "0"}€`}
-            </strong>
+            <span>Treinos feitos</span>
+            <strong>{totalTrainingsDone} no total</strong>
             <p className="muted">
               {billingTypeDraft === "pack"
-                ? `Presenças registadas: ${totalTrainingsDone}. Atualiza os treinos por usar quando consumirem o pack.`
-                : "Se fizer menos treinos, podes ajustar o valor de cada mês abaixo."}
+                ? `Saldo do pack: ${packRemainingDraft || "0"}/${packSizeDraft || "0"}. Atualiza quando consumirem o pack.`
+                : "As presenças do mês aparecem na tabela abaixo e em Treinos a mais."}
             </p>
           </div>
         </div>

@@ -20,8 +20,13 @@ export type Student = {
   level: string;
   /** Mensalidade ou pack de treinos. */
   billingType: StudentBillingType;
+  /**
+   * ID do plano no preçário (`monthly-2-transport`, `pack-5`, …)
+   * ou `custom` / vazio se for personalizado.
+   */
+  planId: string;
   monthlyLimit: number;
-  /** Valor mensal esperado da mensalidade (€). */
+  /** Valor base do plano (€), sem extras. */
   monthlyFee: number;
   /** Treinos incluídos no pack atual. */
   packSize: number;
@@ -29,6 +34,12 @@ export type Student = {
   packPrice: number;
   /** Treinos ainda por usar no pack. */
   packRemaining: number;
+  /** Transporte incluído na mensalidade. */
+  includesTransport: boolean;
+  /** Extra mensal: aluguer de fato (5€). */
+  wetsuitRental: boolean;
+  /** Extra mensal: guardar pranchas (7,5€). */
+  boardStorage: boolean;
   paid: boolean;
   pickup: string;
   mainCoach: string;

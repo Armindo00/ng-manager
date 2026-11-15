@@ -1,4 +1,10 @@
 import type { Lesson, Student } from "../types";
+import { getCurrentMonthYear } from "../utils/dateUtils";
+import {
+  countStudentTrainingsInMonth,
+  countStudentTrainingsTotal,
+} from "../utils/studentPaymentPlan";
+import { getStudentTrainingUsage } from "../utils/studentTrainingUsage";
 
 type Props = {
   student: Student;
@@ -6,29 +12,35 @@ type Props = {
 };
 
 function StudentProfileStats({ student, lessons }: Props) {
+  const { month, year } = getCurrentMonthYear();
+  const usage = getStudentTrainingUsage(student, lessons, month, year);
+  const thisMonth = countStudentTrainingsInMonth(
+    student.id,
+    lessons,
+    month,
+    year
+  );
+  const totalPresent = countStudentTrainingsTotal(student.id, lessons);
+
   const studentLessons = lessons.filter((lesson) =>
     lesson.bookedStudentIds.includes(student.id)
   );
-
-  const attendedLessons = studentLessons.filter((lesson) =>
-    lesson.presentStudentIds.includes(student.id)
-  );
-
   const attendanceRate =
     studentLessons.length === 0
       ? 0
-      : Math.round((attendedLessons.length / studentLessons.length) * 100);
+      : Math.round((totalPresent / studentLessons.length) * 100);
 
   return (
     <div className="stats-grid student-stats-grid">
       <div className="card stat-card">
-        <span className="stat-label">Treinos marcados</span>
-        <strong className="stat-number">{studentLessons.length}</strong>
+        <span className="stat-label">Este mês</span>
+        <strong className="stat-number">{thisMonth}</strong>
+        <span className="stat-sub">{usage.label}</span>
       </div>
 
       <div className="card stat-card">
-        <span className="stat-label">Presenças</span>
-        <strong className="stat-number">{attendedLessons.length}</strong>
+        <span className="stat-label">Presenças totais</span>
+        <strong className="stat-number">{totalPresent}</strong>
       </div>
 
       <div className="card stat-card">
@@ -37,9 +49,15 @@ function StudentProfileStats({ student, lessons }: Props) {
       </div>
 
       <div className="card stat-card">
-        <span className="stat-label">Pagamento</span>
+        <span className="stat-label">
+          {student.billingType === "pack" ? "Pack" : "Pagamento"}
+        </span>
         <strong className="stat-number small">
-          {student.paid ? "Pago" : "Pendente"}
+          {student.billingType === "pack"
+            ? `${student.packRemaining}/${student.packSize}`
+            : student.paid
+              ? "Pago"
+              : "Pendente"}
         </strong>
       </div>
     </div>

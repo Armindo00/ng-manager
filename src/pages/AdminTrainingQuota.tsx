@@ -9,6 +9,7 @@ import {
   usageStatusLabel,
   type TrainingUsageStatus,
 } from "../utils/studentTrainingUsage";
+import { studentPlanLabel } from "../utils/studentPaymentPlan";
 
 const MONTH_LABELS = [
   "Janeiro",
@@ -180,35 +181,46 @@ function AdminTrainingQuota() {
                   <th>Aluno</th>
                   <th>Plano</th>
                   <th>Feitos</th>
-                  <th>Limite / pack</th>
+                  <th>Limite</th>
                   <th>Estado</th>
                 </tr>
               </thead>
               <tbody>
-                {usageRows.map((row) => (
-                  <tr key={row.studentId}>
-                    <td className="data-table-primary" data-label="Aluno">
-                      {row.studentName}
-                    </td>
-                    <td data-label="Plano">
-                      {row.billingType === "pack" ? "Pack" : "Mensalidade"}
-                    </td>
-                    <td data-label="Feitos">{row.done}</td>
-                    <td data-label="Limite">
-                      {row.billingType === "pack"
-                        ? `${row.remaining ?? 0} por usar / ${row.limit}`
-                        : row.limit > 0
-                          ? row.limit
-                          : "—"}
-                    </td>
-                    <td data-label="Estado">
-                      <span className={`quota-status ${statusTone(row.status)}`}>
-                        {usageStatusLabel(row.status)}
-                        {row.overBy > 0 ? ` · +${row.overBy}` : ""}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
+                {usageRows.map((row) => {
+                  const student = students.find(
+                    (item) => item.id === row.studentId
+                  );
+                  return (
+                    <tr key={row.studentId}>
+                      <td className="data-table-primary" data-label="Aluno">
+                        {row.studentName}
+                      </td>
+                      <td data-label="Plano">
+                        {student
+                          ? studentPlanLabel(student)
+                          : row.billingType === "pack"
+                            ? "Pack"
+                            : "Mensalidade"}
+                      </td>
+                      <td data-label="Feitos">{row.done}</td>
+                      <td data-label="Limite">
+                        {row.billingType === "pack"
+                          ? `${row.remaining ?? 0} por usar / ${row.limit}`
+                          : row.limit > 0
+                            ? row.limit
+                            : "—"}
+                      </td>
+                      <td data-label="Estado">
+                        <span
+                          className={`quota-status ${statusTone(row.status)}`}
+                        >
+                          {usageStatusLabel(row.status)}
+                          {row.overBy > 0 ? ` · +${row.overBy}` : ""}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

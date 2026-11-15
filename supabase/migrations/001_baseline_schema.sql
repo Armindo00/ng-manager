@@ -21,9 +21,13 @@ CREATE TABLE IF NOT EXISTS students (
   billing_type text NOT NULL DEFAULT 'monthly' CHECK (
     billing_type IN ('monthly', 'pack')
   ),
+  plan_id text NOT NULL DEFAULT '',
   pack_size integer NOT NULL DEFAULT 0,
   pack_price numeric(10, 2) NOT NULL DEFAULT 0,
   pack_remaining integer NOT NULL DEFAULT 0,
+  includes_transport boolean NOT NULL DEFAULT false,
+  wetsuit_rental boolean NOT NULL DEFAULT false,
+  board_storage boolean NOT NULL DEFAULT false,
   paid boolean NOT NULL DEFAULT false,
   pickup text NOT NULL DEFAULT '',
   main_coach text NOT NULL DEFAULT '',

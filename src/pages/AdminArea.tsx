@@ -1,12 +1,10 @@
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import type {
-  Lesson,
-  MonthlyEvaluation,
-  Student,
-  StudentBillingType,
-} from "../types";
-import { billingTypeLabel } from "../utils/studentPaymentPlan";
+import type { Lesson, MonthlyEvaluation, Student } from "../types";
+import {
+  parseStudentPlanDraft,
+  studentPlanLabel,
+} from "../utils/studentPaymentPlan";
 import {
   getStudents,
   addStudent,
@@ -24,6 +22,11 @@ import {
 import FormField from "../components/FormField";
 import ConfirmDialog from "../components/ConfirmDialog";
 import StudentProfileTabs from "../components/StudentProfileTabs";
+import StudentPlanFields, {
+  draftFromStudentPlan,
+  emptyPlanDraft,
+  type StudentPlanDraft,
+} from "../components/StudentPlanFields";
 import {
   DetailPanel,
   DetailPanelEmpty,
@@ -32,6 +35,8 @@ import {
   SelectionListItem,
 } from "../components/MasterDetailLayout";
 import { getEmailValidationMessage, normalizeEmail } from "../utils/email";
+import { getStudentTrainingUsage } from "../utils/studentTrainingUsage";
+import { getCurrentMonthYear } from "../utils/dateUtils";
 
 function AdminArea() {
   const [students, setStudents] = useState<Student[]>([]);
@@ -51,16 +56,11 @@ function AdminArea() {
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [level, setLevel] = useState("");
-  const [billingType, setBillingType] =
-    useState<StudentBillingType>("monthly");
-  const [monthlyLimit, setMonthlyLimit] = useState("");
-  const [monthlyFee, setMonthlyFee] = useState("");
-  const [packSize, setPackSize] = useState("");
-  const [packPrice, setPackPrice] = useState("");
-  const [packRemaining, setPackRemaining] = useState("");
+  const [planDraft, setPlanDraft] = useState<StudentPlanDraft>(emptyPlanDraft);
   const [pickup, setPickup] = useState("");
   const [mainCoach, setMainCoach] = useState("");
   const [notes, setNotes] = useState("");
+  const currentPeriod = getCurrentMonthYear();
 
   useEffect(() => {
     loadData();
@@ -106,12 +106,7 @@ function AdminArea() {
     setPhone("");
     setEmail("");
     setLevel("");
-    setBillingType("monthly");
-    setMonthlyLimit("");
-    setMonthlyFee("");
-    setPackSize("");
-    setPackPrice("");
-    setPackRemaining("");
+    setPlanDraft(emptyPlanDraft());
     setPickup("");
     setMainCoach("");
     setNotes("");
@@ -137,16 +132,6 @@ function AdminArea() {
       return;
     }
 
-    if (billingType === "monthly" && !monthlyLimit) {
-      toast.error("Indica os treinos por mês.");
-      return;
-    }
-
-    if (billingType === "pack" && !packSize) {
-      toast.error("Indica o número de treinos do pack.");
-      return;
-    }
-
     const normalizedEmail = normalizeEmail(email);
     const emailError = getEmailValidationMessage(normalizedEmail);
 
@@ -155,29 +140,14 @@ function AdminArea() {
       return;
     }
 
-    const feeNumber = monthlyFee.trim() === "" ? 0 : Number(monthlyFee);
-    const packPriceNumber = packPrice.trim() === "" ? 0 : Number(packPrice);
-    const packSizeNumber = packSize.trim() === "" ? 0 : Number(packSize);
-    const packRemainingNumber =
-      packRemaining.trim() === ""
-        ? packSizeNumber
-        : Number(packRemaining);
+    const parsedPlan = parseStudentPlanDraft(planDraft);
+    if (!parsedPlan.ok) {
+      toast.error(parsedPlan.error);
+      return;
+    }
 
-    if (!Number.isFinite(feeNumber) || feeNumber < 0) {
-      toast.error("Valor mensal inválido.");
-      return;
-    }
-    if (!Number.isFinite(packPriceNumber) || packPriceNumber < 0) {
-      toast.error("Valor do pack inválido.");
-      return;
-    }
-    if (
-      !Number.isFinite(packSizeNumber) ||
-      packSizeNumber < 0 ||
-      !Number.isFinite(packRemainingNumber) ||
-      packRemainingNumber < 0
-    ) {
-      toast.error("Dados do pack inválidos.");
+    if (!planDraft.planId) {
+      toast.error("Escolhe um plano do preçário (ou Personalizado).");
       return;
     }
 
@@ -187,13 +157,7 @@ function AdminArea() {
       phone: phone.trim(),
       email: normalizedEmail,
       level,
-      billingType,
-      monthlyLimit:
-        billingType === "monthly" ? Number(monthlyLimit) : Number(monthlyLimit) || 0,
-      monthlyFee: billingType === "monthly" ? feeNumber : 0,
-      packSize: billingType === "pack" ? packSizeNumber : 0,
-      packPrice: billingType === "pack" ? packPriceNumber : 0,
-      packRemaining: billingType === "pack" ? packRemainingNumber : 0,
+      ...parsedPlan.value,
       paid: false,
       pickup,
       mainCoach,
@@ -240,16 +204,7 @@ function AdminArea() {
     setPhone(student.phone);
     setEmail(student.email);
     setLevel(student.level);
-    setBillingType(student.billingType || "monthly");
-    setMonthlyLimit(String(student.monthlyLimit || ""));
-    setMonthlyFee(student.monthlyFee ? String(student.monthlyFee) : "");
-    setPackSize(student.packSize ? String(student.packSize) : "");
-    setPackPrice(student.packPrice ? String(student.packPrice) : "");
-    setPackRemaining(
-      student.packRemaining || student.packSize
-        ? String(student.packRemaining || student.packSize)
-        : ""
-    );
+    setPlanDraft(draftFromStudentPlan(student));
     setPickup(student.pickup);
     setMainCoach(student.mainCoach);
     setNotes(student.notes);
@@ -315,72 +270,12 @@ function AdminArea() {
               onChange={(e) => setLevel(e.target.value)}
             />
           </FormField>
-          <FormField label="Tipo de registo">
-            <select
-              value={billingType}
-              onChange={(e) =>
-                setBillingType(e.target.value as StudentBillingType)
-              }
-            >
-              <option value="monthly">Mensalidade</option>
-              <option value="pack">Pack de treinos</option>
-            </select>
-          </FormField>
-          {billingType === "monthly" ? (
-            <>
-              <FormField label="Treinos por mês">
-                <input
-                  type="number"
-                  min={0}
-                  max={31}
-                  placeholder="Ex: 8"
-                  value={monthlyLimit}
-                  onChange={(e) => setMonthlyLimit(e.target.value)}
-                />
-              </FormField>
-              <FormField label="Mensalidade (€)">
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  placeholder="Ex: 80"
-                  value={monthlyFee}
-                  onChange={(e) => setMonthlyFee(e.target.value)}
-                />
-              </FormField>
-            </>
-          ) : (
-            <>
-              <FormField label="Treinos do pack">
-                <input
-                  type="number"
-                  min={0}
-                  max={100}
-                  placeholder="Ex: 10"
-                  value={packSize}
-                  onChange={(e) => setPackSize(e.target.value)}
-                />
-              </FormField>
-              <FormField label="Valor do pack (€)">
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  placeholder="Ex: 120"
-                  value={packPrice}
-                  onChange={(e) => setPackPrice(e.target.value)}
-                />
-              </FormField>
-              <FormField label="Treinos por usar">
-                <input
-                  type="number"
-                  min={0}
-                  max={100}
-                  placeholder="Ex: 10"
-                  value={packRemaining}
-                  onChange={(e) => setPackRemaining(e.target.value)}
-                />
-              </FormField>
-            </>
-          )}
+          <StudentPlanFields
+            value={planDraft}
+            onChange={(patch) =>
+              setPlanDraft((current) => ({ ...current, ...patch }))
+            }
+          />
           <FormField label="Pickup habitual">
             <input
               placeholder="Ex: Centro da vila"
@@ -464,9 +359,15 @@ function AdminArea() {
                   title={student.name}
                   subtitle={student.email}
                   meta={
-                    student.billingType === "pack"
-                      ? `${student.level || "Sem nível"} · Pack ${student.packRemaining}/${student.packSize}`
-                      : `${student.level || "Sem nível"} · ${student.monthlyLimit} treinos/mês · ${billingTypeLabel(student.billingType)}`
+                    (() => {
+                      const usage = getStudentTrainingUsage(
+                        student,
+                        lessons,
+                        currentPeriod.month,
+                        currentPeriod.year
+                      );
+                      return `${student.level || "Sem nível"} · ${studentPlanLabel(student)} · este mês ${usage.label}`;
+                    })()
                   }
                 />
               ))}
