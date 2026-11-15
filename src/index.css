@@ -1005,9 +1005,14 @@ textarea:focus {
 
   .topbar-avatar,
   .notification-bell {
-    width: 46px;
-    height: 46px;
-    min-width: 46px;
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+  }
+
+  .notification-bell svg {
+    width: 18px;
+    height: 18px;
   }
 
   .notification-panel {
