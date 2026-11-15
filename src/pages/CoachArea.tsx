@@ -7,6 +7,7 @@ import { getLessons } from "../services/lessonsService";
 import { ensureFixedTrainingsSeeded } from "../services/fixedTrainingsService";
 import Modal from "../components/Modal";
 import CoachAttendancePanel from "../components/CoachAttendancePanel";
+import LoadingBlock from "../components/LoadingBlock";
 import { resolveCoachId } from "../utils/coachAccess";
 import { formatSessionCoaches } from "../utils/sessionCoaches";
 import {
@@ -110,7 +111,7 @@ function CoachArea({ user }: Props) {
   );
 
   if (loading) {
-    return <p className="muted">A carregar treinos...</p>;
+    return <LoadingBlock label="A carregar treinos..." />;
   }
 
   if (!coachId) {

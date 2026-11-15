@@ -21,6 +21,7 @@ import {
   amountDueFromPlan,
   isPackStudent,
 } from "../utils/studentPaymentPlan";
+import LoadingBlock from "../components/LoadingBlock";
 
 type BillingFilter = "all" | StudentBillingType;
 
@@ -620,7 +621,7 @@ function AdminPayments() {
         </div>
 
         {loading ? (
-          <p className="muted">A carregar folha de pagamentos...</p>
+          <LoadingBlock label="A carregar folha de pagamentos..." />
         ) : visibleStudents.length === 0 ? (
           <p className="muted">Sem alunos para mostrar.</p>
         ) : (
