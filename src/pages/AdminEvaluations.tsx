@@ -11,6 +11,7 @@ import {
   saveEvaluation,
 } from "../services/evaluationsService";
 import { formatMonthYear, getCurrentMonthYear } from "../utils/dateUtils";
+import { isStudentMainCoach } from "../utils/studentNameMatch";
 import FormField from "../components/FormField";
 import ConfirmDialog from "../components/ConfirmDialog";
 import {
@@ -134,10 +135,34 @@ function AdminEvaluations({ user }: Props) {
     [coaches]
   );
 
+  const coachIdentityNames = useMemo(() => {
+    const names = [user.name];
+    const linked = coaches.find((coach) => coach.id === user.id);
+    if (linked?.name) names.push(linked.name);
+    return names;
+  }, [user.name, user.id, coaches]);
+
+  /** Treinadores só avaliam atletas em que são o treinador principal. */
+  const selectableStudents = useMemo(() => {
+    if (user.role !== "coach") return students;
+    return students.filter((student) =>
+      isStudentMainCoach(student, coachIdentityNames)
+    );
+  }, [students, user.role, coachIdentityNames]);
+
+  const scopedEvaluations = useMemo(() => {
+    if (user.role !== "coach") return evaluations;
+    const allowedIds = new Set(selectableStudents.map((student) => student.id));
+    return evaluations.filter(
+      (evaluation) =>
+        evaluation.coachId === user.id || allowedIds.has(evaluation.studentId)
+    );
+  }, [evaluations, user.role, user.id, selectableStudents]);
+
   const monthBuckets = useMemo(() => {
     const map = new Map<string, MonthlyEvaluation[]>();
 
-    for (const evaluation of evaluations) {
+    for (const evaluation of scopedEvaluations) {
       const key = `${evaluation.year}-${String(evaluation.month).padStart(2, "0")}`;
       const bucket = map.get(key) ?? [];
       bucket.push(evaluation);
@@ -170,7 +195,7 @@ function AdminEvaluations({ user }: Props) {
     );
 
     return buckets.sort((a, b) => b.year - a.year || b.month - a.month);
-  }, [evaluations, studentMap]);
+  }, [scopedEvaluations, studentMap]);
 
   useEffect(() => {
     if (monthBuckets.length === 0) {
@@ -232,6 +257,13 @@ function AdminEvaluations({ user }: Props) {
   }
 
   function startCreate() {
+    if (user.role === "coach" && selectableStudents.length === 0) {
+      toast.error(
+        "Ainda não tens atletas com treino principal atribuído a ti. Pede à administração para definir o treinador principal na ficha do aluno."
+      );
+      return;
+    }
+
     const period = selectedMonth
       ? { month: selectedMonth.month, year: selectedMonth.year }
       : getCurrentMonthYear();
@@ -240,10 +272,9 @@ function AdminEvaluations({ user }: Props) {
       month: period.month,
       year: period.year,
     };
-    const teste = students.find(
-      (student) => student.name.trim().toLowerCase() === "teste"
-    );
-    if (teste) draft.studentId = teste.id;
+    if (selectableStudents.length === 1) {
+      draft.studentId = selectableStudents[0].id;
+    }
     setForm(draft);
     setNumberDrafts(numberDraftsFromEvaluation(draft));
     setShareUrl(null);
@@ -265,6 +296,15 @@ function AdminEvaluations({ user }: Props) {
   async function saveDraft() {
     if (!form.studentId) {
       toast.error("Escolhe o aluno.");
+      return;
+    }
+    if (
+      user.role === "coach" &&
+      !selectableStudents.some((student) => student.id === form.studentId)
+    ) {
+      toast.error(
+        "Só podes avaliar atletas em que és o treinador principal."
+      );
       return;
     }
     if (!form.technicalGoal.trim()) {
@@ -304,6 +344,15 @@ function AdminEvaluations({ user }: Props) {
   async function finalizeAndSend(evaluation: MonthlyEvaluation) {
     if (!evaluation.studentId) {
       toast.error("Escolhe o aluno antes de enviar.");
+      return;
+    }
+    if (
+      user.role === "coach" &&
+      !selectableStudents.some((student) => student.id === evaluation.studentId)
+    ) {
+      toast.error(
+        "Só podes avaliar atletas em que és o treinador principal."
+      );
       return;
     }
 
@@ -432,13 +481,21 @@ function AdminEvaluations({ user }: Props) {
               }
             >
               <option value="">Selecionar aluno</option>
-              {students.map((student) => (
+              {selectableStudents.map((student) => (
                 <option key={student.id} value={student.id}>
                   {student.name}
                   {student.email ? ` · ${student.email}` : " · sem email"}
                 </option>
               ))}
             </select>
+            {user.role === "coach" && (
+              <p className="muted" style={{ marginTop: 8 }}>
+                Só aparecem atletas em que és o treinador principal
+                {selectableStudents.length === 0
+                  ? " — ainda não tens nenhum atribuído."
+                  : ` (${selectableStudents.length}).`}
+              </p>
+            )}
           </FormField>
 
           <FormField label="Mês">
@@ -718,7 +775,9 @@ function AdminEvaluations({ user }: Props) {
         <p className="page-eyebrow">Gestão</p>
         <h1 className="page-title">Avaliações</h1>
         <p className="page-description">
-          Cria a avaliação, finaliza e envia ao atleta por email (ou link).
+          {user.role === "coach"
+            ? "Avalia mensalmente os teus atletas (treinador principal). Finaliza e envia por email ou link."
+            : "Cria a avaliação, finaliza e envia ao atleta por email (ou link). Define o treinador principal na ficha do aluno."}
         </p>
       </header>
 
