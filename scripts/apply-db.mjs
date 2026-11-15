@@ -18,6 +18,7 @@ const APPLY_ORDER = [
   "publish-schedule.sql",
   "constraints.sql",
   "video-analysis.sql",
+  "video-analysis-students.sql",
   "fixed-trainings.sql",
   "inventory-wetsuit-condition.sql",
   "inventory-condition-matrix.sql",

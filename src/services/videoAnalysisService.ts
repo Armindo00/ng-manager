@@ -7,6 +7,7 @@ type DbVideoAnalysisSession = {
   coach_name: string;
   date: string;
   notes: string;
+  student_ids: string[] | null;
   created_at: string;
 };
 
@@ -17,6 +18,7 @@ function fromDb(row: DbVideoAnalysisSession): VideoAnalysisSession {
     coachName: row.coach_name,
     date: row.date,
     notes: row.notes || "",
+    studentIds: row.student_ids || [],
     createdAt: row.created_at,
   };
 }
@@ -28,6 +30,7 @@ function toDb(session: Omit<VideoAnalysisSession, "createdAt">) {
     coach_name: session.coachName,
     date: session.date,
     notes: session.notes || "",
+    student_ids: session.studentIds || [],
   };
 }
 

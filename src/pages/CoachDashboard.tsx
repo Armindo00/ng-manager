@@ -280,6 +280,10 @@ function CoachDashboard({ user }: Props) {
       toast.error("A data tem de ser hoje ou um dia anterior.");
       return;
     }
+    if (extraStudentIds.length === 0) {
+      toast.error("Escolhe pelo menos um aluno da videoanálise.");
+      return;
+    }
 
     try {
       setSaving(true);
@@ -289,6 +293,7 @@ function CoachDashboard({ user }: Props) {
         coachName: user.name,
         date: sessionDate,
         notes: videoNotes.trim(),
+        studentIds: extraStudentIds,
       });
       closeCreateExtra();
       toast.success("Sessão de videoanálise registada.");
@@ -790,6 +795,45 @@ function CoachDashboard({ user }: Props) {
                     onChange={(event) => setSessionDate(event.target.value)}
                   />
                 </label>
+
+                <label className="field-label">
+                  Quem esteve na videoanálise
+                  <input
+                    className="search-input"
+                    value={extraStudentSearch}
+                    onChange={(event) =>
+                      setExtraStudentSearch(event.target.value)
+                    }
+                    placeholder="Pesquisar aluno..."
+                  />
+                </label>
+
+                <div className="coach-extra-student-picker">
+                  {selectableExtraStudents.length === 0 ? (
+                    <p className="muted">Sem alunos encontrados.</p>
+                  ) : (
+                    selectableExtraStudents.map((student) => {
+                      const selected = extraStudentIds.includes(student.id);
+                      return (
+                        <button
+                          type="button"
+                          key={student.id}
+                          className={`coach-extra-student-option${
+                            selected ? " selected" : ""
+                          }`}
+                          onClick={() => toggleExtraStudent(student.id)}
+                        >
+                          <span>{student.name}</span>
+                          <strong>{selected ? "Foi" : "Selecionar"}</strong>
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+
+                <p className="muted">
+                  {extraStudentIds.length} aluno(s) selecionado(s)
+                </p>
 
                 <label className="field-label">
                   Notas (opcional)

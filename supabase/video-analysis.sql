@@ -8,8 +8,12 @@ CREATE TABLE IF NOT EXISTS video_analysis_sessions (
   coach_name text NOT NULL DEFAULT '',
   date text NOT NULL,
   notes text NOT NULL DEFAULT '',
+  student_ids uuid[] NOT NULL DEFAULT '{}',
   created_at timestamptz NOT NULL DEFAULT now()
 );
+
+ALTER TABLE video_analysis_sessions
+  ADD COLUMN IF NOT EXISTS student_ids uuid[] NOT NULL DEFAULT '{}';
 
 CREATE INDEX IF NOT EXISTS video_analysis_sessions_coach_idx
   ON video_analysis_sessions (coach_id);
