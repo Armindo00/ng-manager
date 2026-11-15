@@ -8,13 +8,21 @@ export function isPackStudent(student: Pick<Student, "billingType">) {
   return student.billingType === "pack";
 }
 
+/** Valor do plano do aluno (mensalidade ou pack), sem fallbacks. */
+export function getStudentPlanAmount(student: Student) {
+  if (isPackStudent(student)) {
+    return student.packPrice > 0 ? student.packPrice : 0;
+  }
+  return student.monthlyFee > 0 ? student.monthlyFee : 0;
+}
+
 export function resolveStudentMonthlyFee(
   student: Student,
   payments: Payment[],
   fallback = DEFAULT_MONTHLY_FEE
 ) {
-  if (isPackStudent(student) && student.packPrice > 0) return student.packPrice;
-  if (student.monthlyFee > 0) return student.monthlyFee;
+  const planAmount = getStudentPlanAmount(student);
+  if (planAmount > 0) return planAmount;
 
   const previous = payments
     .filter(

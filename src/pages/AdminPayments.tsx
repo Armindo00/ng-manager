@@ -19,6 +19,7 @@ import StudentPaymentDetail from "../components/StudentPaymentDetail";
 import { getCurrentMonthYear, getTodayDate } from "../utils/dateUtils";
 import {
   DEFAULT_MONTHLY_FEE,
+  getStudentPlanAmount,
   isPackStudent,
   resolveStudentMonthlyFee,
 } from "../utils/studentPaymentPlan";
@@ -62,7 +63,8 @@ function AdminPayments() {
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(
     null
   );
-  const [defaultAmount, setDefaultAmount] = useState(String(DEFAULT_AMOUNT));
+  /** Só usado quando o aluno ainda não tem mensalidade/pack definido. */
+  const [fallbackAmount, setFallbackAmount] = useState("");
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [cellTarget, setCellTarget] = useState<CellTarget | null>(null);
   const [paymentToDelete, setPaymentToDelete] = useState<Payment | null>(null);
@@ -70,7 +72,7 @@ function AdminPayments() {
   const [studentId, setStudentId] = useState("");
   const [month, setMonth] = useState(String(currentPeriod.month));
   const [year, setYear] = useState(String(currentPeriod.year));
-  const [amount, setAmount] = useState(String(DEFAULT_AMOUNT));
+  const [amount, setAmount] = useState("");
   const [status, setStatus] = useState<PaymentStatus>("paid");
   const [paymentMethod, setPaymentMethod] = useState("");
   const [notes, setNotes] = useState("");
@@ -212,14 +214,22 @@ function AdminPayments() {
   }
 
   function suggestedAmount(studentIdValue: string) {
-    const fromDefault = Number(defaultAmount);
-    if (Number.isFinite(fromDefault) && fromDefault > 0) return fromDefault;
-
     const student = students.find((item) => item.id === studentIdValue);
     if (student) {
-      return resolveStudentMonthlyFee(student, payments, DEFAULT_AMOUNT);
+      const planAmount = getStudentPlanAmount(student);
+      if (planAmount > 0) return planAmount;
+
+      const fromFallback = Number(fallbackAmount);
+      const fallback =
+        Number.isFinite(fromFallback) && fromFallback > 0
+          ? fromFallback
+          : DEFAULT_AMOUNT;
+
+      return resolveStudentMonthlyFee(student, payments, fallback);
     }
 
+    const fromFallback = Number(fallbackAmount);
+    if (Number.isFinite(fromFallback) && fromFallback > 0) return fromFallback;
     return DEFAULT_AMOUNT;
   }
 
@@ -241,10 +251,14 @@ function AdminPayments() {
     amount: string;
     status: PaymentStatus;
   }>) {
-    setStudentId(overrides?.studentId || "");
+    const nextStudentId = overrides?.studentId || "";
+    setStudentId(nextStudentId);
     setMonth(overrides?.month || String(currentPeriod.month));
     setYear(overrides?.year || String(selectedYear));
-    setAmount(overrides?.amount || defaultAmount || String(DEFAULT_AMOUNT));
+    setAmount(
+      overrides?.amount ||
+        (nextStudentId ? String(suggestedAmount(nextStudentId)) : "")
+    );
     setStatus(overrides?.status || "paid");
     setPaymentMethod("");
     setNotes("");
@@ -551,21 +565,21 @@ function AdminPayments() {
             </label>
 
             <label className="field-label">
-              Valor rápido (€)
+              Fallback (€)
               <input
                 type="text"
                 inputMode="decimal"
-                value={defaultAmount}
-                onChange={(event) => setDefaultAmount(event.target.value)}
-                placeholder="80"
+                value={fallbackAmount}
+                onChange={(event) => setFallbackAmount(event.target.value)}
+                placeholder="só se sem plano"
               />
             </label>
           </div>
 
           <p className="muted payments-matrix-hint">
-            Clica no nome do aluno para abrir a ficha (mensalidade ou pack).
-            Clica numa célula vazia ou pendente para marcar como pago; num pago
-            para ver detalhes.
+            O valor usado é a mensalidade ou o pack de cada aluno. O fallback só
+            entra se o plano ainda não tiver valor. Clica no nome para abrir a
+            ficha; numa célula vazia/pendente para marcar pago.
           </p>
         </div>
 
@@ -604,14 +618,21 @@ function AdminPayments() {
                         onClick={() => setSelectedStudentId(student.id)}
                       >
                         <span>{student.name}</span>
-                        {isPackStudent(student) && (
-                          <span className="student-billing-badge is-pack compact">
-                            Pack
-                            {student.packSize > 0
-                              ? ` ${student.packRemaining}/${student.packSize}`
-                              : ""}
-                          </span>
-                        )}
+                        <span className="payments-student-plan">
+                          {isPackStudent(student)
+                            ? `Pack${
+                                student.packSize > 0
+                                  ? ` ${student.packRemaining}/${student.packSize}`
+                                  : ""
+                              }${
+                                getStudentPlanAmount(student) > 0
+                                  ? ` · ${getStudentPlanAmount(student)}€`
+                                  : ""
+                              }`
+                            : getStudentPlanAmount(student) > 0
+                              ? `Mensalidade · ${getStudentPlanAmount(student)}€`
+                              : "Sem valor no plano"}
+                        </span>
                       </button>
                     </th>
                     {MONTH_LABELS.map((_, index) => {
@@ -667,17 +688,27 @@ function AdminPayments() {
             <FormField label="Aluno">
               <select
                 value={studentId}
-                onChange={(event) => setStudentId(event.target.value)}
+                onChange={(event) => {
+                  const nextId = event.target.value;
+                  setStudentId(nextId);
+                  if (nextId) {
+                    setAmount(String(suggestedAmount(nextId)));
+                  }
+                }}
               >
                 <option value="">Selecionar aluno</option>
                 {students
                   .slice()
                   .sort((a, b) => a.name.localeCompare(b.name, "pt"))
-                  .map((student) => (
-                    <option key={student.id} value={student.id}>
-                      {student.name}
-                    </option>
-                  ))}
+                  .map((student) => {
+                    const planAmount = getStudentPlanAmount(student);
+                    return (
+                      <option key={student.id} value={student.id}>
+                        {student.name}
+                        {planAmount > 0 ? ` · ${planAmount}€` : ""}
+                      </option>
+                    );
+                  })}
               </select>
             </FormField>
 
