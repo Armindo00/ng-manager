@@ -99,6 +99,21 @@ async function invokeCoachAuth(
 }
 
 export async function getCoachAccessMap() {
+  // Admin+treinador usa role=admin com linha em `coaches`. O acesso
+  // tem de bater pelos ids dos treinadores, não só por role=coach.
+  const { data: coachRows, error: coachesError } = await supabase
+    .from("coaches")
+    .select("id");
+
+  if (coachesError) throw coachesError;
+
+  const coachIds = (coachRows || []).map((row) => row.id);
+  const map = new Map<string, CoachAccess>();
+
+  if (coachIds.length === 0) {
+    return map;
+  }
+
   let rows:
     | Array<{
         id: string;
@@ -110,13 +125,13 @@ export async function getCoachAccessMap() {
   const withBlocked = await supabase
     .from("app_users")
     .select("id, email, blocked")
-    .eq("role", "coach");
+    .in("id", coachIds);
 
   if (withBlocked.error?.message?.includes("blocked")) {
     const withoutBlocked = await supabase
       .from("app_users")
       .select("id, email")
-      .eq("role", "coach");
+      .in("id", coachIds);
 
     if (withoutBlocked.error) throw withoutBlocked.error;
     rows = withoutBlocked.data;
@@ -124,8 +139,6 @@ export async function getCoachAccessMap() {
     if (withBlocked.error) throw withBlocked.error;
     rows = withBlocked.data;
   }
-
-  const map = new Map<string, CoachAccess>();
 
   for (const row of rows || []) {
     map.set(row.id, {
