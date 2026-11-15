@@ -2615,11 +2615,45 @@ textarea:focus {
   flex-wrap: wrap;
 }
 
+.payments-stats-block {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.payments-stats-scope {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  width: fit-content;
+}
+
+.payments-stats-scope button {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.payments-stats-scope button.is-active {
+  background: var(--brand-soft, #e8eef3);
+  color: var(--brand-ink, var(--ink));
+}
+
 .payments-stats-strip {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
-  margin-bottom: 18px;
+  margin-bottom: 0;
 }
 
 .payments-stats-strip > div {
@@ -2671,7 +2705,7 @@ textarea:focus {
 }
 
 .payments-matrix-toolbar-main-wide {
-  grid-template-columns: 110px 140px minmax(180px, 1fr) 140px;
+  grid-template-columns: 110px 140px minmax(180px, 1fr);
 }
 
 .student-billing-badge {
