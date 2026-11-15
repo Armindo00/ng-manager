@@ -113,3 +113,64 @@ export async function syncStudentPaidStatus(studentId: string) {
 
   return isPaid;
 }
+
+/**
+ * Garante um pagamento do mês com o valor do plano.
+ * - Se não existe: cria pendente com `amount`.
+ * - Se existe pendente/cancelado: atualiza o valor (não toca em pagos).
+ */
+export async function ensureMonthPaymentAmount(options: {
+  studentId: string;
+  amount: number;
+  month?: number;
+  year?: number;
+  notes?: string | null;
+}): Promise<Payment | null> {
+  const current = getCurrentMonthYear();
+  const month = options.month ?? current.month;
+  const year = options.year ?? current.year;
+  const amount = Math.round(options.amount * 100) / 100;
+
+  if (!(amount > 0)) return null;
+
+  const { data, error } = await supabase
+    .from("payments")
+    .select("*")
+    .eq("student_id", options.studentId)
+    .eq("month", month)
+    .eq("year", year)
+    .maybeSingle();
+
+  if (error) throw error;
+
+  if (!data) {
+    const created: Payment = {
+      id: crypto.randomUUID(),
+      studentId: options.studentId,
+      month,
+      year,
+      amount,
+      status: "pending",
+      paymentDate: null,
+      paymentMethod: null,
+      notes: options.notes ?? null,
+    };
+    await addPayment(created);
+    return created;
+  }
+
+  const existing = fromDb(data);
+  if (existing.status === "paid") return existing;
+  if (existing.amount === amount && existing.status === "pending") {
+    return existing;
+  }
+
+  const next: Payment = {
+    ...existing,
+    amount,
+    status: "pending",
+    notes: options.notes ?? existing.notes,
+  };
+  await updatePayment(next);
+  return next;
+}

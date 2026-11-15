@@ -19,6 +19,7 @@ import StudentPaymentDetail from "../components/StudentPaymentDetail";
 import { getCurrentMonthYear, getTodayDate } from "../utils/dateUtils";
 import {
   DEFAULT_MONTHLY_FEE,
+  amountDueFromPlan,
   isPackStudent,
   resolveStudentMonthlyFee,
 } from "../utils/studentPaymentPlan";
@@ -211,15 +212,17 @@ function AdminPayments() {
     );
   }
 
+  /** Valor a cobrar: plano do aluno; "Valor rápido" só se o plano não tiver preço. */
   function suggestedAmount(studentIdValue: string) {
-    const fromDefault = Number(defaultAmount);
-    if (Number.isFinite(fromDefault) && fromDefault > 0) return fromDefault;
-
     const student = students.find((item) => item.id === studentIdValue);
     if (student) {
+      const fromPlan = amountDueFromPlan(student);
+      if (fromPlan > 0) return fromPlan;
       return resolveStudentMonthlyFee(student, payments, DEFAULT_AMOUNT);
     }
 
+    const fromDefault = Number(defaultAmount);
+    if (Number.isFinite(fromDefault) && fromDefault > 0) return fromDefault;
     return DEFAULT_AMOUNT;
   }
 
@@ -330,22 +333,32 @@ function AdminPayments() {
 
     try {
       setSaving(true);
+      const planAmount = suggestedAmount(student.id);
       const nextPayment: Payment = existing
         ? {
             ...existing,
+            amount:
+              existing.status === "paid"
+                ? existing.amount
+                : planAmount > 0
+                  ? planAmount
+                  : existing.amount,
             status: "paid",
             paymentDate: getTodayDate(),
+            notes:
+              existing.notes ||
+              (isPackStudent(student) ? "Pack" : "Mensalidade (plano)"),
           }
         : {
             id: crypto.randomUUID(),
             studentId: student.id,
             month: monthValue,
             year: selectedYear,
-            amount: suggestedAmount(student.id),
+            amount: planAmount,
             status: "paid",
             paymentDate: getTodayDate(),
             paymentMethod: null,
-            notes: null,
+            notes: isPackStudent(student) ? "Pack" : "Mensalidade (plano)",
           };
 
       if (existing) {
@@ -451,11 +464,14 @@ function AdminPayments() {
     return classes.join(" ");
   }
 
-  function cellLabel(payment: Payment | null) {
-    if (!payment) return "—";
-    if (payment.status === "paid") return "Pago";
+  function cellLabel(payment: Payment | null, student?: Student) {
+    if (!payment) {
+      const due = student ? amountDueFromPlan(student) : 0;
+      return due > 0 ? `${due}€` : "—";
+    }
+    if (payment.status === "paid") return `${payment.amount}€`;
     if (payment.status === "cancelled") return "Canc.";
-    return "Pend.";
+    return `${payment.amount}€`;
   }
 
   if (selectedStudent) {
@@ -551,21 +567,21 @@ function AdminPayments() {
             </label>
 
             <label className="field-label">
-              Valor rápido (€)
+              Fallback (€)
               <input
                 type="text"
                 inputMode="decimal"
                 value={defaultAmount}
                 onChange={(event) => setDefaultAmount(event.target.value)}
-                placeholder="80"
+                placeholder="95"
               />
             </label>
           </div>
 
           <p className="muted payments-matrix-hint">
-            Clica no nome do aluno para abrir a ficha (mensalidade ou pack).
-            Clica numa célula vazia ou pendente para marcar como pago; num pago
-            para ver detalhes.
+            O valor vem do plano do aluno (mensalidade/pack do preçário). Células
+            vazias mostram o que há a cobrar; clica para marcar pago. Fallback só
+            se o aluno ainda não tiver plano com preço.
           </p>
         </div>
 
@@ -604,19 +620,27 @@ function AdminPayments() {
                         onClick={() => setSelectedStudentId(student.id)}
                       >
                         <span>{student.name}</span>
-                        {isPackStudent(student) && (
+                        {isPackStudent(student) ? (
                           <span className="student-billing-badge is-pack compact">
                             Pack
+                            {student.packPrice > 0
+                              ? ` ${student.packPrice}€`
+                              : ""}
                             {student.packSize > 0
-                              ? ` ${student.packRemaining}/${student.packSize}`
+                              ? ` · ${student.packRemaining}/${student.packSize}`
                               : ""}
                           </span>
-                        )}
+                        ) : amountDueFromPlan(student) > 0 ? (
+                          <span className="student-billing-badge is-monthly compact">
+                            {amountDueFromPlan(student)}€/mês
+                          </span>
+                        ) : null}
                       </button>
                     </th>
                     {MONTH_LABELS.map((_, index) => {
                       const monthValue = index + 1;
                       const payment = getPayment(student.id, monthValue);
+                      const due = amountDueFromPlan(student);
                       return (
                         <td key={`${student.id}-${monthValue}`}>
                           <button
@@ -625,8 +649,10 @@ function AdminPayments() {
                             disabled={saving}
                             title={
                               payment
-                                ? `${cellLabel(payment)} · ${payment.amount}€`
-                                : "Sem registo — clicar para marcar pago"
+                                ? `${payment.status} · ${payment.amount}€`
+                                : due > 0
+                                  ? `A cobrar pelo plano: ${due}€ — clicar para marcar pago`
+                                  : "Sem plano com preço — clicar para marcar pago"
                             }
                             onClick={() => {
                               if (payment?.status === "paid") {
@@ -641,7 +667,7 @@ function AdminPayments() {
                               void quickMarkPaid(student, monthValue);
                             }}
                           >
-                            {cellLabel(payment)}
+                            {cellLabel(payment, student)}
                           </button>
                         </td>
                       );
@@ -667,17 +693,29 @@ function AdminPayments() {
             <FormField label="Aluno">
               <select
                 value={studentId}
-                onChange={(event) => setStudentId(event.target.value)}
+                onChange={(event) => {
+                  const nextId = event.target.value;
+                  setStudentId(nextId);
+                  const student = students.find((item) => item.id === nextId);
+                  if (student) {
+                    const due = amountDueFromPlan(student);
+                    if (due > 0) setAmount(String(due));
+                  }
+                }}
               >
                 <option value="">Selecionar aluno</option>
                 {students
                   .slice()
                   .sort((a, b) => a.name.localeCompare(b.name, "pt"))
-                  .map((student) => (
-                    <option key={student.id} value={student.id}>
-                      {student.name}
-                    </option>
-                  ))}
+                  .map((student) => {
+                    const due = amountDueFromPlan(student);
+                    return (
+                      <option key={student.id} value={student.id}>
+                        {student.name}
+                        {due > 0 ? ` · ${due}€` : ""}
+                      </option>
+                    );
+                  })}
               </select>
             </FormField>
 

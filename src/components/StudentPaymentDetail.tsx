@@ -3,6 +3,7 @@ import toast from "react-hot-toast";
 import type { Lesson, Student } from "../types";
 import {
   addPayment,
+  ensureMonthPaymentAmount,
   syncStudentPaidStatus,
   updatePayment,
   type Payment,
@@ -14,16 +15,16 @@ import StudentPlanFields, {
   type StudentPlanDraft,
 } from "./StudentPlanFields";
 import { getCurrentMonthYear, getTodayDate } from "../utils/dateUtils";
+import { addonMonthlyTotal } from "../data/pricingCatalog";
 import {
+  amountDueFromPlan,
   billingTypeLabel,
   countStudentTrainingsInMonth,
   countStudentTrainingsTotal,
   DEFAULT_MONTHLY_FEE,
-  isPackStudent,
   parseStudentPlanDraft,
   resolveStudentMonthlyFee,
   studentPlanLabel,
-  suggestAmountForTrainings,
 } from "../utils/studentPaymentPlan";
 
 const MONTH_LABELS = [
@@ -58,13 +59,30 @@ type MonthDraft = {
   status: PaymentStatus;
 };
 
+function planAmountFromDraft(
+  draft: StudentPlanDraft,
+  student: Student,
+  payments: Payment[]
+) {
+  if (draft.billingType === "pack") {
+    const packPrice = Number(draft.packPrice || 0);
+    if (packPrice > 0) return packPrice;
+    return amountDueFromPlan(student) || resolveStudentMonthlyFee(student, payments);
+  }
+
+  const base = Number(draft.monthlyFee || 0);
+  const withAddons =
+    Math.round((base + addonMonthlyTotal(draft)) * 100) / 100;
+  if (withAddons > 0) return withAddons;
+  return amountDueFromPlan(student) || resolveStudentMonthlyFee(student, payments);
+}
+
 function buildMonthDrafts(
   student: Student,
   payments: Payment[],
-  lessons: Lesson[],
-  selectedYear: number
+  selectedYear: number,
+  planAmount: number
 ) {
-  const fee = resolveStudentMonthlyFee(student, payments);
   const paymentByMonth = new Map<number, Payment>();
 
   for (const payment of payments) {
@@ -74,25 +92,16 @@ function buildMonthDrafts(
   }
 
   const drafts: Record<number, MonthDraft> = {};
+  const due =
+    planAmount > 0
+      ? planAmount
+      : resolveStudentMonthlyFee(student, payments, DEFAULT_MONTHLY_FEE);
 
   for (let month = 1; month <= 12; month += 1) {
     const payment = paymentByMonth.get(month);
-    const done = countStudentTrainingsInMonth(
-      student.id,
-      lessons,
-      month,
-      selectedYear
-    );
-    const suggested = isPackStudent(student)
-      ? fee
-      : suggestAmountForTrainings(fee, student.monthlyLimit, done);
 
     drafts[month] = {
-      amount: payment
-        ? String(payment.amount)
-        : suggested > 0
-          ? String(suggested)
-          : String(fee || DEFAULT_MONTHLY_FEE),
+      amount: payment ? String(payment.amount) : String(due),
       status: payment?.status || "pending",
     };
   }
@@ -120,13 +129,23 @@ function StudentPaymentDetail({
   const [savingPlan, setSavingPlan] = useState(false);
   const [savingMonth, setSavingMonth] = useState<number | null>(null);
   const [savingPackPayment, setSavingPackPayment] = useState(false);
+  const planAmount = useMemo(
+    () => planAmountFromDraft(planDraft, student, payments),
+    [planDraft, student, payments]
+  );
+
   const [monthDrafts, setMonthDrafts] = useState<Record<number, MonthDraft>>(
-    () => buildMonthDrafts(student, payments, lessons, selectedYear)
+    () =>
+      buildMonthDrafts(
+        student,
+        payments,
+        selectedYear,
+        planAmountFromDraft(draftFromStudentPlan(student), student, payments)
+      )
   );
 
   const billingTypeDraft = planDraft.billingType;
   const monthlyLimitDraft = planDraft.monthlyLimit;
-  const monthlyFeeDraft = planDraft.monthlyFee;
   const packPriceDraft = planDraft.packPrice;
   const packSizeDraft = planDraft.packSize;
   const packRemainingDraft = planDraft.packRemaining;
@@ -146,7 +165,7 @@ function StudentPaymentDetail({
   );
 
   const months = useMemo(() => {
-    const fee = Number(monthlyFeeDraft) || resolvedFee;
+    const due = planAmount > 0 ? planAmount : resolvedFee;
     return Array.from({ length: 12 }, (_, index) => {
       const month = index + 1;
       const payment =
@@ -162,16 +181,12 @@ function StudentPaymentDetail({
         month,
         selectedYear
       );
-      const suggested =
-        billingTypeDraft === "pack"
-          ? Number(packPriceDraft) || fee
-          : suggestAmountForTrainings(fee, expectedTrainings, trainingsDone);
       return {
         month,
         label: MONTH_LABELS[index],
         payment,
         trainingsDone,
-        suggested,
+        suggested: due,
         isCurrent:
           month === currentPeriod.month && selectedYear === currentPeriod.year,
       };
@@ -181,10 +196,7 @@ function StudentPaymentDetail({
     lessons,
     student.id,
     selectedYear,
-    monthlyFeeDraft,
-    packPriceDraft,
-    billingTypeDraft,
-    expectedTrainings,
+    planAmount,
     resolvedFee,
     currentPeriod.month,
     currentPeriod.year,
@@ -202,11 +214,35 @@ function StudentPaymentDetail({
       ...parsed.value,
     };
 
+    const due = amountDueFromPlan(nextStudent);
+
     try {
       setSavingPlan(true);
       await updateStudent(nextStudent);
       onStudentUpdated(nextStudent);
-      toast.success("Plano do atleta atualizado.");
+
+      if (due > 0) {
+        const payment = await ensureMonthPaymentAmount({
+          studentId: nextStudent.id,
+          amount: due,
+          month: currentPeriod.month,
+          year: currentPeriod.year,
+          notes:
+            nextStudent.billingType === "pack"
+              ? "Pack"
+              : "Mensalidade (plano)",
+        });
+        if (payment) onPaymentUpserted(payment);
+        setMonthDrafts(
+          buildMonthDrafts(nextStudent, payments, selectedYear, due)
+        );
+      }
+
+      toast.success(
+        due > 0
+          ? `Plano guardado · a cobrar ${due}€ este mês`
+          : "Plano do atleta atualizado."
+      );
     } catch (error) {
       console.error(error);
       toast.error("Erro ao guardar o plano do atleta.");
@@ -467,9 +503,11 @@ function StudentPaymentDetail({
             </label>
           </div>
           <p className="muted payments-matrix-hint">
+            Valor a cobrar = plano do preçário
+            {planAmount > 0 ? ` (${planAmount}€)` : ""}.
             {billingTypeDraft === "pack"
-              ? "Presenças por mês. O pack não usa mensalidade — regista o pagamento do pack acima."
-              : "Treinos feitos = presenças nesse mês. O valor sugerido é proporcional ao plano."}
+              ? " Pack: o preço do pack fica definido automaticamente."
+              : " Mensalidade: valor completo do plano (+ extras), não proporcional às presenças."}
           </p>
         </div>
 
@@ -479,21 +517,17 @@ function StudentPaymentDetail({
               <tr>
                 <th>Mês</th>
                 <th>Treinos feitos</th>
-                {billingTypeDraft === "monthly" ? (
-                  <>
-                    <th>Previstos</th>
-                    <th>Sugerido</th>
-                    <th>Valor (€)</th>
-                    <th>Estado</th>
-                    <th>Ações</th>
-                  </>
-                ) : null}
+                <th>{billingTypeDraft === "pack" ? "Pack" : "Previstos"}</th>
+                <th>A cobrar</th>
+                <th>Valor (€)</th>
+                <th>Estado</th>
+                <th>Ações</th>
               </tr>
             </thead>
             <tbody>
               {months.map((row) => {
                 const draft = monthDrafts[row.month] || {
-                  amount: "",
+                  amount: String(row.suggested || ""),
                   status: "pending" as PaymentStatus,
                 };
                 const busy = savingMonth === row.month;
@@ -507,66 +541,66 @@ function StudentPaymentDetail({
                     <td>
                       <strong>{row.trainingsDone}</strong>
                     </td>
-                    {billingTypeDraft === "monthly" ? (
-                      <>
-                        <td>{expectedTrainings || "—"}</td>
-                        <td>{row.suggested.toFixed(2)}€</td>
-                        <td>
-                          <input
-                            className="student-payment-amount-input"
-                            type="text"
-                            inputMode="decimal"
-                            value={draft.amount}
-                            disabled={busy}
-                            onChange={(event) =>
-                              updateMonthDraft(row.month, {
-                                amount: event.target.value,
-                              })
-                            }
-                          />
-                        </td>
-                        <td>
-                          <select
-                            value={draft.status}
-                            disabled={busy}
-                            onChange={(event) =>
-                              updateMonthDraft(row.month, {
-                                status: event.target.value as PaymentStatus,
-                              })
-                            }
-                          >
-                            <option value="pending">Pendente</option>
-                            <option value="paid">Pago</option>
-                            <option value="cancelled">Cancelado</option>
-                          </select>
-                        </td>
-                        <td>
-                          <div className="student-payment-month-actions">
-                            <button
-                              type="button"
-                              className="compact-btn"
-                              disabled={busy}
-                              title="Usar valor sugerido pelos treinos"
-                              onClick={() =>
-                                void saveMonth(row.month, {
-                                  useSuggested: true,
-                                })
-                              }
-                            >
-                              Usar sugerido
-                            </button>
-                            <button
-                              type="button"
-                              className="primary-btn compact-btn"
-                              disabled={busy}
-                              onClick={() => void saveMonth(row.month)}
-                            >
-                              {busy ? "..." : "Guardar"}
-                            </button>
-                          </div>
-                        </td>
-                      </>
-                    ) : null}
+                    <td>
+                      {billingTypeDraft === "pack"
+                        ? packSizeDraft || "—"
+                        : expectedTrainings || "—"}
+                    </td>
+                    <td>{row.suggested.toFixed(2)}€</td>
+                    <td>
+                      <input
+                        className="student-payment-amount-input"
+                        type="text"
+                        inputMode="decimal"
+                        value={draft.amount}
+                        disabled={busy}
+                        onChange={(event) =>
+                          updateMonthDraft(row.month, {
+                            amount: event.target.value,
+                          })
+                        }
+                      />
+                    </td>
+                    <td>
+                      <select
+                        value={draft.status}
+                        disabled={busy}
+                        onChange={(event) =>
+                          updateMonthDraft(row.month, {
+                            status: event.target.value as PaymentStatus,
+                          })
+                        }
+                      >
+                        <option value="pending">Pendente</option>
+                        <option value="paid">Pago</option>
+                        <option value="cancelled">Cancelado</option>
+                      </select>
+                    </td>
+                    <td>
+                      <div className="student-payment-month-actions">
+                        <button
+                          type="button"
+                          className="compact-btn"
+                          disabled={busy}
+                          title="Preencher com o valor do plano"
+                          onClick={() =>
+                            void saveMonth(row.month, {
+                              useSuggested: true,
+                            })
+                          }
+                        >
+                          Usar plano
+                        </button>
+                        <button
+                          type="button"
+                          className="primary-btn compact-btn"
+                          disabled={busy}
+                          onClick={() => void saveMonth(row.month)}
+                        >
+                          {busy ? "..." : "Guardar"}
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 );
               })}
