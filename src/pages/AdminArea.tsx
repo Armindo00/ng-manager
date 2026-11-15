@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import type { Lesson, MonthlyEvaluation, Student } from "../types";
+import type { Coach, Lesson, MonthlyEvaluation, Student } from "../types";
 import {
   amountDueFromPlan,
   parseStudentPlanDraft,
@@ -12,6 +12,7 @@ import {
   updateStudent,
   deleteStudent as removeStudent,
 } from "../services/studentsService";
+import { getCoaches } from "../services/coachesService";
 import { ensureMonthPaymentAmount } from "../services/paymentsService";
 import { getLessons } from "../services/lessonsService";
 import { getEvaluations } from "../services/evaluationsService";
@@ -43,6 +44,7 @@ import LoadingBlock from "../components/LoadingBlock";
 
 function AdminArea() {
   const [students, setStudents] = useState<Student[]>([]);
+  const [coaches, setCoaches] = useState<Coach[]>([]);
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [evaluations, setEvaluations] = useState<MonthlyEvaluation[]>([]);
   const [accessMap, setAccessMap] = useState<Map<string, StudentAccess>>(
@@ -72,15 +74,17 @@ function AdminArea() {
   async function loadData() {
     try {
       setLoading(true);
-      const [studentsData, lessonsData, evaluationsData, accessData] =
+      const [studentsData, coachesData, lessonsData, evaluationsData, accessData] =
         await Promise.all([
           getStudents(),
+          getCoaches(),
           getLessons(),
           getEvaluations(),
           getStudentAccessMap(),
         ]);
 
       setStudents(studentsData);
+      setCoaches(coachesData);
       setLessons(lessonsData);
       setEvaluations(evaluationsData);
       setAccessMap(accessData);
@@ -313,11 +317,21 @@ function AdminArea() {
             />
           </FormField>
           <FormField label="Treinador principal">
-            <input
-              placeholder="Nome do treinador"
+            <select
               value={mainCoach}
               onChange={(e) => setMainCoach(e.target.value)}
-            />
+            >
+              <option value="">Sem treinador principal</option>
+              {coaches.map((coach) => (
+                <option key={coach.id} value={coach.name}>
+                  {coach.name}
+                </option>
+              ))}
+              {mainCoach &&
+                !coaches.some((coach) => coach.name === mainCoach) && (
+                  <option value={mainCoach}>{mainCoach} (atual)</option>
+                )}
+            </select>
           </FormField>
           <FormField label="Observações (opcional)">
             <input
