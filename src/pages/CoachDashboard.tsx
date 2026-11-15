@@ -38,6 +38,7 @@ function CoachDashboard({ user }: Props) {
   const [extraStudentIds, setExtraStudentIds] = useState<string[]>([]);
   const [extraStudentSearch, setExtraStudentSearch] = useState("");
   const [secondaryCoachName, setSecondaryCoachName] = useState("");
+  const [sessionDate, setSessionDate] = useState(getTodayDate());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [coachId, setCoachId] = useState<string | null>(null);
@@ -163,12 +164,14 @@ function CoachDashboard({ user }: Props) {
       return;
     }
 
+    setSessionDate(today);
     setPendingGroup(group);
     setSecondaryCoachName("");
   }
 
   function openCreateExtra() {
     setCreatingExtra(true);
+    setSessionDate(today);
     setExtraTitle("Treino extra");
     setExtraStudentIds([]);
     setExtraStudentSearch("");
@@ -192,13 +195,17 @@ function CoachDashboard({ user }: Props) {
       toast.error("Escolhe pelo menos um aluno que foi ao treino.");
       return;
     }
+    if (!sessionDate || sessionDate > today) {
+      toast.error("A data tem de ser hoje ou um dia anterior.");
+      return;
+    }
 
     try {
       setSaving(true);
 
       const lesson: Lesson = {
         id: crypto.randomUUID(),
-        date: today,
+        date: sessionDate,
         time: "",
         beach: "",
         status: "published",
@@ -233,6 +240,10 @@ function CoachDashboard({ user }: Props) {
       toast.error("Não foi possível identificar o treinador.");
       return;
     }
+    if (!sessionDate || sessionDate > today) {
+      toast.error("A data tem de ser hoje ou um dia anterior.");
+      return;
+    }
 
     const { matchedIds, unmatchedNames } = matchStudentIdsByNames(
       pendingGroup.students,
@@ -242,11 +253,11 @@ function CoachDashboard({ user }: Props) {
     try {
       setSaving(true);
 
-      // Evita duplicar se outro treinador já registou o mesmo grupo hoje.
+      // Evita duplicar se outro treinador já registou o mesmo grupo nesse dia.
       const latestLessons = await getLessons();
       const alreadyOpen = latestLessons.find(
         (lesson) =>
-          lesson.date === today &&
+          lesson.date === sessionDate &&
           lesson.groupName === pendingGroup.title &&
           lesson.status !== "draft"
       );
@@ -262,7 +273,7 @@ function CoachDashboard({ user }: Props) {
 
       const lesson: Lesson = {
         id: crypto.randomUUID(),
-        date: today,
+        date: sessionDate,
         time: "",
         beach: "",
         status: "published",
@@ -289,7 +300,11 @@ function CoachDashboard({ user }: Props) {
           `Sessão criada. ${unmatchedNames.length} aluno(s) ainda não existem na app e não entraram na lista.`
         );
       } else {
-        toast.success("Treino registado. Podes marcar as presenças.");
+        toast.success(
+          sessionDate < today
+            ? "Treino passado registado. Podes marcar as presenças."
+            : "Treino registado. Podes marcar as presenças."
+        );
       }
     } catch (error) {
       console.error(error);
@@ -298,7 +313,7 @@ function CoachDashboard({ user }: Props) {
         const latestLessons = await getLessons();
         const existing = latestLessons.find(
           (lesson) =>
-            lesson.date === today &&
+            lesson.date === sessionDate &&
             lesson.groupName === pendingGroup.title &&
             lesson.status !== "draft"
         );
@@ -373,7 +388,8 @@ function CoachDashboard({ user }: Props) {
         <p className="page-eyebrow">NextGeneration · {formatTodayLabel()}</p>
         <h1 className="page-title">Treinos de hoje</h1>
         <p className="page-description">
-          Escolhe o grupo que deste ou cria um treino extra e indica quem foi.
+          Escolhe o grupo de hoje, cria um treino extra, ou altera a data no
+          registo se te esqueceste de marcar um treino passado.
         </p>
       </header>
 
@@ -514,8 +530,19 @@ function CoachDashboard({ user }: Props) {
         <Modal title="Treino extra" onClose={() => setCreatingExtra(false)}>
           <div className="coach-session-modal">
             <p className="muted">
-              Regista um treino fora dos grupos fixos e indica quem foi.
+              Regista um treino fora dos grupos fixos e indica quem foi. Podes
+              escolher um dia anterior se foi esquecimento.
             </p>
+
+            <label className="field-label">
+              Data do treino
+              <input
+                type="date"
+                value={sessionDate}
+                max={today}
+                onChange={(event) => setSessionDate(event.target.value)}
+              />
+            </label>
 
             <label className="field-label">
               Nome do treino
@@ -603,10 +630,19 @@ function CoachDashboard({ user }: Props) {
         >
           <div className="coach-session-modal">
             <p className="muted">
-              Vais registar este grupo para hoje como{" "}
-              <strong>{user.name}</strong>. Se houve 2 treinadores, escolhe o
-              segundo.
+              Vais registar este grupo como <strong>{user.name}</strong>. Se te
+              esqueceste, escolhe a data real do treino (hoje ou anterior).
             </p>
+
+            <label className="field-label">
+              Data do treino
+              <input
+                type="date"
+                value={sessionDate}
+                max={today}
+                onChange={(event) => setSessionDate(event.target.value)}
+              />
+            </label>
 
             <label className="field-label">
               Segundo treinador (opcional)
