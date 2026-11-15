@@ -39,6 +39,7 @@ import {
 import { getEmailValidationMessage, normalizeEmail } from "../utils/email";
 import { getStudentTrainingUsage } from "../utils/studentTrainingUsage";
 import { getCurrentMonthYear } from "../utils/dateUtils";
+import LoadingBlock from "../components/LoadingBlock";
 
 function AdminArea() {
   const [students, setStudents] = useState<Student[]>([]);
@@ -356,7 +357,7 @@ function AdminArea() {
         </p>
       </header>
 
-      {loading && <p className="muted">A carregar alunos...</p>}
+      {loading && <LoadingBlock label="A carregar alunos..." />}
 
       {!loading && (
         <MasterDetailLayout

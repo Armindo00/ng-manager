@@ -37,6 +37,7 @@ function Topbar({ user }: Props) {
   return (
     <header className="topbar">
       <div className="topbar-copy">
+        <p className="topbar-kicker">NextGeneration</p>
         <p className="topbar-date">{today}</p>
         <h2>{user.name}</h2>
         <span className="topbar-role-chip">{roleLabel(user.role)}</span>

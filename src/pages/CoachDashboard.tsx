@@ -12,6 +12,8 @@ import {
 import { ensureFixedTrainingsSeeded } from "../services/fixedTrainingsService";
 import Modal from "../components/Modal";
 import CoachAttendancePanel from "../components/CoachAttendancePanel";
+import EmptyState from "../components/EmptyState";
+import LoadingBlock from "../components/LoadingBlock";
 import { resolveCoachId } from "../utils/coachAccess";
 import { formatSessionCoaches } from "../utils/sessionCoaches";
 import { matchStudentIdsByNames } from "../utils/studentNameMatch";
@@ -100,10 +102,22 @@ function CoachDashboard({ user }: Props) {
     );
   }
 
-  const todayGroups = useMemo(
-    () => fixedTrainings.filter((group) => group.weekday === weekdayKey),
-    [fixedTrainings, weekdayKey]
-  );
+  const todayGroups = useMemo(() => {
+    const normalize = (value: string) => value.trim().toLowerCase();
+    const myName = normalize(user.name);
+    return fixedTrainings
+      .filter((group) => group.weekday === weekdayKey)
+      .slice()
+      .sort((a, b) => {
+        const rank = (group: FixedTraining) => {
+          if (!group.coachName?.trim()) return 1;
+          return normalize(group.coachName) === myName ? 0 : 2;
+        };
+        const diff = rank(a) - rank(b);
+        if (diff !== 0) return diff;
+        return a.title.localeCompare(b.title, "pt");
+      });
+  }, [fixedTrainings, weekdayKey, user.name]);
 
   const selectedLesson =
     lessons.find((lesson) => lesson.id === selectedLessonId) ?? null;
@@ -228,6 +242,24 @@ function CoachDashboard({ user }: Props) {
     try {
       setSaving(true);
 
+      // Evita duplicar se outro treinador já registou o mesmo grupo hoje.
+      const latestLessons = await getLessons();
+      const alreadyOpen = latestLessons.find(
+        (lesson) =>
+          lesson.date === today &&
+          lesson.groupName === pendingGroup.title &&
+          lesson.status !== "draft"
+      );
+      if (alreadyOpen) {
+        setLessons(latestLessons);
+        setPendingGroup(null);
+        setSelectedLessonId(alreadyOpen.id);
+        toast("Este grupo já estava registado — abrimos a sessão existente.", {
+          icon: "ℹ️",
+        });
+        return;
+      }
+
       const lesson: Lesson = {
         id: crypto.randomUUID(),
         date: today,
@@ -261,6 +293,27 @@ function CoachDashboard({ user }: Props) {
       }
     } catch (error) {
       console.error(error);
+      // Corrida: outro coach criou no mesmo instante (índice único).
+      try {
+        const latestLessons = await getLessons();
+        const existing = latestLessons.find(
+          (lesson) =>
+            lesson.date === today &&
+            lesson.groupName === pendingGroup.title &&
+            lesson.status !== "draft"
+        );
+        if (existing) {
+          setLessons(latestLessons);
+          setPendingGroup(null);
+          setSelectedLessonId(existing.id);
+          toast("Este grupo já estava registado — abrimos a sessão existente.", {
+            icon: "ℹ️",
+          });
+          return;
+        }
+      } catch {
+        // ignore
+      }
       toast.error("Erro ao registar o treino.");
     } finally {
       setSaving(false);
@@ -302,22 +355,22 @@ function CoachDashboard({ user }: Props) {
   }
 
   if (loading) {
-    return <p className="muted">A carregar treinos...</p>;
+    return <LoadingBlock label="A carregar treinos de hoje..." />;
   }
 
   if (!coachId) {
     return (
-      <p>
-        Não foi possível ligar esta conta a um treinador. Garante que existes
-        na lista de treinadores.
-      </p>
+      <EmptyState
+        title="Conta sem treinador"
+        description="Não foi possível ligar esta conta a um treinador. Garante que existes na lista de treinadores."
+      />
     );
   }
 
   return (
     <div className="coach-dashboard-page dashboard-page">
       <header className="page-header">
-        <p className="page-eyebrow">Presenças · {formatTodayLabel()}</p>
+        <p className="page-eyebrow">NextGeneration · {formatTodayLabel()}</p>
         <h1 className="page-title">Treinos de hoje</h1>
         <p className="page-description">
           Escolhe o grupo que deste ou cria um treino extra e indica quem foi.
@@ -347,9 +400,19 @@ function CoachDashboard({ user }: Props) {
         </div>
 
         {todayGroups.length === 0 && todayExtraLessons.length === 0 ? (
-          <p className="muted">
-            Não há grupos fixos para hoje. Usa + para registar um treino extra.
-          </p>
+          <EmptyState
+            title="Sem grupos para hoje"
+            description="Não há grupos fixos neste dia. Usa + para registar um treino extra."
+            action={
+              <button
+                type="button"
+                className="primary-btn"
+                onClick={openCreateExtra}
+              >
+                Criar treino extra
+              </button>
+            }
+          />
         ) : (
           <div className="coach-session-list">
             {todayGroups.map((group) => {
@@ -359,6 +422,7 @@ function CoachDashboard({ user }: Props) {
                     session.bookedStudentIds.includes(id)
                   ).length
                 : 0;
+              const assignedCoach = group.coachName?.trim();
 
               return (
                 <button
@@ -369,7 +433,10 @@ function CoachDashboard({ user }: Props) {
                 >
                   <div className="coach-session-card-main">
                     <strong>{group.title}</strong>
-                    <span>{group.students.length} alunos fixos</span>
+                    <span>
+                      {group.students.length} alunos fixos
+                      {assignedCoach ? ` · ${assignedCoach}` : ""}
+                    </span>
                     {session ? (
                       <span>
                         {formatSessionCoaches(
@@ -626,13 +693,15 @@ function CoachDashboard({ user }: Props) {
             />
 
             {canFinishLesson(selectedLesson) && (
-              <button
-                type="button"
-                className="primary-btn"
-                onClick={() => finishLesson(selectedLesson)}
-              >
-                Finalizar treino
-              </button>
+              <div className="coach-session-sticky-actions">
+                <button
+                  type="button"
+                  className="primary-btn"
+                  onClick={() => finishLesson(selectedLesson)}
+                >
+                  Finalizar treino
+                </button>
+              </div>
             )}
           </div>
         </Modal>

@@ -26,6 +26,7 @@ const APPLY_ORDER = [
   "students-monthly-fee.sql",
   "students-billing-type.sql",
   "students-pricing-plan.sql",
+  "coach-ops-rls-hardening.sql",
 ];
 
 if (!token) {

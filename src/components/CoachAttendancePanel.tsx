@@ -472,7 +472,7 @@ function CoachAttendancePanel({
                         disabled={saving}
                         onClick={() => setAttendance(student.id, "makeup")}
                       >
-                        Compensa noutro treino
+                        Compensa
                       </button>
                     )}
                   </div>
@@ -483,7 +483,7 @@ function CoachAttendancePanel({
                       : status === "present"
                         ? "Presente"
                         : status === "makeup"
-                          ? "Compensa noutro treino"
+                          ? "Compensa"
                           : "Falta / por marcar"}
                   </strong>
                 )}
