@@ -85,7 +85,7 @@ button:disabled {
   cursor: not-allowed;
 }
 
-input,
+input:not([type="checkbox"]):not([type="radio"]),
 select,
 textarea {
   display: block;
@@ -101,6 +101,80 @@ textarea {
   border-radius: var(--radius-md);
   padding: 11px 12px;
   box-sizing: border-box;
+}
+
+/* Checkboxes profissionais (teal NG) */
+input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  display: inline-grid;
+  place-content: center;
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
+  max-width: 18px;
+  margin: 0;
+  padding: 0;
+  flex-shrink: 0;
+  vertical-align: middle;
+  box-sizing: border-box;
+  cursor: pointer;
+  border: 1.5px solid var(--line-strong);
+  border-radius: 5px;
+  background: var(--surface);
+  box-shadow: inset 0 1px 1px rgba(16, 35, 58, 0.04);
+  transition: background 0.15s ease, border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+input[type="checkbox"]::before {
+  content: "";
+  width: 10px;
+  height: 10px;
+  transform: scale(0);
+  transition: transform 0.12s ease;
+  background-color: white;
+  clip-path: polygon(
+    14% 44%,
+    0 65%,
+    40% 100%,
+    100% 16%,
+    80% 0%,
+    37% 55%
+  );
+}
+
+input[type="checkbox"]:hover:not(:disabled) {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.1);
+}
+
+input[type="checkbox"]:focus-visible {
+  outline: none;
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.22);
+}
+
+input[type="checkbox"]:checked {
+  background: var(--brand);
+  border-color: var(--brand);
+  box-shadow: none;
+}
+
+input[type="checkbox"]:checked::before {
+  transform: scale(1);
+}
+
+input[type="checkbox"]:checked:hover:not(:disabled) {
+  background: var(--brand-hover);
+  border-color: var(--brand-hover);
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.12);
+}
+
+input[type="checkbox"]:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  background: var(--surface-soft);
 }
 
 input[type="date"],
@@ -1355,13 +1429,17 @@ textarea:focus {
 .van-active-toggle-control {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+  min-height: 42px;
+  padding: 0 12px;
   font-weight: 600;
   color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
 }
 
 .van-active-toggle input[type="checkbox"] {
-  width: auto;
   margin: 0;
 }
 
@@ -1993,11 +2071,21 @@ textarea:focus {
 .quota-filter-toggle {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   font-size: 14px;
   font-weight: 600;
   color: var(--ink);
-  padding-bottom: 10px;
+  padding: 8px 0 10px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.quota-filter-toggle:hover {
+  color: var(--brand-ink);
+}
+
+.plan-addons .quota-filter-toggle {
+  padding: 4px 0;
 }
 
 .quota-table-wrap {
