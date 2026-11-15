@@ -4,6 +4,7 @@ import type { Lesson, Student } from "../types";
 import type { LessonCompensation } from "../types/compensation";
 import { updateLesson } from "../services/lessonsService";
 import { getLessons } from "../services/lessonsService";
+import { updateStudent } from "../services/studentsService";
 import {
   addCompensationStudentToLesson,
   clearOpenCompensationForMissedLesson,
@@ -11,6 +12,12 @@ import {
   markStudentForCompensation,
 } from "../services/compensationsService";
 import { canMarkAttendance } from "../utils/lessonWorkflow";
+import {
+  applyPackRemainingDelta,
+  getStudentTrainingUsage,
+  wouldExceedQuotaOnPresent,
+} from "../utils/studentTrainingUsage";
+import { getCurrentMonthYear } from "../utils/dateUtils";
 
 type AttendanceStatus = "present" | "absent" | "makeup";
 
@@ -18,6 +25,7 @@ type Props = {
   lesson: Lesson;
   students: Student[];
   onLessonUpdated?: (lesson: Lesson) => void;
+  onStudentUpdated?: (student: Student) => void;
   onSaved: () => void;
 };
 
@@ -34,6 +42,7 @@ function CoachAttendancePanel({
   lesson,
   students,
   onLessonUpdated,
+  onStudentUpdated,
   onSaved,
 }: Props) {
   const [workingLesson, setWorkingLesson] = useState(lesson);
@@ -41,6 +50,7 @@ function CoachAttendancePanel({
   const [saving, setSaving] = useState(false);
   const [compensations, setCompensations] = useState<LessonCompensation[]>([]);
   const [allLessons, setAllLessons] = useState<Lesson[]>([]);
+  const currentPeriod = getCurrentMonthYear();
 
   useEffect(() => {
     setWorkingLesson(lesson);
@@ -192,21 +202,58 @@ function CoachAttendancePanel({
     return formatMissedLessonLabel(missed);
   }
 
+  async function syncPackAfterAttendance(
+    student: Student,
+    fromStatus: AttendanceStatus,
+    toStatus: AttendanceStatus
+  ) {
+    const wasPresent = fromStatus === "present";
+    const willPresent = toStatus === "present";
+    if (wasPresent === willPresent) return student;
+
+    const delta: -1 | 1 = willPresent ? -1 : 1;
+    const nextStudent = applyPackRemainingDelta(student, delta);
+    if (nextStudent === student) return student;
+
+    await updateStudent(nextStudent);
+    onStudentUpdated?.(nextStudent);
+    return nextStudent;
+  }
+
   async function setAttendance(studentId: string, status: AttendanceStatus) {
     if (!canEdit || saving) return;
     if (getStatus(studentId) === status) return;
 
     const previousLesson = workingLesson;
+    const previousStatus = getStatus(studentId);
+    const student = students.find((item) => item.id === studentId);
 
     try {
       setSaving(true);
 
       if (status === "makeup") {
+        if (previousStatus === "present" && student) {
+          await syncPackAfterAttendance(student, "present", "absent");
+        }
         await markStudentForCompensation(workingLesson, studentId);
         toast.success("Aluno enviado para compensações.");
         await loadSideData();
         onSaved();
         return;
+      }
+
+      if (status === "present" && student) {
+        const warning = wouldExceedQuotaOnPresent(
+          student,
+          allLessons,
+          workingLesson
+        );
+        if (warning) {
+          toast(
+            `${student.name}: ${warning.label}. Presença registada na mesma.`,
+            { icon: "⚠️" }
+          );
+        }
       }
 
       const nextLesson: Lesson = {
@@ -222,6 +269,11 @@ function CoachAttendancePanel({
       applyLessonUpdate(nextLesson);
       await clearOpenCompensationForMissedLesson(studentId, workingLesson.id);
       await updateLesson(nextLesson);
+
+      if (student && (status === "present" || previousStatus === "present")) {
+        await syncPackAfterAttendance(student, previousStatus, status);
+      }
+
       await loadSideData();
     } catch (error) {
       console.error(error);
@@ -236,6 +288,7 @@ function CoachAttendancePanel({
     if (!canEdit || saving) return;
 
     const previousLesson = workingLesson;
+    const student = students.find((item) => item.id === studentId);
     const nextLesson: Lesson = {
       ...workingLesson,
       bookedStudentIds: [...workingLesson.bookedStudentIds, studentId],
@@ -244,8 +297,24 @@ function CoachAttendancePanel({
 
     try {
       setSaving(true);
+      if (student) {
+        const warning = wouldExceedQuotaOnPresent(
+          student,
+          allLessons,
+          workingLesson
+        );
+        if (warning) {
+          toast(
+            `${student.name}: ${warning.label}. Presença registada na mesma.`,
+            { icon: "⚠️" }
+          );
+        }
+      }
       applyLessonUpdate(nextLesson);
       await updateLesson(nextLesson);
+      if (student) {
+        await syncPackAfterAttendance(student, "absent", "present");
+      }
       setStudentSearch("");
     } catch (error) {
       console.error(error);
@@ -328,6 +397,16 @@ function CoachAttendancePanel({
             const status = getStatus(student.id);
             const compensatingLabel = getCompensatingLabel(student.id);
             const isCompensatingHere = Boolean(compensatingLabel);
+            const usage = getStudentTrainingUsage(
+              student,
+              allLessons,
+              currentPeriod.month,
+              currentPeriod.year
+            );
+            const quotaHot =
+              usage.status === "over" ||
+              usage.status === "pack_empty" ||
+              usage.status === "at_limit";
 
             return (
               <div
@@ -344,6 +423,11 @@ function CoachAttendancePanel({
               >
                 <div className="lesson-student-main">
                   <span className="lesson-student-name">{student.name}</span>
+                  {quotaHot && (
+                    <span className={`quota-status ${usage.status === "at_limit" ? "is-limit" : "is-over"}`}>
+                      {usage.label}
+                    </span>
+                  )}
                   {compensatingLabel && (
                     <span className="lesson-compensation-tag">
                       A compensar · {compensatingLabel}

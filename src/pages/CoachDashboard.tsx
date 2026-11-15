@@ -94,6 +94,12 @@ function CoachDashboard({ user }: Props) {
     );
   }
 
+  function handleStudentUpdated(nextStudent: Student) {
+    setStudents((current) =>
+      current.map((item) => (item.id === nextStudent.id ? nextStudent : item))
+    );
+  }
+
   const todayGroups = useMemo(
     () => fixedTrainings.filter((group) => group.weekday === weekdayKey),
     [fixedTrainings, weekdayKey]
@@ -615,6 +621,7 @@ function CoachDashboard({ user }: Props) {
               lesson={selectedLesson}
               students={students}
               onLessonUpdated={handleLessonUpdated}
+              onStudentUpdated={handleStudentUpdated}
               onSaved={() => loadData({ silent: true })}
             />
 

@@ -19,6 +19,7 @@ import {
   X,
   Clapperboard,
   BarChart3,
+  TrendingUp,
 } from "lucide-react";
 import type { User } from "../types";
 import logo from "../assets/logo next.jpeg";
@@ -43,6 +44,7 @@ const ADMIN_MANAGEMENT_SECTIONS = new Set([
   "compensations",
   "evaluations",
   "payments",
+  "training-quota",
   "coach-activity",
 ]);
 
@@ -179,6 +181,7 @@ function Sidebar({ user, activeSection, onChangeSection, onLogout }: Props) {
 
               <div className="nav-section-label">Gestão</div>
               {item(CreditCard, "Pagamentos", "payments")}
+              {item(TrendingUp, "Treinos a mais", "training-quota")}
               {item(Star, "Avaliações", "evaluations")}
               {item(CalendarClock, "Compensações", "compensations")}
               {item(Package, "Inventário", "inventory")}

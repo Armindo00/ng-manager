@@ -1923,9 +1923,16 @@ textarea:focus {
   font-size: 14px;
 }
 
+.student-profile-badges {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .status-paid,
 .status-pending {
-  margin-left: auto;
   display: inline-flex;
   align-items: center;
   padding: 4px 10px;
@@ -1942,6 +1949,84 @@ textarea:focus {
 .status-pending {
   background: #fff7ed;
   color: var(--warning);
+}
+
+.quota-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.quota-status.is-over,
+.quota-status.is-warn {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.quota-status.is-limit {
+  background: #fff7ed;
+  color: var(--warning);
+}
+
+.quota-status.is-ok {
+  background: #ecfdf3;
+  color: var(--success);
+}
+
+.quota-status.is-muted {
+  background: var(--surface-2, #f3f4f6);
+  color: var(--muted);
+}
+
+.quota-toolbar {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  align-items: end;
+  margin-bottom: 18px;
+}
+
+.quota-filter-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  padding-bottom: 10px;
+}
+
+.quota-table-wrap {
+  overflow-x: auto;
+}
+
+.quota-table .quota-status {
+  margin: 0;
+}
+
+.lesson-student-main .quota-status {
+  margin-top: 4px;
+}
+
+.admin-summary-status.is-warn {
+  color: #b91c1c;
+  background: #fef2f2;
+}
+
+@media (max-width: 900px) {
+  .quota-toolbar {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .quota-toolbar {
+    grid-template-columns: 1fr;
+  }
 }
 
 .student-profile-grid {

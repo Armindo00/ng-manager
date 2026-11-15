@@ -15,6 +15,7 @@ type Props = {
 
 function LessonDetailCard({ lesson, students }: Props) {
   const [currentLesson, setCurrentLesson] = useState<Lesson>(lesson);
+  const [localStudents, setLocalStudents] = useState(students);
   const [coachNotes, setCoachNotes] = useState(lesson.coachNotes || "");
   const [coaches, setCoaches] = useState<Coach[]>([]);
   const [studentSearch, setStudentSearch] = useState("");
@@ -26,14 +27,18 @@ function LessonDetailCard({ lesson, students }: Props) {
   }, [lesson]);
 
   useEffect(() => {
+    setLocalStudents(students);
+  }, [students]);
+
+  useEffect(() => {
     loadCoaches();
   }, []);
 
-  const bookedStudents = students.filter((student) =>
+  const bookedStudents = localStudents.filter((student) =>
     currentLesson.bookedStudentIds.includes(student.id)
   );
 
-  const availableStudents = students.filter(
+  const availableStudents = localStudents.filter(
     (student) =>
       !currentLesson.bookedStudentIds.includes(student.id) &&
       student.name.toLowerCase().includes(studentSearch.toLowerCase())
@@ -291,8 +296,15 @@ function LessonDetailCard({ lesson, students }: Props) {
         <h3>Presenças</h3>
         <CoachAttendancePanel
           lesson={currentLesson}
-          students={students}
+          students={localStudents}
           onLessonUpdated={setCurrentLesson}
+          onStudentUpdated={(nextStudent) =>
+            setLocalStudents((current) =>
+              current.map((item) =>
+                item.id === nextStudent.id ? nextStudent : item
+              )
+            )
+          }
           onSaved={refreshLesson}
         />
       </div>

@@ -95,6 +95,12 @@ function CoachArea({ user }: Props) {
     );
   }
 
+  function handleStudentUpdated(nextStudent: Student) {
+    setStudents((current) =>
+      current.map((item) => (item.id === nextStudent.id ? nextStudent : item))
+    );
+  }
+
   const selectedLesson =
     lessons.find((lesson) => lesson.id === selectedLessonId) ?? null;
 
@@ -245,6 +251,7 @@ function CoachArea({ user }: Props) {
               lesson={selectedLesson}
               students={students}
               onLessonUpdated={handleLessonUpdated}
+              onStudentUpdated={handleStudentUpdated}
               onSaved={() => loadData({ silent: true })}
             />
           </div>

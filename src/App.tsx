@@ -9,6 +9,7 @@ import CoachDashboard from "./pages/CoachDashboard";
 import AdminArea from "./pages/AdminArea";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminPayments from "./pages/AdminPayments";
+import AdminTrainingQuota from "./pages/AdminTrainingQuota";
 import Coaches from "./pages/Coaches";
 import AdminLessons from "./pages/AdminLessons";
 import AdminInventory from "./pages/AdminInventory";
@@ -49,6 +50,7 @@ type AdminSection =
   | "compensations"
   | "evaluations"
   | "payments"
+  | "training-quota"
   | "coach-activity";
 
 type CoachSection =
@@ -357,6 +359,9 @@ function App() {
 
           {currentUser.role === "admin" &&
             activeSection === "payments" && <AdminPayments />}
+
+          {currentUser.role === "admin" &&
+            activeSection === "training-quota" && <AdminTrainingQuota />}
 
           {currentUser.role === "admin" &&
             activeSection === "coach-activity" && <AdminCoachActivity />}
