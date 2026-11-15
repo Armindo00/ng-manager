@@ -728,16 +728,40 @@ function CoachDashboard({ user }: Props) {
               onSaved={() => loadData({ silent: true })}
             />
 
-            {canFinishLesson(selectedLesson) && (
+            {selectedLesson.status === "finished" ? (
               <div className="coach-session-sticky-actions">
                 <button
                   type="button"
                   className="primary-btn"
-                  onClick={() => finishLesson(selectedLesson)}
+                  onClick={async () => {
+                    try {
+                      await updateLesson({
+                        ...selectedLesson,
+                        status: "published",
+                      });
+                      await loadData({ silent: true });
+                      toast.success("Treino reaberto como registado.");
+                    } catch (error) {
+                      console.error(error);
+                      toast.error("Erro ao reabrir treino.");
+                    }
+                  }}
                 >
-                  Finalizar treino
+                  Reabrir (voltar a registado)
                 </button>
               </div>
+            ) : (
+              canFinishLesson(selectedLesson) && (
+                <div className="coach-session-sticky-actions">
+                  <button
+                    type="button"
+                    className="compact-btn"
+                    onClick={() => finishLesson(selectedLesson)}
+                  >
+                    Concluir treino
+                  </button>
+                </div>
+              )
             )}
           </div>
         </Modal>
