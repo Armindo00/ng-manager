@@ -314,14 +314,20 @@ textarea:focus {
 
 .notification-bell {
   position: relative;
-  width: 46px;
-  height: 46px;
+  width: 48px;
+  height: 48px;
+  min-width: 48px;
   border-radius: 50%;
   background: white;
   border: 1px solid #e2e8f0;
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.notification-bell svg {
+  width: 22px;
+  height: 22px;
 }
 
 .notification-count {

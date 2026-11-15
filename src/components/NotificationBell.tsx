@@ -44,7 +44,7 @@ function NotificationBell({ notifications }: Props) {
         aria-expanded={open}
         onClick={() => setOpen((current) => !current)}
       >
-        <Bell size={18} strokeWidth={2.2} />
+        <Bell size={22} strokeWidth={2.2} aria-hidden />
 
         {notifications.length > 0 && (
           <span className="notification-count">{notifications.length}</span>

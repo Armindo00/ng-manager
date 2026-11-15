@@ -2737,9 +2737,16 @@ textarea:focus {
 }
 
 /* Notifications / chrome polish */
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .notification-bell {
-  width: 40px;
-  height: 40px;
+  width: 48px;
+  height: 48px;
+  min-width: 48px;
   border-radius: var(--radius-md);
   border: 1px solid var(--line);
   background: var(--surface);
@@ -2750,6 +2757,11 @@ textarea:focus {
   position: relative;
 }
 
+.notification-bell svg {
+  width: 22px;
+  height: 22px;
+}
+
 .notification-bell:hover {
   background: var(--surface-soft);
   border-color: var(--line-strong);
@@ -2758,15 +2770,15 @@ textarea:focus {
 
 .notification-count {
   position: absolute;
-  top: -4px;
-  right: -4px;
-  min-width: 18px;
-  height: 18px;
+  top: -5px;
+  right: -5px;
+  min-width: 20px;
+  height: 20px;
   padding: 0 5px;
   border-radius: 999px;
   background: var(--danger);
   color: white;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 800;
   display: inline-flex;
   align-items: center;
@@ -3393,6 +3405,23 @@ textarea:focus {
     width: 34px;
     height: 34px;
     border-radius: 10px;
+  }
+
+  .notification-bell {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+  }
+
+  .notification-bell svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .notification-count {
+    min-width: 18px;
+    height: 18px;
+    font-size: 10px;
   }
 
   .lesson-student-row {
