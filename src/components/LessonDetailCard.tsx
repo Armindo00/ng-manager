@@ -99,6 +99,13 @@ function LessonDetailCard({ lesson, students }: Props) {
     );
   }
 
+  function reopenLesson() {
+    saveLessonChanges(
+      { ...currentLesson, status: "published" },
+      "Treino reaberto como registado."
+    );
+  }
+
   function addStudent(studentId: string) {
     saveLessonChanges(
       {
@@ -162,22 +169,21 @@ function LessonDetailCard({ lesson, students }: Props) {
       </div>
 
       <div className="lesson-actions-bar">
-        {currentLesson.status !== "finished" &&
-          canFinishLesson(currentLesson) && (
-            <button className="primary-btn" onClick={finishLesson}>
-              Concluir treino
-            </button>
-          )}
-
-        {currentLesson.status !== "finished" &&
-          !canFinishLesson(currentLesson) && (
+        {currentLesson.status === "finished" ? (
+          <>
             <span className="muted">
-              Conclusão disponível no dia do treino ({currentLesson.date}).
+              Já estava concluído. Podes reabrir para ficar só como registado e
+              continuar a editar presenças.
             </span>
-          )}
-
-        {currentLesson.status === "finished" && (
-          <span className="muted">Este treino já foi concluído.</span>
+            <button type="button" className="primary-btn" onClick={reopenLesson}>
+              Reabrir (voltar a registado)
+            </button>
+          </>
+        ) : (
+          <span className="muted">
+            Registado = sessão aberta. Conclui só no fim, depois de marcar as
+            presenças.
+          </span>
         )}
       </div>
 
@@ -308,6 +314,18 @@ function LessonDetailCard({ lesson, students }: Props) {
           onSaved={refreshLesson}
         />
       </div>
+
+      {currentLesson.status !== "finished" && canFinishLesson(currentLesson) && (
+        <div className="lesson-section">
+          <h3>Fechar sessão</h3>
+          <p className="muted">
+            Só conclui quando as presenças já estiverem marcadas.
+          </p>
+          <button type="button" className="compact-btn" onClick={finishLesson}>
+            Concluir treino
+          </button>
+        </div>
+      )}
 
       <div className="lesson-section">
         <h3>Notas do treinador</h3>

@@ -193,9 +193,12 @@ function AdminLessons({ user }: Props) {
       if (alreadyOpen) {
         setLessons(latestLessons);
         setSelectedLesson(alreadyOpen);
-        toast("Este grupo já estava registado — abrimos a sessão.", {
-          icon: "ℹ️",
-        });
+        toast(
+          alreadyOpen.status === "finished"
+            ? "Este treino já existia e estava concluído — podes reabrir para ficar registado."
+            : "Este grupo já estava registado — abrimos a sessão.",
+          { icon: "ℹ️" }
+        );
         return;
       }
 
