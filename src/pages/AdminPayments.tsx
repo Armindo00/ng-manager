@@ -56,6 +56,7 @@ function AdminPayments() {
   const [billingFilter, setBillingFilter] = useState<BillingFilter>("all");
   const currentPeriod = getCurrentMonthYear();
   const [selectedYear, setSelectedYear] = useState(currentPeriod.year);
+  const [statsScope, setStatsScope] = useState<"month" | "year">("month");
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(
     null
   );
@@ -173,29 +174,66 @@ function AdminPayments() {
     [payments, selectedYear]
   );
 
+  const statsPayments = useMemo(() => {
+    if (statsScope === "year") {
+      return yearPayments;
+    }
+    return payments.filter(
+      (payment) =>
+        payment.year === currentPeriod.year &&
+        payment.month === currentPeriod.month
+    );
+  }, [statsScope, yearPayments, payments, currentPeriod.year, currentPeriod.month]);
+
   const stats = useMemo(() => {
-    const pending = yearPayments.filter((payment) => payment.status === "pending");
-    const paid = yearPayments.filter((payment) => payment.status === "paid");
+    const pending = statsPayments.filter(
+      (payment) => payment.status === "pending"
+    );
+    const paid = statsPayments.filter((payment) => payment.status === "paid");
     const monthlyStudents = visibleStudents.filter(
       (student) => !isPackStudent(student)
     );
-    const monthlyStudentIds = new Set(monthlyStudents.map((student) => student.id));
-    const monthlyYearPayments = yearPayments.filter((payment) =>
-      monthlyStudentIds.has(payment.studentId)
+    const monthlyStudentIds = new Set(
+      monthlyStudents.map((student) => student.id)
     );
+
+    let missingCells = 0;
+    if (statsScope === "year") {
+      const monthlyYearPayments = yearPayments.filter((payment) =>
+        monthlyStudentIds.has(payment.studentId)
+      );
+      missingCells = Math.max(
+        0,
+        monthlyStudents.length * 12 -
+          monthlyYearPayments.filter((payment) => payment.status !== "cancelled")
+            .length
+      );
+    } else {
+      const covered = new Set(
+        statsPayments
+          .filter(
+            (payment) =>
+              monthlyStudentIds.has(payment.studentId) &&
+              payment.status !== "cancelled"
+          )
+          .map((payment) => payment.studentId)
+      );
+      missingCells = Math.max(0, monthlyStudents.length - covered.size);
+    }
+
     return {
       pending: pending.length,
       paid: paid.length,
       pendingAmount: pending.reduce((sum, payment) => sum + payment.amount, 0),
       paidAmount: paid.reduce((sum, payment) => sum + payment.amount, 0),
-      missingCells: Math.max(
-        0,
-        monthlyStudents.length * 12 -
-          monthlyYearPayments.filter((payment) => payment.status !== "cancelled")
-            .length
-      ),
+      missingCells,
     };
-  }, [yearPayments, visibleStudents]);
+  }, [statsPayments, statsScope, yearPayments, visibleStudents]);
+
+  const statsPeriodLabel =
+    statsScope === "year"
+      ? String(selectedYear)
+      : MONTH_LABELS[currentPeriod.month - 1];
 
   function getStudentName(id: string) {
     return students.find((student) => student.id === id)?.name || "Aluno";
@@ -494,22 +532,41 @@ function AdminPayments() {
         </button>
       </header>
 
-      <div className="payments-stats-strip">
-        <div>
-          <span>Pagos {selectedYear}</span>
-          <strong>{stats.paid}</strong>
+      <div className="payments-stats-block">
+        <div className="payments-stats-scope" role="group" aria-label="Período do resumo">
+          <button
+            type="button"
+            className={statsScope === "month" ? "is-active" : undefined}
+            onClick={() => setStatsScope("month")}
+          >
+            Mês atual
+          </button>
+          <button
+            type="button"
+            className={statsScope === "year" ? "is-active" : undefined}
+            onClick={() => setStatsScope("year")}
+          >
+            Ano {selectedYear}
+          </button>
         </div>
-        <div>
-          <span>Pendentes</span>
-          <strong>{stats.pending}</strong>
-        </div>
-        <div>
-          <span>Recebido</span>
-          <strong>{stats.paidAmount.toFixed(0)}€</strong>
-        </div>
-        <div>
-          <span>Em falta</span>
-          <strong>{stats.pendingAmount.toFixed(0)}€</strong>
+
+        <div className="payments-stats-strip">
+          <div>
+            <span>Pagos · {statsPeriodLabel}</span>
+            <strong>{stats.paid}</strong>
+          </div>
+          <div>
+            <span>Pendentes</span>
+            <strong>{stats.pending}</strong>
+          </div>
+          <div>
+            <span>Recebido</span>
+            <strong>{stats.paidAmount.toFixed(0)}€</strong>
+          </div>
+          <div>
+            <span>Em falta</span>
+            <strong>{stats.pendingAmount.toFixed(0)}€</strong>
+          </div>
         </div>
       </div>
 
