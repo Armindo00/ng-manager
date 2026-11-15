@@ -23,6 +23,9 @@ import {
   getWeekdayKey,
 } from "../utils/dateUtils";
 import { canFinishLesson } from "../utils/lessonWorkflow";
+import { buildCoachAttentionAlerts } from "../utils/coachAttentionAlerts";
+import { getVanTasks, getVans } from "../services/vansService";
+import type { Van, VanTask } from "../types/van";
 
 type Props = {
   user: User;
@@ -44,6 +47,8 @@ function CoachDashboard({ user }: Props) {
   const [coachId, setCoachId] = useState<string | null>(null);
   const [coaches, setCoaches] = useState<Coach[]>([]);
   const [fixedTrainings, setFixedTrainings] = useState<FixedTraining[]>([]);
+  const [vanTasks, setVanTasks] = useState<VanTask[]>([]);
+  const [vans, setVans] = useState<Van[]>([]);
 
   const today = getTodayDate();
   const weekdayKey = getWeekdayKey(today);
@@ -64,17 +69,23 @@ function CoachDashboard({ user }: Props) {
         coachesData,
         trainingsData,
         resolvedCoachId,
+        vanTasksData,
+        vansData,
       ] = await Promise.all([
         getLessons(),
         getStudents(),
         getCoaches(),
         ensureFixedTrainingsSeeded(),
         resolveCoachId(user),
+        getVanTasks().catch(() => [] as VanTask[]),
+        getVans().catch(() => [] as Van[]),
       ]);
 
       setCoachId(resolvedCoachId);
       setCoaches(coachesData);
       setFixedTrainings(trainingsData);
+      setVanTasks(vanTasksData);
+      setVans(vansData);
       setLessons(
         lessonsData.sort((a, b) =>
           `${b.date} ${b.time || ""}`.localeCompare(
@@ -156,6 +167,19 @@ function CoachDashboard({ user }: Props) {
       )
       .sort((a, b) => a.name.localeCompare(b.name, "pt"));
   }, [students, extraStudentSearch]);
+
+  const attentionAlerts = useMemo(
+    () =>
+      buildCoachAttentionAlerts({
+        user,
+        lessons,
+        fixedTrainings,
+        vanTasks,
+        vans,
+        today,
+      }),
+    [user, lessons, fixedTrainings, vanTasks, vans, today]
+  );
 
   function openGroup(group: FixedTraining) {
     const existing = findSessionForGroup(group);
@@ -392,6 +416,38 @@ function CoachDashboard({ user }: Props) {
           registo se te esqueceste de marcar um treino passado.
         </p>
       </header>
+
+      {attentionAlerts.length > 0 && (
+        <section className="card section-card admin-attention-card">
+          <div className="admin-section-heading">
+            <div>
+              <span className="admin-section-kicker">Atenção</span>
+              <h2>Avisos</h2>
+            </div>
+            <span className="coach-count-chip">{attentionAlerts.length}</span>
+          </div>
+          <ul className="admin-alert-list">
+            {attentionAlerts.map((alert) => (
+              <li key={alert.id}>
+                <div className="admin-alert-static">
+                  <strong
+                    className={
+                      alert.severity === "danger"
+                        ? "admin-alert-title is-danger"
+                        : "admin-alert-title"
+                    }
+                  >
+                    {alert.text}
+                  </strong>
+                  {alert.detail ? (
+                    <span className="admin-alert-detail">{alert.detail}</span>
+                  ) : null}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <section className="card section-card">
         <div className="admin-section-heading">

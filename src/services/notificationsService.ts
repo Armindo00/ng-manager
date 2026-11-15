@@ -4,9 +4,9 @@ import { getStudents } from "./studentsService";
 import { getPayments } from "./paymentsService";
 import { getEvaluations } from "./evaluationsService";
 import { getVanTasks, getVans } from "./vansService";
-import { getTodayDate } from "../utils/dateUtils";
-import { canMarkAttendance } from "../utils/lessonWorkflow";
+import { ensureFixedTrainingsSeeded } from "./fixedTrainingsService";
 import { buildAdminAttentionAlerts } from "../utils/adminAttentionAlerts";
+import { buildCoachAttentionAlerts } from "../utils/coachAttentionAlerts";
 
 export type Notification = {
   id: string;
@@ -46,15 +46,7 @@ export async function getNotifications(user: User): Promise<Notification[]> {
       (payment) => payment.status === "pending"
     ).length;
 
-    if (
-      pendingPayments > 0 &&
-      !notifications.some((item) => item.id === "payments-unpaid")
-    ) {
-      notifications.push({
-        id: "pending-payments",
-        text: `${pendingPayments} pagamento(s) pendente(s)`,
-      });
-    } else if (pendingPayments > 0) {
+    if (pendingPayments > 0) {
       notifications.push({
         id: "pending-payments",
         text: `${pendingPayments} pagamento(s) pendente(s) na matriz`,
@@ -63,38 +55,25 @@ export async function getNotifications(user: User): Promise<Notification[]> {
   }
 
   if (user.role === "coach") {
-    const lessons = await getLessons();
-    const coachLessons = lessons.filter(
-      (lesson) =>
-        lesson.coachId === user.id ||
-        (lesson.secondaryCoachName || "").toLowerCase() ===
-          user.name.trim().toLowerCase()
-    );
+    const [lessons, fixedTrainings, vanTasks, vans] = await Promise.all([
+      getLessons(),
+      ensureFixedTrainingsSeeded(),
+      getVanTasks(),
+      getVans(),
+    ]);
 
-    const today = getTodayDate();
-    const todayLessons = coachLessons.filter(
-      (lesson) => lesson.date === today && lesson.status !== "finished"
-    ).length;
+    const attention = buildCoachAttentionAlerts({
+      user,
+      lessons,
+      fixedTrainings,
+      vanTasks,
+      vans,
+    });
 
-    if (todayLessons > 0) {
+    for (const alert of attention) {
       notifications.push({
-        id: "coach-today-lessons",
-        text: `${todayLessons} treino(s) hoje`,
-      });
-    }
-
-    const pendingAttendance = coachLessons.filter((lesson) => {
-      if (!canMarkAttendance(lesson) || lesson.status === "finished") {
-        return false;
-      }
-
-      return lesson.presentStudentIds.length < lesson.bookedStudentIds.length;
-    }).length;
-
-    if (pendingAttendance > 0) {
-      notifications.push({
-        id: "coach-pending-attendance",
-        text: `${pendingAttendance} treino(s) com presenças por marcar`,
+        id: alert.id,
+        text: alert.detail ? `${alert.text} · ${alert.detail}` : alert.text,
       });
     }
   }
