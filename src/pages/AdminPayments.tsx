@@ -337,12 +337,7 @@ function AdminPayments() {
       const nextPayment: Payment = existing
         ? {
             ...existing,
-            amount:
-              existing.status === "paid"
-                ? existing.amount
-                : planAmount > 0
-                  ? planAmount
-                  : existing.amount,
+            amount: planAmount > 0 ? planAmount : existing.amount,
             status: "paid",
             paymentDate: getTodayDate(),
             notes:
