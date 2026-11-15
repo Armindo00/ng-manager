@@ -679,13 +679,53 @@ textarea:focus {
 
 .admin-alert-list {
   margin: 0;
-  padding-left: 18px;
+  padding: 0;
+  list-style: none;
   display: flex;
   flex-direction: column;
   gap: 8px;
   color: var(--ink-soft);
   font-size: 14px;
   line-height: 1.45;
+}
+
+.admin-alert-link,
+.admin-alert-static {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid #f0d7c4;
+  background: rgba(255, 255, 255, 0.72);
+  text-align: left;
+  color: inherit;
+}
+
+.admin-alert-link {
+  cursor: pointer;
+}
+
+.admin-alert-link:hover {
+  border-color: #e2b890;
+  background: #fff;
+}
+
+.admin-alert-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.admin-alert-title.is-danger {
+  color: #9a3412;
+}
+
+.admin-alert-detail {
+  font-size: 12px;
+  color: var(--muted);
 }
 
 .admin-summary-list {

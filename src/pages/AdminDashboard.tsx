@@ -2,22 +2,31 @@ import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import type { Coach, Lesson, MonthlyEvaluation, Student } from "../types";
 import type { FixedTraining } from "../data/fixedTrainings";
+import type { Van, VanTask } from "../types/van";
 import { getStudents } from "../services/studentsService";
 import { getCoaches } from "../services/coachesService";
 import { getLessons } from "../services/lessonsService";
 import { getEvaluations } from "../services/evaluationsService";
 import { ensureFixedTrainingsSeeded } from "../services/fixedTrainingsService";
+import { getVanTasks, getVans } from "../services/vansService";
 import { getCurrentMonthYear, getTodayDate } from "../utils/dateUtils";
 import { formatSessionCoaches } from "../utils/sessionCoaches";
 import { listOverQuotaStudents } from "../utils/studentTrainingUsage";
+import { buildAdminAttentionAlerts } from "../utils/adminAttentionAlerts";
 import LoadingBlock from "../components/LoadingBlock";
 
-function AdminDashboard() {
+type Props = {
+  onNavigate?: (section: string) => void;
+};
+
+function AdminDashboard({ onNavigate }: Props) {
   const [students, setStudents] = useState<Student[]>([]);
   const [coaches, setCoaches] = useState<Coach[]>([]);
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [evaluations, setEvaluations] = useState<MonthlyEvaluation[]>([]);
   const [fixedTrainings, setFixedTrainings] = useState<FixedTraining[]>([]);
+  const [vanTasks, setVanTasks] = useState<VanTask[]>([]);
+  const [vans, setVans] = useState<Van[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -33,12 +42,16 @@ function AdminDashboard() {
         lessonsData,
         evaluationsData,
         trainingsData,
+        vanTasksData,
+        vansData,
       ] = await Promise.all([
         getStudents(),
         getCoaches(),
         getLessons(),
         getEvaluations(),
         ensureFixedTrainingsSeeded(),
+        getVanTasks(),
+        getVans(),
       ]);
 
       setStudents(studentsData);
@@ -46,6 +59,8 @@ function AdminDashboard() {
       setLessons(lessonsData);
       setEvaluations(evaluationsData);
       setFixedTrainings(trainingsData);
+      setVanTasks(vanTasksData);
+      setVans(vansData);
     } catch (error) {
       console.error(error);
       toast.error("Erro ao carregar dashboard.");
@@ -56,10 +71,6 @@ function AdminDashboard() {
 
   const pendingPayments = students.filter((student) => !student.paid).length;
   const { month: currentMonth, year: currentYear } = getCurrentMonthYear();
-  const evaluationsThisMonth = evaluations.filter(
-    (evaluation) =>
-      evaluation.month === currentMonth && evaluation.year === currentYear
-  ).length;
 
   const totalBooked = lessons.reduce(
     (total, lesson) => total + lesson.bookedStudentIds.length,
@@ -90,24 +101,16 @@ function AdminDashboard() {
     currentYear
   );
 
-  const alerts = [
-    overQuota.length > 0
-      ? overQuota.length === 1
-        ? "1 atleta acima do limite / pack este mês"
-        : `${overQuota.length} atletas acima do limite / pack este mês`
-      : null,
-    pendingPayments > 0
-      ? `${pendingPayments} mensalidade${pendingPayments === 1 ? "" : "s"} em falta`
-      : null,
-    todayOpen > 0
-      ? todayOpen === 1
-        ? "1 sessão ainda aberta hoje"
-        : `${todayOpen} sessões ainda abertas hoje`
-      : null,
-    evaluationsThisMonth === 0
-      ? "Ainda sem avaliações este mês"
-      : null,
-  ].filter(Boolean) as string[];
+  const alerts = buildAdminAttentionAlerts({
+    students,
+    lessons,
+    evaluations,
+    vanTasks,
+    vans,
+    today,
+    month: currentMonth,
+    year: currentYear,
+  });
 
   return (
     <div className="dashboard-page admin-dashboard">
@@ -115,8 +118,8 @@ function AdminDashboard() {
         <p className="page-eyebrow">NextGeneration · Administração</p>
         <h1 className="page-title">Visão geral</h1>
         <p className="page-description">
-          Resumo do estado da escola. Para gerir alunos, escala ou pagamentos,
-          usa o menu.
+          Resumo do estado da escola. A caixa Atenção junta carrinhas, prazos,
+          treinos a mais e mensalidades em falta.
         </p>
       </header>
 
@@ -157,21 +160,59 @@ function AdminDashboard() {
             </div>
           </div>
 
-          {alerts.length > 0 && (
-            <section className="card section-card admin-attention-card">
-              <div className="admin-section-heading">
-                <div>
-                  <span className="admin-section-kicker">Atenção</span>
-                  <h2>Pontos a acompanhar</h2>
-                </div>
+          <section className="card section-card admin-attention-card">
+            <div className="admin-section-heading">
+              <div>
+                <span className="admin-section-kicker">Atenção</span>
+                <h2>Pontos a acompanhar</h2>
               </div>
+              {alerts.length > 0 && (
+                <span className="coach-count-chip">{alerts.length}</span>
+              )}
+            </div>
+
+            {alerts.length === 0 ? (
+              <p className="muted">Tudo em dia — sem alertas neste momento.</p>
+            ) : (
               <ul className="admin-alert-list">
-                {alerts.map((alert) => (
-                  <li key={alert}>{alert}</li>
-                ))}
+                {alerts.map((alert) => {
+                  const clickable = Boolean(onNavigate && alert.section);
+                  const content = (
+                    <>
+                      <strong
+                        className={
+                          alert.severity === "danger"
+                            ? "admin-alert-title is-danger"
+                            : "admin-alert-title"
+                        }
+                      >
+                        {alert.text}
+                      </strong>
+                      {alert.detail ? (
+                        <span className="admin-alert-detail">{alert.detail}</span>
+                      ) : null}
+                    </>
+                  );
+
+                  return (
+                    <li key={alert.id}>
+                      {clickable ? (
+                        <button
+                          type="button"
+                          className="admin-alert-link"
+                          onClick={() => onNavigate?.(alert.section!)}
+                        >
+                          {content}
+                        </button>
+                      ) : (
+                        <div className="admin-alert-static">{content}</div>
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
-            </section>
-          )}
+            )}
+          </section>
 
           {overQuota.length > 0 && (
             <section className="card section-card">

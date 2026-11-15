@@ -2,8 +2,11 @@ import type { User } from "../types";
 import { getLessons } from "./lessonsService";
 import { getStudents } from "./studentsService";
 import { getPayments } from "./paymentsService";
+import { getEvaluations } from "./evaluationsService";
+import { getVanTasks, getVans } from "./vansService";
 import { getTodayDate } from "../utils/dateUtils";
 import { canMarkAttendance } from "../utils/lessonWorkflow";
+import { buildAdminAttentionAlerts } from "../utils/adminAttentionAlerts";
 
 export type Notification = {
   id: string;
@@ -14,30 +17,28 @@ export async function getNotifications(user: User): Promise<Notification[]> {
   const notifications: Notification[] = [];
 
   if (user.role === "admin") {
-    const [lessons, students, payments] = await Promise.all([
-      getLessons(),
-      getStudents(),
-      getPayments(),
-    ]);
+    const [lessons, students, payments, evaluations, vanTasks, vans] =
+      await Promise.all([
+        getLessons(),
+        getStudents(),
+        getPayments(),
+        getEvaluations(),
+        getVanTasks(),
+        getVans(),
+      ]);
 
-    const today = getTodayDate();
-    const openToday = lessons.filter(
-      (lesson) => lesson.date === today && lesson.status !== "finished"
-    ).length;
+    const attention = buildAdminAttentionAlerts({
+      students,
+      lessons,
+      evaluations,
+      vanTasks,
+      vans,
+    });
 
-    if (openToday > 0) {
+    for (const alert of attention) {
       notifications.push({
-        id: "open-today",
-        text: `${openToday} treino(s) abertos hoje`,
-      });
-    }
-
-    const unpaidStudents = students.filter((student) => !student.paid).length;
-
-    if (unpaidStudents > 0) {
-      notifications.push({
-        id: "unpaid-students",
-        text: `${unpaidStudents} aluno(s) com mensalidade em falta`,
+        id: alert.id,
+        text: alert.detail ? `${alert.text} · ${alert.detail}` : alert.text,
       });
     }
 
@@ -45,10 +46,18 @@ export async function getNotifications(user: User): Promise<Notification[]> {
       (payment) => payment.status === "pending"
     ).length;
 
-    if (pendingPayments > 0) {
+    if (
+      pendingPayments > 0 &&
+      !notifications.some((item) => item.id === "payments-unpaid")
+    ) {
       notifications.push({
         id: "pending-payments",
         text: `${pendingPayments} pagamento(s) pendente(s)`,
+      });
+    } else if (pendingPayments > 0) {
+      notifications.push({
+        id: "pending-payments",
+        text: `${pendingPayments} pagamento(s) pendente(s) na matriz`,
       });
     }
   }
