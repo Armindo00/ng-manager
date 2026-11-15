@@ -112,6 +112,19 @@ export const MONTHLY_PLANS: PricingPlan[] = [
   },
 ];
 
+/** Mensalidades especiais (fora da grelha água × transporte). */
+export const SPECIAL_MONTHLY_PLANS: PricingPlan[] = [
+  {
+    id: "monthly-video-analysis",
+    kind: "monthly",
+    includesTransport: false,
+    trainings: 4,
+    price: 200,
+    label: "Videoanálise",
+    description: "Treinos por videoanálise · 200€/mês · ≈4 sessões/mês",
+  },
+];
+
 export const PACK_PLANS: PricingPlan[] = [
   {
     id: "pack-5",
@@ -133,7 +146,11 @@ export const PACK_PLANS: PricingPlan[] = [
   },
 ];
 
-export const PRICING_PLANS: PricingPlan[] = [...MONTHLY_PLANS, ...PACK_PLANS];
+export const PRICING_PLANS: PricingPlan[] = [
+  ...MONTHLY_PLANS,
+  ...SPECIAL_MONTHLY_PLANS,
+  ...PACK_PLANS,
+];
 
 export const CUSTOM_PLAN_ID = "custom";
 
@@ -177,7 +194,7 @@ export function matchPricingPlanId(input: {
     return pack?.id || CUSTOM_PLAN_ID;
   }
 
-  const monthly = MONTHLY_PLANS.find((plan) => {
+  const monthly = [...MONTHLY_PLANS, ...SPECIAL_MONTHLY_PLANS].find((plan) => {
     if (plan.trainings !== input.monthlyLimit || plan.price !== input.monthlyFee) {
       return false;
     }

@@ -5,6 +5,7 @@ import {
   CUSTOM_PLAN_ID,
   MONTHLY_PLANS,
   PACK_PLANS,
+  SPECIAL_MONTHLY_PLANS,
   WETSUIT_RENTAL_FEE,
   addonMonthlyTotal,
   formatEuro,
@@ -142,6 +143,13 @@ function StudentPlanFields({
           <option value="">Escolher plano…</option>
           <optgroup label="Mensalidades">
             {MONTHLY_PLANS.map((plan) => (
+              <option key={plan.id} value={plan.id}>
+                {plan.label} · {formatEuro(plan.price)} · ≈{plan.trainings}/mês
+              </option>
+            ))}
+          </optgroup>
+          <optgroup label="Videoanálise">
+            {SPECIAL_MONTHLY_PLANS.map((plan) => (
               <option key={plan.id} value={plan.id}>
                 {plan.label} · {formatEuro(plan.price)} · ≈{plan.trainings}/mês
               </option>
