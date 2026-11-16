@@ -141,19 +141,19 @@ function classRows(
       {
         key: "lycra_coach",
         itemType: "lycra_coach",
-        label: "Treinador",
+        label: "Pretas",
         size: null,
       },
       {
         key: "lycra_student",
         itemType: "lycra_student",
-        label: "Aluno",
+        label: "Brancas",
         size: null,
       },
     ];
   }
   if (classId === "leash") {
-    return [{ key: "leash", itemType: "leash", label: "Leash", size: null }];
+    return [{ key: "leash", itemType: "leash", label: "Leash (streps)", size: null }];
   }
   return [
     { key: "flags", itemType: "flags", label: "Bandeiras", size: null },
