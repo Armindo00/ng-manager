@@ -25,6 +25,8 @@ import {
 import { canFinishLesson } from "../utils/lessonWorkflow";
 import { buildCoachAttentionAlerts } from "../utils/coachAttentionAlerts";
 import { getVanTasks, getVans } from "../services/vansService";
+import { getInventoryItems } from "../services/inventoryService";
+import type { InventoryItem } from "../types/inventory";
 import type { Van, VanTask } from "../types/van";
 import { addVideoAnalysisSession } from "../services/videoAnalysisService";
 
@@ -54,6 +56,7 @@ function CoachDashboard({ user }: Props) {
   const [fixedTrainings, setFixedTrainings] = useState<FixedTraining[]>([]);
   const [vanTasks, setVanTasks] = useState<VanTask[]>([]);
   const [vans, setVans] = useState<Van[]>([]);
+  const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
 
   const today = getTodayDate();
   const weekdayKey = getWeekdayKey(today);
@@ -76,6 +79,7 @@ function CoachDashboard({ user }: Props) {
         resolvedCoachId,
         vanTasksData,
         vansData,
+        inventoryData,
       ] = await Promise.all([
         getLessons(),
         getStudents(),
@@ -84,6 +88,7 @@ function CoachDashboard({ user }: Props) {
         resolveCoachId(user),
         getVanTasks().catch(() => [] as VanTask[]),
         getVans().catch(() => [] as Van[]),
+        getInventoryItems().catch(() => [] as InventoryItem[]),
       ]);
 
       setCoachId(resolvedCoachId);
@@ -91,6 +96,7 @@ function CoachDashboard({ user }: Props) {
       setFixedTrainings(trainingsData);
       setVanTasks(vanTasksData);
       setVans(vansData);
+      setInventoryItems(inventoryData);
       setLessons(
         lessonsData.sort((a, b) =>
           `${b.date} ${b.time || ""}`.localeCompare(
@@ -181,9 +187,10 @@ function CoachDashboard({ user }: Props) {
         fixedTrainings,
         vanTasks,
         vans,
+        inventoryItems,
         today,
       }),
-    [user, lessons, fixedTrainings, vanTasks, vans, today]
+    [user, lessons, fixedTrainings, vanTasks, vans, inventoryItems, today]
   );
 
   function openGroup(group: FixedTraining) {

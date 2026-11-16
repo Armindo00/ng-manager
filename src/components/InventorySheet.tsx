@@ -526,10 +526,23 @@ function InventorySheet({
                     const quantityColumns = isVanKeysSheet
                       ? VAN_KEY_SLOTS.map((slot) => slot.condition)
                       : CONDITIONS;
+                    const keysShort =
+                      isVanKeysSheet && rowTotal(row) < 2;
 
                     return (
-                      <tr key={row.key}>
-                        <td className="inventory-sheet-label">{row.label}</td>
+                      <tr
+                        key={row.key}
+                        className={keysShort ? "inventory-sheet-row-warn" : undefined}
+                      >
+                        <td className="inventory-sheet-label">
+                          {row.label}
+                          {keysShort ? (
+                            <span className="inventory-sheet-row-warn-tag">
+                              {" "}
+                              · menos de 2 chaves
+                            </span>
+                          ) : null}
+                        </td>
                         {quantityColumns.map((condition) => {
                           const slotLabel = isVanKeysSheet
                             ? VAN_KEY_SLOTS.find(
