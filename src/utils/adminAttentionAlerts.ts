@@ -1,4 +1,5 @@
 import type { Lesson, MonthlyEvaluation, Student } from "../types";
+import type { InventoryItem } from "../types/inventory";
 import type { Van, VanTask } from "../types/van";
 import { VAN_TASK_TYPE_LABELS } from "../types/van";
 import { getCurrentMonthYear, getTodayDate } from "./dateUtils";
@@ -7,6 +8,7 @@ import { listOverQuotaStudents } from "./studentTrainingUsage";
 
 export type AttentionSection =
   | "vans"
+  | "inventory"
   | "payments"
   | "training-quota"
   | "evaluations"
@@ -25,12 +27,30 @@ function plural(count: number, one: string, many: string) {
   return count === 1 ? one : many;
 }
 
+/** Principal (good) + backup (fair) por carrinha. */
+export function countVanKeys(
+  inventoryItems: InventoryItem[],
+  vanId: string
+): number {
+  return inventoryItems
+    .filter(
+      (item) =>
+        item.itemType === "van_keys" &&
+        item.size === vanId &&
+        (item.condition === "good" ||
+          item.condition === "fair" ||
+          item.condition == null)
+    )
+    .reduce((sum, item) => sum + item.quantity, 0);
+}
+
 export function buildAdminAttentionAlerts(options: {
   students: Student[];
   lessons: Lesson[];
   evaluations: MonthlyEvaluation[];
   vanTasks: VanTask[];
   vans?: Van[];
+  inventoryItems?: InventoryItem[];
   today?: string;
   month?: number;
   year?: number;
@@ -39,8 +59,10 @@ export function buildAdminAttentionAlerts(options: {
   const period = getCurrentMonthYear();
   const month = options.month ?? period.month;
   const year = options.year ?? period.year;
+  const vans = options.vans || [];
+  const inventoryItems = options.inventoryItems || [];
   const vanNameById = new Map(
-    (options.vans || []).map((van) => [van.id, van.name || van.plate || "Carrinha"])
+    vans.map((van) => [van.id, van.name || van.plate || "Carrinha"])
   );
 
   const alerts: AttentionAlert[] = [];
@@ -75,6 +97,24 @@ export function buildAdminAttentionAlerts(options: {
       )} a vencer em 14 dias`,
       severity: "warn",
       section: "vans",
+    });
+  }
+
+  const activeVans = vans.filter((van) => van.active);
+  for (const van of activeVans) {
+    const keyCount = countVanKeys(inventoryItems, van.id);
+    if (keyCount >= 2) continue;
+
+    const vanLabel = van.name || van.plate || "Carrinha";
+    alerts.push({
+      id: `van-keys-low-${van.id}`,
+      text:
+        keyCount === 0
+          ? `${vanLabel}: sem chaves`
+          : `${vanLabel}: só ${keyCount} ${plural(keyCount, "chave", "chaves")}`,
+      detail: "Cada carrinha deve ter chave principal e chave backup.",
+      severity: keyCount === 0 ? "danger" : "warn",
+      section: "inventory",
     });
   }
 

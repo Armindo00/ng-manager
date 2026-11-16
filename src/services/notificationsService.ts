@@ -4,7 +4,9 @@ import { getStudents } from "./studentsService";
 import { getPayments } from "./paymentsService";
 import { getEvaluations } from "./evaluationsService";
 import { getVanTasks, getVans } from "./vansService";
+import { getInventoryItems } from "./inventoryService";
 import { ensureFixedTrainingsSeeded } from "./fixedTrainingsService";
+import type { InventoryItem } from "../types/inventory";
 import { buildAdminAttentionAlerts } from "../utils/adminAttentionAlerts";
 import { buildCoachAttentionAlerts } from "../utils/coachAttentionAlerts";
 
@@ -17,7 +19,7 @@ export async function getNotifications(user: User): Promise<Notification[]> {
   const notifications: Notification[] = [];
 
   if (user.role === "admin") {
-    const [lessons, students, payments, evaluations, vanTasks, vans] =
+    const [lessons, students, payments, evaluations, vanTasks, vans, inventoryItems] =
       await Promise.all([
         getLessons(),
         getStudents(),
@@ -25,6 +27,7 @@ export async function getNotifications(user: User): Promise<Notification[]> {
         getEvaluations(),
         getVanTasks(),
         getVans(),
+        getInventoryItems().catch(() => [] as InventoryItem[]),
       ]);
 
     const attention = buildAdminAttentionAlerts({
@@ -33,6 +36,7 @@ export async function getNotifications(user: User): Promise<Notification[]> {
       evaluations,
       vanTasks,
       vans,
+      inventoryItems,
     });
 
     for (const alert of attention) {

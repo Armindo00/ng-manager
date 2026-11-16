@@ -9,6 +9,8 @@ import { getLessons } from "../services/lessonsService";
 import { getEvaluations } from "../services/evaluationsService";
 import { ensureFixedTrainingsSeeded } from "../services/fixedTrainingsService";
 import { getVanTasks, getVans } from "../services/vansService";
+import { getInventoryItems } from "../services/inventoryService";
+import type { InventoryItem } from "../types/inventory";
 import { getCurrentMonthYear, getTodayDate } from "../utils/dateUtils";
 import { formatSessionCoaches } from "../utils/sessionCoaches";
 import { listOverQuotaStudents } from "../utils/studentTrainingUsage";
@@ -27,6 +29,7 @@ function AdminDashboard({ onNavigate }: Props) {
   const [fixedTrainings, setFixedTrainings] = useState<FixedTraining[]>([]);
   const [vanTasks, setVanTasks] = useState<VanTask[]>([]);
   const [vans, setVans] = useState<Van[]>([]);
+  const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -44,6 +47,7 @@ function AdminDashboard({ onNavigate }: Props) {
         trainingsData,
         vanTasksData,
         vansData,
+        inventoryData,
       ] = await Promise.all([
         getStudents(),
         getCoaches(),
@@ -52,6 +56,7 @@ function AdminDashboard({ onNavigate }: Props) {
         ensureFixedTrainingsSeeded(),
         getVanTasks(),
         getVans(),
+        getInventoryItems().catch(() => [] as InventoryItem[]),
       ]);
 
       setStudents(studentsData);
@@ -61,6 +66,7 @@ function AdminDashboard({ onNavigate }: Props) {
       setFixedTrainings(trainingsData);
       setVanTasks(vanTasksData);
       setVans(vansData);
+      setInventoryItems(inventoryData);
     } catch (error) {
       console.error(error);
       toast.error("Erro ao carregar dashboard.");
@@ -107,6 +113,7 @@ function AdminDashboard({ onNavigate }: Props) {
     evaluations,
     vanTasks,
     vans,
+    inventoryItems,
     today,
     month: currentMonth,
     year: currentYear,
@@ -118,8 +125,8 @@ function AdminDashboard({ onNavigate }: Props) {
         <p className="page-eyebrow">NextGeneration · Administração</p>
         <h1 className="page-title">Visão geral</h1>
         <p className="page-description">
-          Resumo do estado da escola. A caixa Atenção junta carrinhas, prazos,
-          treinos a mais e mensalidades em falta.
+          Resumo do estado da escola. A caixa Atenção junta carrinhas, chaves,
+          prazos, treinos a mais e mensalidades em falta.
         </p>
       </header>
 
