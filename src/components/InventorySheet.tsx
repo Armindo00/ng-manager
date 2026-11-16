@@ -10,14 +10,13 @@ import { INVENTORY_CONDITION_LABELS } from "../types/inventory";
 const CONDITIONS: InventoryCondition[] = ["good", "fair", "bad"];
 
 const BOARD_SIZES = [
-  "5'6\"",
-  "5'10\"",
-  "6'0\"",
-  "6'4\"",
-  "6'8\"",
-  "7'0\"",
-  "7'6\"",
+  "8'6\"",
   "8'0\"",
+  "6'8\"",
+  "6'6\"",
+  "6'4\"",
+  "6'0\"",
+  "Fibra",
 ];
 const WETSUIT_SIZES = ["XS", "S", "M", "L", "XL", "XXL"];
 
