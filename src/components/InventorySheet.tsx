@@ -19,7 +19,7 @@ const BOARD_SIZES = [
   "7'6\"",
   "8'0\"",
 ];
-const WETSUIT_SIZES = ["XS", "S", "M", "L", "XL", "XXL"];
+const WETSUIT_SIZES = ["6", "8", "10", "12", "14", "S", "M", "L"];
 
 type ClassId = "boards" | "wetsuits" | "lycras" | "leash" | "accessories";
 
