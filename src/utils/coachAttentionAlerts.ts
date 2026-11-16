@@ -133,7 +133,8 @@ export function buildCoachAttentionAlerts(options: {
     today,
   });
 
-  for (const item of missed.slice(0, 6)) {
+  // Mostra no máximo 1 aviso detalhado; a partir de 2, resume o resto.
+  for (const item of missed.slice(0, 1)) {
     alerts.push({
       id: item.id,
       text:
@@ -145,10 +146,16 @@ export function buildCoachAttentionAlerts(options: {
     });
   }
 
-  if (missed.length > 6) {
+  if (missed.length > 1) {
+    const extra = missed.length - 1;
     alerts.push({
       id: "missed-more",
-      text: `+${missed.length - 6} treinos da escala ainda por registar`,
+      text: `+${extra} ${plural(
+        extra,
+        "treino da escala por registar",
+        "treinos da escala por registar"
+      )}`,
+      detail: "Abre o Calendário ou Hoje para registar.",
       severity: "danger",
     });
   }
