@@ -6,6 +6,7 @@ import type {
   InventoryItemType,
 } from "../types/inventory";
 import { INVENTORY_CONDITION_LABELS } from "../types/inventory";
+import type { Van } from "../types/van";
 
 const CONDITIONS: InventoryCondition[] = ["good", "fair", "bad"];
 
@@ -32,9 +33,12 @@ type SheetRow = {
 
 type DraftMap = Record<string, number>;
 
+type VanKeyRef = Pick<Van, "id" | "name" | "plate" | "active">;
+
 type Props = {
   mode: "view" | "edit";
   items: InventoryItem[];
+  vans?: VanKeyRef[];
   medicalNotes: string;
   saving?: boolean;
   onClose: () => void;
@@ -124,11 +128,51 @@ function sizedRows(
   }));
 }
 
+function vanKeyLabel(van: VanKeyRef) {
+  const name = van.name.trim() || "Carrinha";
+  const plate = van.plate.trim();
+  return plate ? `${name} (${plate})` : name;
+}
+
+function vanKeyRows(vans: VanKeyRef[], items: InventoryItem[]): SheetRow[] {
+  const byId = new Map(vans.map((van) => [van.id, van]));
+  const ordered = [...vans].sort((a, b) => {
+    if (a.active !== b.active) return a.active ? -1 : 1;
+    return (a.name || a.plate).localeCompare(b.name || b.plate, "pt");
+  });
+
+  const fromFleet = ordered.map((van) => ({
+    key: `van_keys-${van.id}`,
+    itemType: "van_keys" as const,
+    label: vanKeyLabel(van),
+    size: van.id,
+  }));
+
+  const orphanIds = [
+    ...new Set(
+      items
+        .filter((item) => item.itemType === "van_keys")
+        .map((item) => item.size?.trim() || "")
+        .filter((id) => id && !byId.has(id))
+    ),
+  ];
+
+  const orphans = orphanIds.map((id) => ({
+    key: `van_keys-${id}`,
+    itemType: "van_keys" as const,
+    label: "Carrinha removida",
+    size: id,
+  }));
+
+  return [...fromFleet, ...orphans];
+}
+
 function classRows(
   classId: ClassId,
   items: InventoryItem[],
   extraBoardSizes: string[],
-  extraWetsuitSizes: string[]
+  extraWetsuitSizes: string[],
+  vans: VanKeyRef[]
 ): SheetRow[] {
   if (classId === "boards") {
     return sizedRows("board", BOARD_SIZES, items, extraBoardSizes);
@@ -165,12 +209,7 @@ function classRows(
       label: "Kit médico",
       size: null,
     },
-    {
-      key: "van_keys",
-      itemType: "van_keys",
-      label: "Chaves da carrinha",
-      size: null,
-    },
+    ...vanKeyRows(vans, items),
     { key: "spares", itemType: "spares", label: "Suplentes", size: null },
   ];
 }
@@ -178,6 +217,7 @@ function classRows(
 function InventorySheet({
   mode,
   items,
+  vans = [],
   medicalNotes: initialNotes,
   saving = false,
   onClose,
@@ -205,8 +245,9 @@ function InventorySheet({
   }, []);
 
   const rows = useMemo(
-    () => classRows(activeClass, items, extraBoardSizes, extraWetsuitSizes),
-    [activeClass, items, extraBoardSizes, extraWetsuitSizes]
+    () =>
+      classRows(activeClass, items, extraBoardSizes, extraWetsuitSizes, vans),
+    [activeClass, items, extraBoardSizes, extraWetsuitSizes, vans]
   );
 
   const dirty = useMemo(() => {

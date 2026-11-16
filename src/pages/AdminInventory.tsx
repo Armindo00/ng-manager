@@ -11,11 +11,14 @@ import {
   saveInventoryItem,
   setInventoryQuantity,
 } from "../services/inventoryService";
+import { getVans } from "../services/vansService";
+import type { Van } from "../types/van";
 
 type SheetMode = "view" | "edit";
 
 function AdminInventory() {
   const [items, setItems] = useState<InventoryItem[]>([]);
+  const [vans, setVans] = useState<Van[]>([]);
   const [loading, setLoading] = useState(true);
   const [sheetMode, setSheetMode] = useState<SheetMode | null>(null);
   const [saving, setSaving] = useState(false);
@@ -28,8 +31,12 @@ function AdminInventory() {
   async function loadData() {
     try {
       setLoading(true);
-      const data = await getInventoryItems();
+      const [data, vansData] = await Promise.all([
+        getInventoryItems(),
+        getVans().catch(() => [] as Van[]),
+      ]);
       setItems(data);
+      setVans(vansData);
 
       const medical =
         data.find(
@@ -197,6 +204,7 @@ function AdminInventory() {
         <InventorySheet
           mode={sheetMode}
           items={items}
+          vans={vans}
           medicalNotes={medicalNotes}
           saving={saving}
           onClose={() => {

@@ -41,9 +41,12 @@ CREATE UNIQUE INDEX IF NOT EXISTS inventory_items_simple_unique
     'lycra_student',
     'flags',
     'medical_kit',
-    'van_keys',
     'spares'
   );
+
+CREATE UNIQUE INDEX IF NOT EXISTS inventory_items_van_keys_unique
+  ON inventory_items (item_type, COALESCE(size, ''), COALESCE(condition, ''))
+  WHERE item_type = 'van_keys';
 
 ALTER TABLE inventory_items ENABLE ROW LEVEL SECURITY;
 

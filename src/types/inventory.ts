@@ -29,7 +29,7 @@ export const INVENTORY_TYPE_LABELS: Record<InventoryItemType, string> = {
   lycra_student: "Licra de aluno",
   flags: "Bandeiras",
   medical_kit: "Kit médico",
-  van_keys: "Chaves da carrinha",
+  van_keys: "Chave da carrinha",
   spares: "Suplentes",
 };
 
