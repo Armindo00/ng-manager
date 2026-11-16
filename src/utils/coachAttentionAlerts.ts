@@ -1,7 +1,9 @@
 import type { FixedTraining } from "../data/fixedTrainings";
 import type { Lesson, User } from "../types";
+import type { InventoryItem } from "../types/inventory";
 import type { Van, VanTask } from "../types/van";
 import { VAN_TASK_TYPE_LABELS } from "../types/van";
+import { listVansWithLowKeys } from "./adminAttentionAlerts";
 import {
   addDays,
   formatDisplayDate,
@@ -84,16 +86,59 @@ export function buildCoachAttentionAlerts(options: {
   fixedTrainings: FixedTraining[];
   vanTasks: VanTask[];
   vans?: Van[];
+  inventoryItems?: InventoryItem[];
   today?: string;
 }): CoachAttentionAlert[] {
   const today = options.today ?? getTodayDate();
   const alerts: CoachAttentionAlert[] = [];
+  const vans = options.vans || [];
+  const inventoryItems = options.inventoryItems || [];
   const vanNameById = new Map(
-    (options.vans || []).map((van) => [
+    vans.map((van) => [
       van.id,
       van.name || van.plate || "Carrinha",
     ])
   );
+
+  // Admin usa "Hoje" (este ecrã) no dia a dia — os avisos de chaves têm de aparecer aqui.
+  if (options.user.role === "admin") {
+    const lowKeyVans = listVansWithLowKeys(vans, inventoryItems);
+    if (lowKeyVans.length > 0) {
+      alerts.push({
+        id: "van-keys-low-summary",
+        text: `${lowKeyVans.length} ${plural(
+          lowKeyVans.length,
+          "carrinha com menos de 2 chaves",
+          "carrinhas com menos de 2 chaves"
+        )}`,
+        detail: lowKeyVans.map((row) => row.label).join(", "),
+        severity: lowKeyVans.some((row) => row.total === 0) ? "danger" : "warn",
+      });
+
+      for (const row of lowKeyVans) {
+        const missingLabel =
+          row.missing.length === 2
+            ? "faltam chave principal e backup"
+            : row.missing[0] === "principal"
+              ? "falta chave principal"
+              : "falta chave backup";
+
+        alerts.push({
+          id: `van-keys-low-${row.van.id}`,
+          text:
+            row.total === 0
+              ? `${row.label}: sem chaves`
+              : `${row.label}: só ${row.total} ${plural(
+                  row.total,
+                  "chave",
+                  "chaves"
+                )}`,
+          detail: missingLabel,
+          severity: row.total === 0 ? "danger" : "warn",
+        });
+      }
+    }
+  }
 
   const openVanTasks = options.vanTasks.filter((task) => !task.completed);
   const overdueTasks = openVanTasks.filter(
