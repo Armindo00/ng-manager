@@ -1052,6 +1052,20 @@ textarea:focus {
   background: #fbfdfb;
 }
 
+.inventory-sheet-row-warn td {
+  background: #fff4e8 !important;
+}
+
+.inventory-sheet-row-warn .inventory-sheet-total {
+  color: #9a3412;
+}
+
+.inventory-sheet-row-warn-tag {
+  font-weight: 700;
+  color: #9a3412;
+  font-size: 0.85em;
+}
+
 .inventory-sheet-cell {
   width: 100%;
   min-width: 88px;

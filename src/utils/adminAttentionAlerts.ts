@@ -27,21 +27,64 @@ function plural(count: number, one: string, many: string) {
   return count === 1 ? one : many;
 }
 
-/** Principal (good) + backup (fair) por carrinha. */
-export function countVanKeys(
+function sumVanKeySlot(
   inventoryItems: InventoryItem[],
-  vanId: string
+  vanId: string,
+  condition: "good" | "fair"
 ): number {
   return inventoryItems
     .filter(
       (item) =>
         item.itemType === "van_keys" &&
         item.size === vanId &&
-        (item.condition === "good" ||
-          item.condition === "fair" ||
-          item.condition == null)
+        item.condition === condition
     )
     .reduce((sum, item) => sum + item.quantity, 0);
+}
+
+/** Principal (good) + backup (fair) por carrinha. */
+export function countVanKeys(
+  inventoryItems: InventoryItem[],
+  vanId: string
+): number {
+  return (
+    sumVanKeySlot(inventoryItems, vanId, "good") +
+    sumVanKeySlot(inventoryItems, vanId, "fair")
+  );
+}
+
+export function getVanKeyShortage(
+  inventoryItems: InventoryItem[],
+  vanId: string
+): {
+  principal: number;
+  backup: number;
+  total: number;
+  missing: Array<"principal" | "backup">;
+} {
+  const principal = sumVanKeySlot(inventoryItems, vanId, "good");
+  const backup = sumVanKeySlot(inventoryItems, vanId, "fair");
+  const missing: Array<"principal" | "backup"> = [];
+  if (principal < 1) missing.push("principal");
+  if (backup < 1) missing.push("backup");
+  return { principal, backup, total: principal + backup, missing };
+}
+
+export function listVansWithLowKeys(
+  vans: Van[],
+  inventoryItems: InventoryItem[]
+) {
+  return vans
+    .filter((van) => van.active)
+    .map((van) => {
+      const status = getVanKeyShortage(inventoryItems, van.id);
+      return {
+        van,
+        ...status,
+        label: van.name || van.plate || "Carrinha",
+      };
+    })
+    .filter((row) => row.total < 2 || row.missing.length > 0);
 }
 
 export function buildAdminAttentionAlerts(options: {
@@ -66,6 +109,45 @@ export function buildAdminAttentionAlerts(options: {
   );
 
   const alerts: AttentionAlert[] = [];
+
+  const lowKeyVans = listVansWithLowKeys(vans, inventoryItems);
+  if (lowKeyVans.length > 0) {
+    alerts.push({
+      id: "van-keys-low-summary",
+      text: `${lowKeyVans.length} ${plural(
+        lowKeyVans.length,
+        "carrinha com menos de 2 chaves",
+        "carrinhas com menos de 2 chaves"
+      )}`,
+      detail: lowKeyVans.map((row) => row.label).join(", "),
+      severity: lowKeyVans.some((row) => row.total === 0) ? "danger" : "warn",
+      section: "inventory",
+    });
+
+    for (const row of lowKeyVans) {
+      const missingLabel =
+        row.missing.length === 2
+          ? "faltam chave principal e backup"
+          : row.missing[0] === "principal"
+            ? "falta chave principal"
+            : "falta chave backup";
+
+      alerts.push({
+        id: `van-keys-low-${row.van.id}`,
+        text:
+          row.total === 0
+            ? `${row.label}: sem chaves`
+            : `${row.label}: só ${row.total} ${plural(
+                row.total,
+                "chave",
+                "chaves"
+              )}`,
+        detail: missingLabel,
+        severity: row.total === 0 ? "danger" : "warn",
+        section: "inventory",
+      });
+    }
+  }
 
   const openVanTasks = options.vanTasks.filter((task) => !task.completed);
   const overdueTasks = openVanTasks.filter(
@@ -97,24 +179,6 @@ export function buildAdminAttentionAlerts(options: {
       )} a vencer em 14 dias`,
       severity: "warn",
       section: "vans",
-    });
-  }
-
-  const activeVans = vans.filter((van) => van.active);
-  for (const van of activeVans) {
-    const keyCount = countVanKeys(inventoryItems, van.id);
-    if (keyCount >= 2) continue;
-
-    const vanLabel = van.name || van.plate || "Carrinha";
-    alerts.push({
-      id: `van-keys-low-${van.id}`,
-      text:
-        keyCount === 0
-          ? `${vanLabel}: sem chaves`
-          : `${vanLabel}: só ${keyCount} ${plural(keyCount, "chave", "chaves")}`,
-      detail: "Cada carrinha deve ter chave principal e chave backup.",
-      severity: keyCount === 0 ? "danger" : "warn",
-      section: "inventory",
     });
   }
 

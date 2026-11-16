@@ -13,6 +13,7 @@ import {
 } from "../services/inventoryService";
 import { getVans } from "../services/vansService";
 import type { Van } from "../types/van";
+import { listVansWithLowKeys } from "../utils/adminAttentionAlerts";
 
 type SheetMode = "view" | "edit";
 
@@ -69,6 +70,11 @@ function AdminInventory() {
       total: items.reduce((sum, item) => sum + item.quantity, 0),
     };
   }, [items]);
+
+  const lowKeyVans = useMemo(
+    () => listVansWithLowKeys(vans, items),
+    [vans, items]
+  );
 
   async function handleSave(payload: {
     changes: Array<{
@@ -145,6 +151,30 @@ function AdminInventory() {
         <p className="muted">A carregar inventário...</p>
       ) : (
         <>
+          {lowKeyVans.length > 0 && (
+            <section className="card section-card van-alert van-alert-danger">
+              <strong>
+                {lowKeyVans.length === 1
+                  ? "1 carrinha com menos de 2 chaves"
+                  : `${lowKeyVans.length} carrinhas com menos de 2 chaves`}
+              </strong>
+              <p>
+                {lowKeyVans
+                  .map((row) => {
+                    const missing =
+                      row.missing.length === 2
+                        ? "sem principal nem backup"
+                        : row.missing[0] === "principal"
+                          ? "falta principal"
+                          : "falta backup";
+                    return `${row.label} (${missing})`;
+                  })
+                  .join(" · ")}
+              </p>
+              <p>Abre a folha → Chaves carrinhas para corrigir.</p>
+            </section>
+          )}
+
           <section className="card section-card inventory-open-card">
             <div className="inventory-open-copy">
               <span className="admin-section-kicker">Folha</span>
