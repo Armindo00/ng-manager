@@ -57,7 +57,7 @@ function AdminInventory() {
       wetsuits: count(["wetsuit"]),
       lycras: count(["lycra_coach", "lycra_student"]),
       leash: count(["leash"]),
-      accessories: count(["flags", "medical_kit"]),
+      accessories: count(["flags", "medical_kit", "van_keys", "spares"]),
       total: items.reduce((sum, item) => sum + item.quantity, 0),
     };
   }, [items]);

@@ -13,7 +13,9 @@ CREATE TABLE IF NOT EXISTS inventory_items (
       'lycra_coach',
       'lycra_student',
       'flags',
-      'medical_kit'
+      'medical_kit',
+      'van_keys',
+      'spares'
     )
   ),
   size text,
@@ -33,7 +35,15 @@ CREATE UNIQUE INDEX IF NOT EXISTS inventory_items_wetsuit_unique
 
 CREATE UNIQUE INDEX IF NOT EXISTS inventory_items_simple_unique
   ON inventory_items (item_type, COALESCE(condition, ''))
-  WHERE item_type IN ('leash', 'lycra_coach', 'lycra_student', 'flags', 'medical_kit');
+  WHERE item_type IN (
+    'leash',
+    'lycra_coach',
+    'lycra_student',
+    'flags',
+    'medical_kit',
+    'van_keys',
+    'spares'
+  );
 
 ALTER TABLE inventory_items ENABLE ROW LEVEL SECURITY;
 

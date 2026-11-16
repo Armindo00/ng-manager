@@ -15,5 +15,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS inventory_items_simple_unique
     'lycra_coach',
     'lycra_student',
     'flags',
-    'medical_kit'
+    'medical_kit',
+    'van_keys',
+    'spares'
   );

@@ -22,6 +22,7 @@ const APPLY_ORDER = [
   "fixed-trainings.sql",
   "inventory-wetsuit-condition.sql",
   "inventory-condition-matrix.sql",
+  "inventory-van-keys-spares.sql",
   "evaluations-share.sql",
   "login-resolve.sql",
   "students-monthly-fee.sql",

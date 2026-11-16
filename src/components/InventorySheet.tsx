@@ -165,6 +165,13 @@ function classRows(
       label: "Kit médico",
       size: null,
     },
+    {
+      key: "van_keys",
+      itemType: "van_keys",
+      label: "Chaves da carrinha",
+      size: null,
+    },
+    { key: "spares", itemType: "spares", label: "Suplentes", size: null },
   ];
 }
 
