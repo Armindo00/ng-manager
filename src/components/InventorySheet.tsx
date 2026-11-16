@@ -10,16 +10,16 @@ import { INVENTORY_CONDITION_LABELS } from "../types/inventory";
 const CONDITIONS: InventoryCondition[] = ["good", "fair", "bad"];
 
 const BOARD_SIZES = [
-  "5'6\"",
-  "5'10\"",
-  "6'0\"",
-  "6'4\"",
-  "6'8\"",
-  "7'0\"",
-  "7'6\"",
+  "8'6\"",
   "8'0\"",
+  "6'8\"",
+  "6'6\"",
+  "6'4\"",
+  "6'0\"",
+  "Fibra",
 ];
-const WETSUIT_SIZES = ["XS", "S", "M", "L", "XL", "XXL"];
+/** Tamanhos da folha da escola: criança 6–14 + adulto S/M/L. */
+const WETSUIT_SIZES = ["6", "8", "10", "12", "14", "S", "M", "L"];
 
 type ClassId = "boards" | "wetsuits" | "lycras" | "leash" | "accessories";
 
@@ -141,19 +141,21 @@ function classRows(
       {
         key: "lycra_coach",
         itemType: "lycra_coach",
-        label: "Treinador",
+        label: "Pretas",
         size: null,
       },
       {
         key: "lycra_student",
         itemType: "lycra_student",
-        label: "Aluno",
+        label: "Brancas",
         size: null,
       },
     ];
   }
   if (classId === "leash") {
-    return [{ key: "leash", itemType: "leash", label: "Leash", size: null }];
+    return [
+      { key: "leash", itemType: "leash", label: "Leash (streps)", size: null },
+    ];
   }
   return [
     { key: "flags", itemType: "flags", label: "Bandeiras", size: null },
