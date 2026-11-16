@@ -22,7 +22,13 @@ const BOARD_SIZES = [
 /** Tamanhos da folha da escola: criança 6–14 + adulto S/M/L. */
 const WETSUIT_SIZES = ["6", "8", "10", "12", "14", "S", "M", "L"];
 
-type ClassId = "boards" | "wetsuits" | "lycras" | "leash" | "accessories";
+type ClassId =
+  | "boards"
+  | "wetsuits"
+  | "lycras"
+  | "leash"
+  | "van_keys"
+  | "accessories";
 
 type SheetRow = {
   key: string;
@@ -59,6 +65,7 @@ const CLASS_TABS: Array<{ id: ClassId; label: string }> = [
   { id: "wetsuits", label: "Fatos" },
   { id: "lycras", label: "Licras" },
   { id: "leash", label: "Leash" },
+  { id: "van_keys", label: "Chaves carrinhas" },
   { id: "accessories", label: "Acessórios" },
 ];
 
@@ -201,6 +208,9 @@ function classRows(
       { key: "leash", itemType: "leash", label: "Leash (streps)", size: null },
     ];
   }
+  if (classId === "van_keys") {
+    return vanKeyRows(vans, items);
+  }
   return [
     { key: "flags", itemType: "flags", label: "Bandeiras", size: null },
     {
@@ -209,7 +219,6 @@ function classRows(
       label: "Kit médico",
       size: null,
     },
-    ...vanKeyRows(vans, items),
     { key: "spares", itemType: "spares", label: "Suplentes", size: null },
   ];
 }
@@ -429,7 +438,18 @@ function InventorySheet({
 
         <div className="inventory-sheet-body">
           <p className="inventory-sheet-help">
-            {isEdit ? (
+            {activeClass === "van_keys" ? (
+              <>
+                Folha de chaves por carrinha registada na frota
+                {isEdit ? (
+                  <>
+                    . Guarda com <strong>Guardar alterações</strong>.
+                  </>
+                ) : (
+                  "."
+                )}
+              </>
+            ) : isEdit ? (
               <>
                 Edita as quantidades nas células. As alterações só ficam
                 gravadas quando carregares em{" "}
@@ -447,7 +467,9 @@ function InventorySheet({
                   <th>
                     {activeClass === "boards" || activeClass === "wetsuits"
                       ? "Tamanho"
-                      : "Item"}
+                      : activeClass === "van_keys"
+                        ? "Carrinha"
+                        : "Item"}
                   </th>
                   <th>Bom</th>
                   <th>Razoável</th>
@@ -456,32 +478,42 @@ function InventorySheet({
                 </tr>
               </thead>
               <tbody>
-                {rows.map((row) => (
-                  <tr key={row.key}>
-                    <td className="inventory-sheet-label">{row.label}</td>
-                    {CONDITIONS.map((condition) => (
-                      <td key={condition}>
-                        {isEdit ? (
-                          <input
-                            className="inventory-sheet-cell"
-                            type="number"
-                            min={0}
-                            aria-label={`${row.label} ${INVENTORY_CONDITION_LABELS[condition]}`}
-                            value={getQty(row, condition)}
-                            onChange={(event) =>
-                              setQty(row, condition, event.target.value)
-                            }
-                          />
-                        ) : (
-                          <span className="inventory-sheet-value">
-                            {getQty(row, condition)}
-                          </span>
-                        )}
-                      </td>
-                    ))}
-                    <td className="inventory-sheet-total">{rowTotal(row)}</td>
+                {rows.length === 0 && activeClass === "van_keys" ? (
+                  <tr>
+                    <td colSpan={5} className="inventory-sheet-label">
+                      Ainda não há carrinhas registadas na frota.
+                    </td>
                   </tr>
-                ))}
+                ) : (
+                  rows.map((row) => (
+                    <tr key={row.key}>
+                      <td className="inventory-sheet-label">{row.label}</td>
+                      {CONDITIONS.map((condition) => (
+                        <td key={condition}>
+                          {isEdit ? (
+                            <input
+                              className="inventory-sheet-cell"
+                              type="number"
+                              min={0}
+                              aria-label={`${row.label} ${INVENTORY_CONDITION_LABELS[condition]}`}
+                              value={getQty(row, condition)}
+                              onChange={(event) =>
+                                setQty(row, condition, event.target.value)
+                              }
+                            />
+                          ) : (
+                            <span className="inventory-sheet-value">
+                              {getQty(row, condition)}
+                            </span>
+                          )}
+                        </td>
+                      ))}
+                      <td className="inventory-sheet-total">
+                        {rowTotal(row)}
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
               <tfoot>
                 <tr>

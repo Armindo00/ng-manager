@@ -64,7 +64,8 @@ function AdminInventory() {
       wetsuits: count(["wetsuit"]),
       lycras: count(["lycra_coach", "lycra_student"]),
       leash: count(["leash"]),
-      accessories: count(["flags", "medical_kit", "van_keys", "spares"]),
+      vanKeys: count(["van_keys"]),
+      accessories: count(["flags", "medical_kit", "spares"]),
       total: items.reduce((sum, item) => sum + item.quantity, 0),
     };
   }, [items]);
@@ -149,8 +150,8 @@ function AdminInventory() {
               <span className="admin-section-kicker">Folha</span>
               <h2>Material da escola</h2>
               <p className="muted">
-                Pranchas, Fatos, Licras, Leash e Acessórios — com Bom, Razoável
-                e Mau.
+                Pranchas, Fatos, Licras, Leash, Chaves carrinhas e Acessórios —
+                com Bom, Razoável e Mau.
               </p>
             </div>
             <div className="inventory-open-actions">
@@ -191,6 +192,10 @@ function AdminInventory() {
             <div className="card stat-card">
               <span className="stat-label">Leash</span>
               <strong className="stat-number">{summary.leash}</strong>
+            </div>
+            <div className="card stat-card">
+              <span className="stat-label">Chaves</span>
+              <strong className="stat-number">{summary.vanKeys}</strong>
             </div>
             <div className="card stat-card">
               <span className="stat-label">Acessórios</span>
