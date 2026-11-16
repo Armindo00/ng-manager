@@ -6,6 +6,7 @@ import type {
   InventoryItemType,
 } from "../types/inventory";
 import { INVENTORY_CONDITION_LABELS } from "../types/inventory";
+import type { Van } from "../types/van";
 
 const CONDITIONS: InventoryCondition[] = ["good", "fair", "bad"];
 
@@ -21,7 +22,13 @@ const BOARD_SIZES = [
 /** Tamanhos da folha da escola: criança 6–14 + adulto S/M/L. */
 const WETSUIT_SIZES = ["6", "8", "10", "12", "14", "S", "M", "L"];
 
-type ClassId = "boards" | "wetsuits" | "lycras" | "leash" | "accessories";
+type ClassId =
+  | "boards"
+  | "wetsuits"
+  | "lycras"
+  | "leash"
+  | "van_keys"
+  | "accessories";
 
 type SheetRow = {
   key: string;
@@ -32,9 +39,12 @@ type SheetRow = {
 
 type DraftMap = Record<string, number>;
 
+type VanKeyRef = Pick<Van, "id" | "name" | "plate" | "active">;
+
 type Props = {
   mode: "view" | "edit";
   items: InventoryItem[];
+  vans?: VanKeyRef[];
   medicalNotes: string;
   saving?: boolean;
   onClose: () => void;
@@ -55,6 +65,7 @@ const CLASS_TABS: Array<{ id: ClassId; label: string }> = [
   { id: "wetsuits", label: "Fatos" },
   { id: "lycras", label: "Licras" },
   { id: "leash", label: "Leash" },
+  { id: "van_keys", label: "Chaves carrinhas" },
   { id: "accessories", label: "Acessórios" },
 ];
 
@@ -124,11 +135,51 @@ function sizedRows(
   }));
 }
 
+function vanKeyLabel(van: VanKeyRef) {
+  const name = van.name.trim() || "Carrinha";
+  const plate = van.plate.trim();
+  return plate ? `${name} (${plate})` : name;
+}
+
+function vanKeyRows(vans: VanKeyRef[], items: InventoryItem[]): SheetRow[] {
+  const byId = new Map(vans.map((van) => [van.id, van]));
+  const ordered = [...vans].sort((a, b) => {
+    if (a.active !== b.active) return a.active ? -1 : 1;
+    return (a.name || a.plate).localeCompare(b.name || b.plate, "pt");
+  });
+
+  const fromFleet = ordered.map((van) => ({
+    key: `van_keys-${van.id}`,
+    itemType: "van_keys" as const,
+    label: vanKeyLabel(van),
+    size: van.id,
+  }));
+
+  const orphanIds = [
+    ...new Set(
+      items
+        .filter((item) => item.itemType === "van_keys")
+        .map((item) => item.size?.trim() || "")
+        .filter((id) => id && !byId.has(id))
+    ),
+  ];
+
+  const orphans = orphanIds.map((id) => ({
+    key: `van_keys-${id}`,
+    itemType: "van_keys" as const,
+    label: "Carrinha removida",
+    size: id,
+  }));
+
+  return [...fromFleet, ...orphans];
+}
+
 function classRows(
   classId: ClassId,
   items: InventoryItem[],
   extraBoardSizes: string[],
-  extraWetsuitSizes: string[]
+  extraWetsuitSizes: string[],
+  vans: VanKeyRef[]
 ): SheetRow[] {
   if (classId === "boards") {
     return sizedRows("board", BOARD_SIZES, items, extraBoardSizes);
@@ -157,6 +208,9 @@ function classRows(
       { key: "leash", itemType: "leash", label: "Leash (streps)", size: null },
     ];
   }
+  if (classId === "van_keys") {
+    return vanKeyRows(vans, items);
+  }
   return [
     { key: "flags", itemType: "flags", label: "Bandeiras", size: null },
     {
@@ -165,12 +219,14 @@ function classRows(
       label: "Kit médico",
       size: null,
     },
+    { key: "spares", itemType: "spares", label: "Suplentes", size: null },
   ];
 }
 
 function InventorySheet({
   mode,
   items,
+  vans = [],
   medicalNotes: initialNotes,
   saving = false,
   onClose,
@@ -198,8 +254,9 @@ function InventorySheet({
   }, []);
 
   const rows = useMemo(
-    () => classRows(activeClass, items, extraBoardSizes, extraWetsuitSizes),
-    [activeClass, items, extraBoardSizes, extraWetsuitSizes]
+    () =>
+      classRows(activeClass, items, extraBoardSizes, extraWetsuitSizes, vans),
+    [activeClass, items, extraBoardSizes, extraWetsuitSizes, vans]
   );
 
   const dirty = useMemo(() => {
@@ -381,7 +438,18 @@ function InventorySheet({
 
         <div className="inventory-sheet-body">
           <p className="inventory-sheet-help">
-            {isEdit ? (
+            {activeClass === "van_keys" ? (
+              <>
+                Folha de chaves por carrinha registada na frota
+                {isEdit ? (
+                  <>
+                    . Guarda com <strong>Guardar alterações</strong>.
+                  </>
+                ) : (
+                  "."
+                )}
+              </>
+            ) : isEdit ? (
               <>
                 Edita as quantidades nas células. As alterações só ficam
                 gravadas quando carregares em{" "}
@@ -399,7 +467,9 @@ function InventorySheet({
                   <th>
                     {activeClass === "boards" || activeClass === "wetsuits"
                       ? "Tamanho"
-                      : "Item"}
+                      : activeClass === "van_keys"
+                        ? "Carrinha"
+                        : "Item"}
                   </th>
                   <th>Bom</th>
                   <th>Razoável</th>
@@ -408,32 +478,42 @@ function InventorySheet({
                 </tr>
               </thead>
               <tbody>
-                {rows.map((row) => (
-                  <tr key={row.key}>
-                    <td className="inventory-sheet-label">{row.label}</td>
-                    {CONDITIONS.map((condition) => (
-                      <td key={condition}>
-                        {isEdit ? (
-                          <input
-                            className="inventory-sheet-cell"
-                            type="number"
-                            min={0}
-                            aria-label={`${row.label} ${INVENTORY_CONDITION_LABELS[condition]}`}
-                            value={getQty(row, condition)}
-                            onChange={(event) =>
-                              setQty(row, condition, event.target.value)
-                            }
-                          />
-                        ) : (
-                          <span className="inventory-sheet-value">
-                            {getQty(row, condition)}
-                          </span>
-                        )}
-                      </td>
-                    ))}
-                    <td className="inventory-sheet-total">{rowTotal(row)}</td>
+                {rows.length === 0 && activeClass === "van_keys" ? (
+                  <tr>
+                    <td colSpan={5} className="inventory-sheet-label">
+                      Ainda não há carrinhas registadas na frota.
+                    </td>
                   </tr>
-                ))}
+                ) : (
+                  rows.map((row) => (
+                    <tr key={row.key}>
+                      <td className="inventory-sheet-label">{row.label}</td>
+                      {CONDITIONS.map((condition) => (
+                        <td key={condition}>
+                          {isEdit ? (
+                            <input
+                              className="inventory-sheet-cell"
+                              type="number"
+                              min={0}
+                              aria-label={`${row.label} ${INVENTORY_CONDITION_LABELS[condition]}`}
+                              value={getQty(row, condition)}
+                              onChange={(event) =>
+                                setQty(row, condition, event.target.value)
+                              }
+                            />
+                          ) : (
+                            <span className="inventory-sheet-value">
+                              {getQty(row, condition)}
+                            </span>
+                          )}
+                        </td>
+                      ))}
+                      <td className="inventory-sheet-total">
+                        {rowTotal(row)}
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
               <tfoot>
                 <tr>

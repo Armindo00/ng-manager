@@ -182,7 +182,9 @@ CREATE TABLE IF NOT EXISTS inventory_items (
       'lycra_coach',
       'lycra_student',
       'flags',
-      'medical_kit'
+      'medical_kit',
+      'van_keys',
+      'spares'
     )
   ),
   size text,

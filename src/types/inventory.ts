@@ -5,7 +5,9 @@ export type InventoryItemType =
   | "lycra_coach"
   | "lycra_student"
   | "flags"
-  | "medical_kit";
+  | "medical_kit"
+  | "van_keys"
+  | "spares";
 
 export type InventoryCondition = "good" | "fair" | "bad";
 
@@ -27,6 +29,8 @@ export const INVENTORY_TYPE_LABELS: Record<InventoryItemType, string> = {
   lycra_student: "Licra de aluno",
   flags: "Bandeiras",
   medical_kit: "Kit médico",
+  van_keys: "Chave da carrinha",
+  spares: "Suplentes",
 };
 
 export const INVENTORY_CONDITION_LABELS: Record<InventoryCondition, string> = {

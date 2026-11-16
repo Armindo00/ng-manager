@@ -11,11 +11,14 @@ import {
   saveInventoryItem,
   setInventoryQuantity,
 } from "../services/inventoryService";
+import { getVans } from "../services/vansService";
+import type { Van } from "../types/van";
 
 type SheetMode = "view" | "edit";
 
 function AdminInventory() {
   const [items, setItems] = useState<InventoryItem[]>([]);
+  const [vans, setVans] = useState<Van[]>([]);
   const [loading, setLoading] = useState(true);
   const [sheetMode, setSheetMode] = useState<SheetMode | null>(null);
   const [saving, setSaving] = useState(false);
@@ -28,8 +31,12 @@ function AdminInventory() {
   async function loadData() {
     try {
       setLoading(true);
-      const data = await getInventoryItems();
+      const [data, vansData] = await Promise.all([
+        getInventoryItems(),
+        getVans().catch(() => [] as Van[]),
+      ]);
       setItems(data);
+      setVans(vansData);
 
       const medical =
         data.find(
@@ -57,7 +64,8 @@ function AdminInventory() {
       wetsuits: count(["wetsuit"]),
       lycras: count(["lycra_coach", "lycra_student"]),
       leash: count(["leash"]),
-      accessories: count(["flags", "medical_kit"]),
+      vanKeys: count(["van_keys"]),
+      accessories: count(["flags", "medical_kit", "spares"]),
       total: items.reduce((sum, item) => sum + item.quantity, 0),
     };
   }, [items]);
@@ -142,8 +150,8 @@ function AdminInventory() {
               <span className="admin-section-kicker">Folha</span>
               <h2>Material da escola</h2>
               <p className="muted">
-                Pranchas, Fatos, Licras, Leash e Acessórios — com Bom, Razoável
-                e Mau.
+                Pranchas, Fatos, Licras, Leash, Chaves carrinhas e Acessórios —
+                com Bom, Razoável e Mau.
               </p>
             </div>
             <div className="inventory-open-actions">
@@ -186,6 +194,10 @@ function AdminInventory() {
               <strong className="stat-number">{summary.leash}</strong>
             </div>
             <div className="card stat-card">
+              <span className="stat-label">Chaves</span>
+              <strong className="stat-number">{summary.vanKeys}</strong>
+            </div>
+            <div className="card stat-card">
               <span className="stat-label">Acessórios</span>
               <strong className="stat-number">{summary.accessories}</strong>
             </div>
@@ -197,6 +209,7 @@ function AdminInventory() {
         <InventorySheet
           mode={sheetMode}
           items={items}
+          vans={vans}
           medicalNotes={medicalNotes}
           saving={saving}
           onClose={() => {
