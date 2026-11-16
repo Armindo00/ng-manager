@@ -10,6 +10,15 @@ import type { Van } from "../types/van";
 
 const CONDITIONS: InventoryCondition[] = ["good", "fair", "bad"];
 
+/** Na folha de chaves: good = principal, fair = backup. */
+const VAN_KEY_SLOTS: Array<{
+  condition: InventoryCondition;
+  label: string;
+}> = [
+  { condition: "good", label: "Chave principal" },
+  { condition: "fair", label: "Chave backup" },
+];
+
 const BOARD_SIZES = [
   "8'6\"",
   "8'0\"",
@@ -282,19 +291,36 @@ function InventorySheet({
   }
 
   function rowTotal(row: SheetRow) {
-    return CONDITIONS.reduce((sum, condition) => sum + getQty(row, condition), 0);
+    if (activeClass === "van_keys") {
+      return VAN_KEY_SLOTS.reduce(
+        (sum, slot) => sum + getQty(row, slot.condition),
+        0
+      );
+    }
+    return CONDITIONS.reduce(
+      (sum, condition) => sum + getQty(row, condition),
+      0
+    );
   }
 
   const columnTotals = (() => {
     const totals = { good: 0, fair: 0, bad: 0, total: 0 };
     for (const row of rows) {
-      for (const condition of CONDITIONS) {
-        totals[condition] += getQty(row, condition);
+      if (activeClass === "van_keys") {
+        for (const slot of VAN_KEY_SLOTS) {
+          totals[slot.condition] += getQty(row, slot.condition);
+        }
+      } else {
+        for (const condition of CONDITIONS) {
+          totals[condition] += getQty(row, condition);
+        }
       }
       totals.total += rowTotal(row);
     }
     return totals;
   })();
+
+  const isVanKeysSheet = activeClass === "van_keys";
 
   function addCustomSize() {
     const size = newSize.trim();
@@ -438,9 +464,9 @@ function InventorySheet({
 
         <div className="inventory-sheet-body">
           <p className="inventory-sheet-help">
-            {activeClass === "van_keys" ? (
+            {isVanKeysSheet ? (
               <>
-                Folha de chaves por carrinha registada na frota
+                Conta a chave principal e a chave backup de cada carrinha
                 {isEdit ? (
                   <>
                     . Guarda com <strong>Guardar alterações</strong>.
@@ -467,61 +493,96 @@ function InventorySheet({
                   <th>
                     {activeClass === "boards" || activeClass === "wetsuits"
                       ? "Tamanho"
-                      : activeClass === "van_keys"
+                      : isVanKeysSheet
                         ? "Carrinha"
                         : "Item"}
                   </th>
-                  <th>Bom</th>
-                  <th>Razoável</th>
-                  <th>Mau</th>
-                  <th>Total</th>
+                  {isVanKeysSheet ? (
+                    <>
+                      {VAN_KEY_SLOTS.map((slot) => (
+                        <th key={slot.condition}>{slot.label}</th>
+                      ))}
+                      <th>Total</th>
+                    </>
+                  ) : (
+                    <>
+                      <th>Bom</th>
+                      <th>Razoável</th>
+                      <th>Mau</th>
+                      <th>Total</th>
+                    </>
+                  )}
                 </tr>
               </thead>
               <tbody>
-                {rows.length === 0 && activeClass === "van_keys" ? (
+                {rows.length === 0 && isVanKeysSheet ? (
                   <tr>
-                    <td colSpan={5} className="inventory-sheet-label">
+                    <td colSpan={4} className="inventory-sheet-label">
                       Ainda não há carrinhas registadas na frota.
                     </td>
                   </tr>
                 ) : (
-                  rows.map((row) => (
-                    <tr key={row.key}>
-                      <td className="inventory-sheet-label">{row.label}</td>
-                      {CONDITIONS.map((condition) => (
-                        <td key={condition}>
-                          {isEdit ? (
-                            <input
-                              className="inventory-sheet-cell"
-                              type="number"
-                              min={0}
-                              aria-label={`${row.label} ${INVENTORY_CONDITION_LABELS[condition]}`}
-                              value={getQty(row, condition)}
-                              onChange={(event) =>
-                                setQty(row, condition, event.target.value)
-                              }
-                            />
-                          ) : (
-                            <span className="inventory-sheet-value">
-                              {getQty(row, condition)}
-                            </span>
-                          )}
+                  rows.map((row) => {
+                    const quantityColumns = isVanKeysSheet
+                      ? VAN_KEY_SLOTS.map((slot) => slot.condition)
+                      : CONDITIONS;
+
+                    return (
+                      <tr key={row.key}>
+                        <td className="inventory-sheet-label">{row.label}</td>
+                        {quantityColumns.map((condition) => {
+                          const slotLabel = isVanKeysSheet
+                            ? VAN_KEY_SLOTS.find(
+                                (slot) => slot.condition === condition
+                              )?.label || condition
+                            : INVENTORY_CONDITION_LABELS[condition];
+
+                          return (
+                            <td key={condition}>
+                              {isEdit ? (
+                                <input
+                                  className="inventory-sheet-cell"
+                                  type="number"
+                                  min={0}
+                                  aria-label={`${row.label} ${slotLabel}`}
+                                  value={getQty(row, condition)}
+                                  onChange={(event) =>
+                                    setQty(row, condition, event.target.value)
+                                  }
+                                />
+                              ) : (
+                                <span className="inventory-sheet-value">
+                                  {getQty(row, condition)}
+                                </span>
+                              )}
+                            </td>
+                          );
+                        })}
+                        <td className="inventory-sheet-total">
+                          {rowTotal(row)}
                         </td>
-                      ))}
-                      <td className="inventory-sheet-total">
-                        {rowTotal(row)}
-                      </td>
-                    </tr>
-                  ))
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
               <tfoot>
                 <tr>
                   <th>Total</th>
-                  <th>{columnTotals.good}</th>
-                  <th>{columnTotals.fair}</th>
-                  <th>{columnTotals.bad}</th>
-                  <th>{columnTotals.total}</th>
+                  {isVanKeysSheet ? (
+                    <>
+                      <th>{columnTotals.good}</th>
+                      <th>{columnTotals.fair}</th>
+                      <th>{columnTotals.total}</th>
+                    </>
+                  ) : (
+                    <>
+                      <th>{columnTotals.good}</th>
+                      <th>{columnTotals.fair}</th>
+                      <th>{columnTotals.bad}</th>
+                      <th>{columnTotals.total}</th>
+                    </>
+                  )}
                 </tr>
               </tfoot>
             </table>
