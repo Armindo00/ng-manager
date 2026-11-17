@@ -62,6 +62,7 @@ type AdminSection =
   | "my-dashboard"
   | "my-lessons"
   | "my-activity"
+  | "my-evaluations"
   | "students"
   | "coaches"
   | "fixed-trainings"
@@ -330,7 +331,7 @@ function App() {
               {coachSection === "inventory" && <AdminInventory />}
 
               {coachSection === "evaluations" && (
-                <AdminEvaluations user={currentUser} />
+                <AdminEvaluations user={currentUser} scope="mine" />
               )}
 
               {coachSection === "compensations" && <AdminCompensations />}
@@ -348,6 +349,11 @@ function App() {
           {currentUser.role === "admin" && activeSection === "my-activity" && (
             <CoachActivity user={currentUser} />
           )}
+
+          {currentUser.role === "admin" &&
+            activeSection === "my-evaluations" && (
+              <AdminEvaluations user={currentUser} scope="mine" />
+            )}
 
           {currentUser.role === "admin" && activeSection === "dashboard" && (
             <AdminDashboard onNavigate={handleChangeSection} />
@@ -378,7 +384,7 @@ function App() {
 
           {currentUser.role === "admin" &&
             activeSection === "evaluations" && (
-              <AdminEvaluations user={currentUser} />
+              <AdminEvaluations user={currentUser} scope="all" />
             )}
 
           {currentUser.role === "admin" &&

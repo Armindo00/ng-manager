@@ -26,6 +26,8 @@ import {
 
 type Props = {
   user: User;
+  /** mine = atletas do treinador; all = escola (só admin). */
+  scope?: "mine" | "all";
 };
 
 type MonthBucket = {
@@ -84,7 +86,8 @@ function applyNumberDrafts(
   };
 }
 
-function AdminEvaluations({ user }: Props) {
+function AdminEvaluations({ user, scope }: Props) {
+  const personalScope = scope === "mine" || user.role === "coach";
   const [students, setStudents] = useState<Student[]>([]);
   const [coaches, setCoaches] = useState<Coach[]>([]);
   const [lessons, setLessons] = useState<Lesson[]>([]);
@@ -163,29 +166,49 @@ function AdminEvaluations({ user }: Props) {
     [coaches]
   );
 
+  const linkedCoach = useMemo(() => {
+    const byId = coaches.find((coach) => coach.id === user.id);
+    if (byId) return byId;
+    const normalized = user.name.trim().toLowerCase();
+    return (
+      coaches.find(
+        (coach) => coach.name.trim().toLowerCase() === normalized
+      ) ?? null
+    );
+  }, [coaches, user.id, user.name]);
+
+  const resolvedCoachId = linkedCoach?.id || user.id;
+
   const coachIdentityNames = useMemo(() => {
     const names = [user.name];
-    const linked = coaches.find((coach) => coach.id === user.id);
-    if (linked?.name) names.push(linked.name);
+    if (linkedCoach?.name) names.push(linkedCoach.name);
     return names;
-  }, [user.name, user.id, coaches]);
+  }, [user.name, linkedCoach]);
 
-  /** Treinadores só avaliam atletas em que são o treinador principal. */
+  /** Scope mine / coach: só atletas com este treinador principal. */
   const selectableStudents = useMemo(() => {
-    if (user.role !== "coach") return students;
+    if (!personalScope) return students;
     return students.filter((student) =>
       isStudentMainCoach(student, coachIdentityNames)
     );
-  }, [students, user.role, coachIdentityNames]);
+  }, [students, personalScope, coachIdentityNames]);
 
   const scopedEvaluations = useMemo(() => {
-    if (user.role !== "coach") return evaluations;
+    if (!personalScope) return evaluations;
     const allowedIds = new Set(selectableStudents.map((student) => student.id));
     return evaluations.filter(
       (evaluation) =>
-        evaluation.coachId === user.id || allowedIds.has(evaluation.studentId)
+        evaluation.coachId === resolvedCoachId ||
+        evaluation.coachId === user.id ||
+        allowedIds.has(evaluation.studentId)
     );
-  }, [evaluations, user.role, user.id, selectableStudents]);
+  }, [
+    evaluations,
+    personalScope,
+    resolvedCoachId,
+    user.id,
+    selectableStudents,
+  ]);
 
   const monthBuckets = useMemo(() => {
     const map = new Map<string, MonthlyEvaluation[]>();
@@ -285,9 +308,9 @@ function AdminEvaluations({ user }: Props) {
   }
 
   function startCreate() {
-    if (user.role === "coach" && selectableStudents.length === 0) {
+    if (personalScope && selectableStudents.length === 0) {
       toast.error(
-        "Ainda não tens atletas com treino principal atribuído a ti. Pede à administração para definir o treinador principal na ficha do aluno."
+        "Ainda não tens atletas com treino principal atribuído a ti. Define o treinador principal na ficha do aluno."
       );
       return;
     }
@@ -296,7 +319,7 @@ function AdminEvaluations({ user }: Props) {
       ? { month: selectedMonth.month, year: selectedMonth.year }
       : getCurrentMonthYear();
     const draft = {
-      ...emptyEvaluation(user.id),
+      ...emptyEvaluation(personalScope ? resolvedCoachId : user.id),
       month: period.month,
       year: period.year,
     };
@@ -340,7 +363,7 @@ function AdminEvaluations({ user }: Props) {
       return;
     }
     if (
-      user.role === "coach" &&
+      personalScope &&
       !selectableStudents.some((student) => student.id === form.studentId)
     ) {
       toast.error(
@@ -370,7 +393,9 @@ function AdminEvaluations({ user }: Props) {
         coachComment: withAttendance.coachComment.trim(),
         nextGoal: withAttendance.nextGoal.trim(),
         status: withAttendance.status === "sent" ? "sent" : "draft",
-        coachId: withAttendance.coachId || user.id,
+        coachId:
+          withAttendance.coachId ||
+          (personalScope ? resolvedCoachId : user.id),
       };
       await saveEvaluation(next);
       await loadData();
@@ -394,7 +419,7 @@ function AdminEvaluations({ user }: Props) {
       return;
     }
     if (
-      user.role === "coach" &&
+      personalScope &&
       !selectableStudents.some((student) => student.id === evaluation.studentId)
     ) {
       toast.error(
@@ -423,7 +448,9 @@ function AdminEvaluations({ user }: Props) {
           coachComment: withAttendance.coachComment.trim(),
           nextGoal: withAttendance.nextGoal.trim(),
           status: "draft",
-          coachId: withAttendance.coachId || user.id,
+          coachId:
+            withAttendance.coachId ||
+            (personalScope ? resolvedCoachId : user.id),
         };
         if (!draft.studentId || !draft.technicalGoal) {
           toast.error("Preenche aluno e objetivo técnico.");
@@ -581,7 +608,7 @@ function AdminEvaluations({ user }: Props) {
                 </option>
               ))}
             </select>
-            {user.role === "coach" && (
+            {personalScope && (
               <p className="muted" style={{ marginTop: 8 }}>
                 Só aparecem atletas em que és o treinador principal
                 {selectableStudents.length === 0
@@ -886,12 +913,16 @@ function AdminEvaluations({ user }: Props) {
   return (
     <div className="dashboard-page">
       <header className="page-header">
-        <p className="page-eyebrow">Gestão</p>
-        <h1 className="page-title">Avaliações</h1>
+        <p className="page-eyebrow">
+          {personalScope ? "Dia a dia" : "Administração"}
+        </p>
+        <h1 className="page-title">
+          {personalScope ? "As minhas avaliações" : "Avaliações geral"}
+        </h1>
         <p className="page-description">
-          {user.role === "coach"
+          {personalScope
             ? "Avalia mensalmente os teus atletas (treinador principal). Finaliza e envia por email ou link."
-            : "Cria a avaliação, finaliza e envia ao atleta por email (ou link). Define o treinador principal na ficha do aluno."}
+            : "Visão da escola: todas as avaliações. Define o treinador principal na ficha do aluno."}
         </p>
       </header>
 
