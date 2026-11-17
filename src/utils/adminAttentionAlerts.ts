@@ -87,6 +87,82 @@ export function listVansWithLowKeys(
     .filter((row) => row.total < 2 || row.missing.length > 0);
 }
 
+function missingKeyLabel(missing: Array<"principal" | "backup">) {
+  if (missing.length === 2) return "faltam principal e backup";
+  if (missing[0] === "principal") return "falta chave principal";
+  return "falta chave backup";
+}
+
+/** Um único aviso de chaves — sem duplicar resumo + linha por carrinha. */
+export function buildVanKeysAttentionAlert(
+  vans: Van[],
+  inventoryItems: InventoryItem[],
+  section?: AttentionSection
+): AttentionAlert | null {
+  const lowKeyVans = listVansWithLowKeys(vans, inventoryItems);
+  if (lowKeyVans.length === 0) return null;
+
+  if (lowKeyVans.length === 1) {
+    const row = lowKeyVans[0];
+    return {
+      id: "van-keys-low",
+      text: `${row.label}: ${missingKeyLabel(row.missing)}`,
+      detail: "Inventário → Chaves carrinhas",
+      severity: row.total === 0 ? "danger" : "warn",
+      section,
+    };
+  }
+
+  return {
+    id: "van-keys-low",
+    text: `${lowKeyVans.length} carrinhas com menos de 2 chaves`,
+    detail: lowKeyVans
+      .map((row) => `${row.label} (${missingKeyLabel(row.missing)})`)
+      .join(" · "),
+    severity: lowKeyVans.some((row) => row.total === 0) ? "danger" : "warn",
+    section,
+  };
+}
+
+export function buildOverdueVanTasksAlert(
+  overdueTasks: VanTask[],
+  vanNameById: Map<string, string>,
+  section?: AttentionSection
+): AttentionAlert | null {
+  if (overdueTasks.length === 0) return null;
+
+  if (overdueTasks.length === 1) {
+    const task = overdueTasks[0];
+    const vanLabel = vanNameById.get(task.vanId) || "Carrinha";
+    const typeLabel = VAN_TASK_TYPE_LABELS[task.taskType] || "Tarefa";
+    return {
+      id: `van-overdue-${task.id}`,
+      text: `${vanLabel}: ${task.title || typeLabel} em atraso`,
+      detail: `Prazo ultrapassado (${task.dueDate})`,
+      severity: "danger",
+      section,
+    };
+  }
+
+  const preview = overdueTasks
+    .slice(0, 3)
+    .map((task) => {
+      const vanLabel = vanNameById.get(task.vanId) || "Carrinha";
+      const typeLabel = VAN_TASK_TYPE_LABELS[task.taskType] || "Tarefa";
+      return `${vanLabel}: ${task.title || typeLabel}`;
+    })
+    .join(" · ");
+  const extra = overdueTasks.length - 3;
+
+  return {
+    id: "van-overdue-summary",
+    text: `${overdueTasks.length} tarefas de carrinha em atraso`,
+    detail: extra > 0 ? `${preview} · +${extra}` : preview,
+    severity: "danger",
+    section,
+  };
+}
+
 export function buildAdminAttentionAlerts(options: {
   students: Student[];
   lessons: Lesson[];
@@ -110,44 +186,12 @@ export function buildAdminAttentionAlerts(options: {
 
   const alerts: AttentionAlert[] = [];
 
-  const lowKeyVans = listVansWithLowKeys(vans, inventoryItems);
-  if (lowKeyVans.length > 0) {
-    alerts.push({
-      id: "van-keys-low-summary",
-      text: `${lowKeyVans.length} ${plural(
-        lowKeyVans.length,
-        "carrinha com menos de 2 chaves",
-        "carrinhas com menos de 2 chaves"
-      )}`,
-      detail: lowKeyVans.map((row) => row.label).join(", "),
-      severity: lowKeyVans.some((row) => row.total === 0) ? "danger" : "warn",
-      section: "inventory",
-    });
-
-    for (const row of lowKeyVans) {
-      const missingLabel =
-        row.missing.length === 2
-          ? "faltam chave principal e backup"
-          : row.missing[0] === "principal"
-            ? "falta chave principal"
-            : "falta chave backup";
-
-      alerts.push({
-        id: `van-keys-low-${row.van.id}`,
-        text:
-          row.total === 0
-            ? `${row.label}: sem chaves`
-            : `${row.label}: só ${row.total} ${plural(
-                row.total,
-                "chave",
-                "chaves"
-              )}`,
-        detail: missingLabel,
-        severity: row.total === 0 ? "danger" : "warn",
-        section: "inventory",
-      });
-    }
-  }
+  const keysAlert = buildVanKeysAttentionAlert(
+    vans,
+    inventoryItems,
+    "inventory"
+  );
+  if (keysAlert) alerts.push(keysAlert);
 
   const openVanTasks = options.vanTasks.filter((task) => !task.completed);
   const overdueTasks = openVanTasks.filter(
@@ -157,17 +201,12 @@ export function buildAdminAttentionAlerts(options: {
     (task) => getVanTaskStatus(task, today) === "due_soon"
   );
 
-  for (const task of overdueTasks) {
-    const vanLabel = vanNameById.get(task.vanId) || "Carrinha";
-    const typeLabel = VAN_TASK_TYPE_LABELS[task.taskType] || "Tarefa";
-    alerts.push({
-      id: `van-overdue-${task.id}`,
-      text: `${vanLabel}: ${task.title || typeLabel} em atraso`,
-      detail: `Prazo ultrapassado (${task.dueDate})`,
-      severity: "danger",
-      section: "vans",
-    });
-  }
+  const overdueAlert = buildOverdueVanTasksAlert(
+    overdueTasks,
+    vanNameById,
+    "vans"
+  );
+  if (overdueAlert) alerts.push(overdueAlert);
 
   if (dueSoonTasks.length > 0) {
     alerts.push({

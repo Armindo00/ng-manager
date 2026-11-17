@@ -2,8 +2,10 @@ import type { FixedTraining } from "../data/fixedTrainings";
 import type { Lesson, User } from "../types";
 import type { InventoryItem } from "../types/inventory";
 import type { Van, VanTask } from "../types/van";
-import { VAN_TASK_TYPE_LABELS } from "../types/van";
-import { listVansWithLowKeys } from "./adminAttentionAlerts";
+import {
+  buildOverdueVanTasksAlert,
+  buildVanKeysAttentionAlert,
+} from "./adminAttentionAlerts";
 import {
   addDays,
   formatDisplayDate,
@@ -100,43 +102,16 @@ export function buildCoachAttentionAlerts(options: {
     ])
   );
 
-  // Admin usa "Hoje" (este ecrã) no dia a dia — os avisos de chaves têm de aparecer aqui.
+  // Admin usa "Hoje" no dia a dia — chaves têm de aparecer aqui (1 aviso só).
   if (options.user.role === "admin") {
-    const lowKeyVans = listVansWithLowKeys(vans, inventoryItems);
-    if (lowKeyVans.length > 0) {
+    const keysAlert = buildVanKeysAttentionAlert(vans, inventoryItems);
+    if (keysAlert) {
       alerts.push({
-        id: "van-keys-low-summary",
-        text: `${lowKeyVans.length} ${plural(
-          lowKeyVans.length,
-          "carrinha com menos de 2 chaves",
-          "carrinhas com menos de 2 chaves"
-        )}`,
-        detail: lowKeyVans.map((row) => row.label).join(", "),
-        severity: lowKeyVans.some((row) => row.total === 0) ? "danger" : "warn",
+        id: keysAlert.id,
+        text: keysAlert.text,
+        detail: keysAlert.detail,
+        severity: keysAlert.severity,
       });
-
-      for (const row of lowKeyVans) {
-        const missingLabel =
-          row.missing.length === 2
-            ? "faltam chave principal e backup"
-            : row.missing[0] === "principal"
-              ? "falta chave principal"
-              : "falta chave backup";
-
-        alerts.push({
-          id: `van-keys-low-${row.van.id}`,
-          text:
-            row.total === 0
-              ? `${row.label}: sem chaves`
-              : `${row.label}: só ${row.total} ${plural(
-                  row.total,
-                  "chave",
-                  "chaves"
-                )}`,
-          detail: missingLabel,
-          severity: row.total === 0 ? "danger" : "warn",
-        });
-      }
     }
   }
 
@@ -148,14 +123,13 @@ export function buildCoachAttentionAlerts(options: {
     (task) => getVanTaskStatus(task, today) === "due_soon"
   );
 
-  for (const task of overdueTasks) {
-    const vanLabel = vanNameById.get(task.vanId) || "Carrinha";
-    const typeLabel = VAN_TASK_TYPE_LABELS[task.taskType] || "Tarefa";
+  const overdueAlert = buildOverdueVanTasksAlert(overdueTasks, vanNameById);
+  if (overdueAlert) {
     alerts.push({
-      id: `van-overdue-${task.id}`,
-      text: `${vanLabel}: ${task.title || typeLabel} em atraso`,
-      detail: `Prazo ultrapassado (${task.dueDate})`,
-      severity: "danger",
+      id: overdueAlert.id,
+      text: overdueAlert.text,
+      detail: overdueAlert.detail,
+      severity: overdueAlert.severity,
     });
   }
 
@@ -178,30 +152,34 @@ export function buildCoachAttentionAlerts(options: {
     today,
   });
 
-  // Mostra no máximo 1 aviso detalhado; a partir de 2, resume o resto.
-  for (const item of missed.slice(0, 1)) {
-    alerts.push({
-      id: item.id,
-      text:
-        item.date === today
-          ? `${item.group.title} ainda não registado hoje`
-          : `${item.group.title} sem registo (${formatDisplayDate(item.date)})`,
-      detail: "Treino da escala por registar — abre o Calendário ou Hoje.",
-      severity: item.date === today ? "warn" : "danger",
-    });
-  }
+  // Um único aviso da escala — total + exemplo direto.
+  if (missed.length > 0) {
+    const todayMissed = missed.filter((item) => item.date === today);
+    const sample = todayMissed[0] || missed[0];
+    const sampleLabel =
+      sample.date === today
+        ? sample.group.title
+        : `${sample.group.title} (${formatDisplayDate(sample.date)})`;
 
-  if (missed.length > 1) {
-    const extra = missed.length - 1;
     alerts.push({
-      id: "missed-more",
-      text: `+${extra} ${plural(
-        extra,
+      id: "missed-scale",
+      text: `${missed.length} ${plural(
+        missed.length,
         "treino da escala por registar",
         "treinos da escala por registar"
       )}`,
-      detail: "Abre o Calendário ou Hoje para registar.",
-      severity: "danger",
+      detail:
+        missed.length === 1
+          ? sampleLabel
+          : todayMissed.length > 0
+            ? `Hoje: ${sampleLabel}${
+                todayMissed.length > 1 ? ` +${todayMissed.length - 1}` : ""
+              }`
+            : `Ex.: ${sampleLabel}`,
+      severity:
+        todayMissed.length === missed.length && missed.length === 1
+          ? "warn"
+          : "danger",
     });
   }
 
