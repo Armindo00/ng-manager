@@ -149,6 +149,7 @@ function Sidebar({ user, activeSection, onChangeSection, onLogout }: Props) {
               {item(LayoutDashboard, "Hoje", "my-dashboard")}
               {item(CalendarDays, "Grupos fixos", "my-lessons")}
               {item(Clapperboard, "Os meus treinos", "my-activity")}
+              {item(Star, "As minhas avaliações", "my-evaluations")}
               <div className="nav-section-label">Administração</div>
               {item(Shield, "Visão geral", "dashboard")}
             </nav>
@@ -181,7 +182,7 @@ function Sidebar({ user, activeSection, onChangeSection, onLogout }: Props) {
               <div className="nav-section-label">Gestão</div>
               {item(CreditCard, "Pagamentos", "payments")}
               {item(TrendingUp, "Treinos a mais", "training-quota")}
-              {item(Star, "Avaliações", "evaluations")}
+              {item(Star, "Avaliações geral", "evaluations")}
               {item(CalendarClock, "Compensações", "compensations")}
               {item(Package, "Inventário", "inventory")}
               {item(Truck, "Carrinhas", "vans")}
@@ -197,7 +198,7 @@ function Sidebar({ user, activeSection, onChangeSection, onLogout }: Props) {
               {item(Clapperboard, "Os meus treinos", "activity")}
 
               <div className="nav-section-label">Gestão</div>
-              {item(Star, "Avaliações", "evaluations")}
+              {item(Star, "As minhas avaliações", "evaluations")}
               {item(CalendarClock, "Compensações", "compensations")}
               {item(Package, "Inventário", "inventory")}
             </nav>
